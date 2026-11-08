@@ -8,6 +8,8 @@ Una aplicación móvil para registrar cada día qué hábitos se han cumplido.
 
 El problema que resuelve no es la falta de motivación, sino el **olvido**: con el ajetreo diario se pasan cosas que uno quiere hacer. Apuntar lo que se hace genera conciencia, y los recordatorios evitan que se olvide.
 
+A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo (ver [6. Visión a futuro](#6-visión-a-futuro-tres-horizontes)). El MVP se centra solo en los hábitos diarios.
+
 ### Principios
 
 1. **Minimalismo.** Solo lo imprescindible. Cada funcionalidad nueva debe justificar su presencia.
@@ -109,7 +111,7 @@ Funcionalidades descartadas por ahora, en orden aproximado de interés:
 
 1. Estadísticas: rachas, porcentaje de cumplimiento, calendario de actividad.
 2. Widget en la pantalla de inicio para marcar hábitos.
-3. Más tipos de frecuencia (por ejemplo, "3 veces por semana").
+3. Más tipos de frecuencia (por ejemplo, "3 veces por semana"). Encaja con los objetivos semanales de la [visión a futuro](#6-visión-a-futuro-tres-horizontes).
 4. Más tipos de hábito.
 5. Reordenar manualmente los hábitos.
 6. Automatizaciones (registrar hábitos sin intervención del usuario).
@@ -125,3 +127,48 @@ Puntos a decidir antes de implementar la parte correspondiente:
 - **Resumen del día:** ¿un aviso al final del día con los hábitos pendientes?
 - **Orden de la lista del día:** ¿por hora del primer recordatorio, alfabético o por fecha de creación?
 - **Hábitos cumplidos en la lista:** ¿se quedan en su sitio o bajan al final?
+
+## 6. Visión a futuro: tres horizontes
+
+> **Solo es una idea.** No forma parte del MVP, no tiene requisitos ni tareas y se concretará cuando el desarrollo avance. Se apunta para no perderla y para construir a partir de ella.
+
+La aplicación podría organizarse en tres partes, una por cada horizonte de tiempo. Cada una responde a una pregunta distinta:
+
+| Horizonte | Parte | Pregunta | Para qué sirve | Ejemplo |
+|-----------|-------|----------|----------------|---------|
+| Diario | **Hábitos** | ¿Qué hago hoy? | Mantener un orden en el día | Tomar el sol, leer 20 minutos |
+| Corto plazo | **Objetivos semanales** | ¿Cómo voy esta semana? | Ver el progreso de la semana | Dedicar 5 horas a proyectos personales |
+| Largo plazo | **Objetivos a largo plazo** | ¿Hacia dónde voy? | Mantener el foco y no desviarse del camino | Correr una media maratón, terminar una aplicación antes de una fecha |
+
+### Hábitos
+
+Es lo que define el MVP (secciones 3.1 a 3.6) y la base de las otras dos partes. Se empieza por aquí.
+
+### Objetivos semanales
+
+- La referencia es la **semana completa**, no cada día: las 5 horas cuentan igual si se hacen en un día, en tres o en cinco.
+- Pueden ser **recurrentes** (todas las semanas, como "5 horas a la semana en proyectos personales") o **puntuales** (solo una semana concreta). De momento se contemplan los dos; ya se verá cómo encajan.
+- Se parecen a un hábito cuantitativo cuya meta se mide por semana en lugar de por día: lo que se apunta cada día se suma al total de la semana. Incluyen la frecuencia "N veces por semana" de la sección 4.
+
+### Objetivos a largo plazo
+
+- Tienen un resultado claro y una **fecha concreta**.
+- Sirven para mantener el foco en el largo plazo, no para el registro diario.
+
+### Vínculo entre horizontes
+
+Los tres horizontes podrían relacionarse: un objetivo a largo plazo se consigue con objetivos semanales y hábitos (la media maratón se prepara corriendo varias veces por semana). Vincularlos daría sentido al registro diario, porque mostraría **para qué** se hace cada cosa. El vínculo sería opcional. Es una idea valorada, pendiente de definir.
+
+### Puntos a tener en cuenta
+
+- **Recordatorios en cada horizonte.** Siguiendo el principio de que el recordatorio es el centro, cada parte podría tener los suyos: a una hora para los hábitos, de progreso para la semana ("llevas 2 de 5 horas y es jueves") y de cuenta atrás para el largo plazo ("quedan 40 días").
+- **Minimalismo.** Cada parte nueva tendrá que justificar su presencia cuando llegue, como cualquier otra funcionalidad.
+- **Visión del producto.** Hoy el problema que se resuelve es el olvido. Con los tres horizontes se ampliaría a no perder de vista lo que uno quiere hacer, hoy, esta semana y a largo plazo. Si se adopta, habrá que revisar la sección 1.
+- **Nombres.** "Meta" ya significa la cantidad diaria de un hábito cuantitativo (ver el glosario), así que la tercera parte no debe llamarse "metas". Por ahora: "Objetivos a largo plazo" (alternativa: "Propósitos").
+
+### Preguntas abiertas
+
+- ¿Cómo se vinculan los horizontes y qué se ve de ese vínculo?
+- ¿Cómo conviven los objetivos semanales recurrentes y los puntuales?
+- ¿Qué día empieza la semana?
+- ¿Cómo se mide el progreso de un objetivo a largo plazo: hitos intermedios, avance calculado a partir de lo vinculado, o solo cumplido o no en la fecha?
