@@ -1,6 +1,6 @@
 # ADR-0007: Código en inglés y documentación en español
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-10
 
 ## Contexto
