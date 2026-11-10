@@ -1,0 +1,32 @@
+# Revisión semanal de dependencias: avisos de seguridad nuevos y parches del SDK de Expo.
+# No depende de que haya Pull Requests abiertos; si falla, GitHub avisa por correo.
+name: Revisión semanal
+
+on:
+  schedule:
+    # Lunes a las 07:00 UTC.
+    - cron: "0 7 * * 1"
+  # Permite lanzarla a mano desde la pestaña Actions.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependencias:
+    name: Dependencias
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Avisos de seguridad
+        run: npm run auditar
+      # Se ejecuta aunque falle la auditoría, para ver los dos resultados.
+      - name: Parches del SDK de Expo
+        if: ${{ !cancelled() }}
+        run: npx --yes expo-doctor

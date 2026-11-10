@@ -10,7 +10,7 @@ Fase 1: proyecto Expo creado, con formato, lint, tipos y tests configurados. Tod
 
 ## Desarrollo
 
-Requisitos: Node.js 24 y npm.
+Requisitos: Node.js 24 (ver `.nvmrc`) y npm.
 
 ```bash
 npm install

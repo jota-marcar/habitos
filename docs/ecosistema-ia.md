@@ -57,7 +57,7 @@ Complementa la protección de `main` en GitHub: el servidor lo impediría igualm
 
 [.claude/hooks/formatear.mjs](../.claude/hooks/formatear.mjs), en el evento `PostToolUse` de las herramientas Edit y Write.
 
-- Formatea con Prettier el fichero editado (`.js`, `.mjs`, `.ts`, `.tsx`, `.json`…), respetando `.prettierignore`.
+- Formatea con Prettier el fichero editado (`.js`, `.mjs`, `.ts`, `.tsx`, `.json`, `.yml`…), respetando `.prettierignore`.
 - En ficheros de código ejecuta `eslint --fix`. Si quedan errores que no se corrigen solos, se los devuelve a Claude para que los arregle en el momento.
 - Ignora los ficheros de fuera del proyecto y el Markdown, que queda fuera de Prettier para no reformatear las tablas de `docs/`.
 
@@ -70,6 +70,15 @@ No comprueba tipos: `tsc` sobre todo el proyecto tarda demasiado para hacerlo en
 ### Regla de dependencias en ESLint
 
 No es una pieza de Claude Code, pero cumple el mismo principio de imponer lo determinista: [eslint.config.js](../eslint.config.js) solo deja que `src/domain` importe de `src/domain` (ni paquetes ni otras capas), como exige la [arquitectura](arquitectura.md#4-capas-y-estructura-del-código). El hook `formatear` la aplica en cada edición.
+
+### CI con GitHub Actions
+
+Tampoco es una pieza de Claude Code, pero es la red de seguridad de todo lo anterior: lo que los hooks y Claude comprueban en local, la CI lo vuelve a comprobar en GitHub.
+
+- [ci.yml](../.github/workflows/ci.yml), en cada Pull Request hacia `main`: **Verificar** (`npm run verificar`), obligatorio para hacer merge, y **Auditar** (`npm run auditar`), que solo informa.
+- [revision-semanal.yml](../.github/workflows/revision-semanal.yml), cada lunes: `npm run auditar` y `npx expo-doctor`. Si falla, GitHub avisa por correo.
+
+Los detalles están en [CONTRIBUTING.md](../CONTRIBUTING.md#8-integración-continua).
 
 ### Skill `/pr`
 
@@ -95,7 +104,6 @@ No es una pieza de Claude Code, pero cumple el mismo principio de imponer lo det
 | Evaluar el plugin oficial `expo` para Claude Code (la plantilla lo activa; aquí se quitó) | Cuando haya fricción con las APIs de Expo |
 | Subagente revisor (contra la especificación y los ADR) | Tras las primeras funcionalidades |
 | Subagente de tests | Cuando exista la capa de dominio |
-| CI con GitHub Actions y checks obligatorios en `main` | Cuando haya tests |
 
 ## Descartadas
 

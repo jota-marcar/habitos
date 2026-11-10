@@ -168,7 +168,7 @@ Decisiones del modelo:
 
 - Los cambios solo de JavaScript pueden llegar a producción con **EAS Update**, sin pasar por una nueva compilación.
 - Los cambios nativos (dependencias nuevas, permisos) requieren una compilación con EAS Build y una nueva versión en TestFlight.
-- Se automatizará con CI (GitHub Actions) más adelante; queda fuera de este documento hasta entonces.
+- La CI (GitHub Actions) verifica cada Pull Request: formato, lint, tipos y tests (ver [CONTRIBUTING.md](../CONTRIBUTING.md#8-integración-continua)). Compilar y publicar desde la CI queda para más adelante.
 
 ## 9. Riesgos conocidos
 
