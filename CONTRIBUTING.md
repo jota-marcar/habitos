@@ -149,7 +149,7 @@ gh release create v0.1.0 --generate-notes
 Para que la regla "nunca commit directo en `main`" no dependa solo de la disciplina, se configura en GitHub (Settings → Branches/Rules):
 
 - Exigir Pull Request para hacer merge en `main`.
-- Exigir que pasen los checks de CI (cuando exista CI).
+- Exigir que pase el check **Verificar** de la CI (ver sección 8).
 - Bloquear force push y borrado de `main`.
 - Permitir solo squash merge y borrar ramas automáticamente tras el merge (Settings → General).
 
@@ -190,3 +190,18 @@ Ante un aviso nuevo, por este orden:
 3. Solo si no se puede explotar, aceptarlo en `auditoria-aceptada.json` con el motivo y una fecha de revisión de, como mucho, tres meses. La aceptación se decide en el Pull Request.
 
 No se usa `npm audit fix --force`: cambia versiones mayores sin respetar el SDK de Expo.
+
+## 8. Integración continua
+
+GitHub Actions comprueba cada cambio. Los flujos están en `.github/workflows/`.
+
+| Flujo | Cuándo | Qué ejecuta | ¿Bloquea el merge? |
+|-------|--------|-------------|--------------------|
+| **CI → Verificar** | En cada Pull Request hacia `main` y en cada commit de `main` | `npm run verificar`: formato, lint, tipos y tests | Sí |
+| **CI → Auditar** | Igual | `npm run auditar`: avisos de seguridad | No, solo informa |
+| **Revisión semanal** | Cada lunes a las 07:00 UTC, o a mano desde la pestaña Actions | `npm run auditar` y `npx expo-doctor` | No aplica; si falla, GitHub avisa por correo |
+
+- **Auditar no bloquea** porque un aviso de seguridad nuevo puede publicarse cualquier día y no debe frenar un PR que no tiene que ver. Si sale en rojo, se resuelve en un PR propio siguiendo la sección 7.
+- **`expo-doctor` solo va en la revisión semanal** porque falla cada vez que Expo publica un parche. Se corrige con `npx expo install --fix` en un PR.
+- **Las acciones de terceros se fijan a un commit exacto**, con la versión en un comentario, y los flujos solo tienen permiso de lectura. Para actualizar una acción se cambia el commit en un PR.
+- La versión de Node de la CI es la de `.nvmrc`.

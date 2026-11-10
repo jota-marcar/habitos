@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-const FORMATEABLES = /\.(js|cjs|mjs|jsx|ts|tsx|json)$/;
+const FORMATEABLES = /\.(js|cjs|mjs|jsx|ts|tsx|json|yml|yaml)$/;
 const LINTEABLES = /\.(js|cjs|mjs|jsx|ts|tsx)$/;
 
 function leerEntrada() {
