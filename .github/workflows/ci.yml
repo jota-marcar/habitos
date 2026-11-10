@@ -1,6 +1,6 @@
-# CI de cada Pull Request: comprueba formato, lint, tipos y tests.
-# "Verificar" es el check obligatorio para hacer merge en main.
-# "Auditar" solo informa: un aviso de seguridad nuevo no debe bloquear un PR ajeno a él.
+# CI for every Pull Request: checks formatting, lint, types and tests.
+# "Verify" is the required check to merge into main.
+# "Audit" is informational: a new security advisory must not block an unrelated PR.
 name: CI
 
 on:
@@ -12,28 +12,28 @@ on:
 permissions:
   contents: read
 
-# Un push nuevo a la misma rama cancela la ejecución anterior.
+# A new push to the same branch cancels the previous run.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  verificar:
-    name: Verificar
+  verify:
+    name: Verify
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      # Acciones fijadas a un commit exacto: un cambio en ellas no se ejecuta sin revisarlo.
+      # Actions pinned to an exact commit: a change in them does not run without review.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm run verificar
+      - run: npm run verify
 
-  auditar:
-    name: Auditar
+  audit:
+    name: Audit
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -43,4 +43,4 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm run auditar
+      - run: npm run audit-deps

@@ -39,9 +39,9 @@ En el mismo fichero, `attribution.commit` vacío hace que los commits no lleven 
 
 Cada persona puede añadir sus propias preferencias en `.claude/settings.local.json`, que no se versiona.
 
-### Hook `proteger-main`
+### Hook `protect-main`
 
-[.claude/hooks/proteger-main.mjs](../.claude/hooks/proteger-main.mjs), en el evento `PreToolUse` de las herramientas Bash y PowerShell.
+[.claude/hooks/protect-main.mjs](../.claude/hooks/protect-main.mjs), en el evento `PreToolUse` de las herramientas Bash y PowerShell.
 
 - Bloquea `git commit` cuando la rama actual es `main`.
 - Bloquea `git push` hacia `main`, ya sea explícito (`git push origin main`, `HEAD:main`) o implícito (push sin rama estando en `main`).
@@ -53,15 +53,15 @@ Complementa la protección de `main` en GitHub: el servidor lo impediría igualm
 
 **Requisito:** Node.js en el `PATH`.
 
-### Hook `formatear`
+### Hook `format`
 
-[.claude/hooks/formatear.mjs](../.claude/hooks/formatear.mjs), en el evento `PostToolUse` de las herramientas Edit y Write.
+[.claude/hooks/format.mjs](../.claude/hooks/format.mjs), en el evento `PostToolUse` de las herramientas Edit y Write.
 
 - Formatea con Prettier el fichero editado (`.js`, `.mjs`, `.ts`, `.tsx`, `.json`, `.yml`…), respetando `.prettierignore`.
 - En ficheros de código ejecuta `eslint --fix`. Si quedan errores que no se corrigen solos, se los devuelve a Claude para que los arregle en el momento.
 - Ignora los ficheros de fuera del proyecto y el Markdown, que queda fuera de Prettier para no reformatear las tablas de `docs/`.
 
-No comprueba tipos: `tsc` sobre todo el proyecto tarda demasiado para hacerlo en cada edición. Los tipos se comprueban con `npm run verificar` antes de cada commit; si se olvida a menudo, se pasará a un hook `Stop`.
+No comprueba tipos: `tsc` sobre todo el proyecto tarda demasiado para hacerlo en cada edición. Los tipos se comprueban con `npm run verify` antes de cada commit; si se olvida a menudo, se pasará a un hook `Stop`.
 
 **Limitaciones conocidas:** tarda unos 3 segundos por edición en Windows, sobre todo por ESLint. Si `node_modules` no está instalado, no hace nada.
 
@@ -69,14 +69,14 @@ No comprueba tipos: `tsc` sobre todo el proyecto tarda demasiado para hacerlo en
 
 ### Regla de dependencias en ESLint
 
-No es una pieza de Claude Code, pero cumple el mismo principio de imponer lo determinista: [eslint.config.js](../eslint.config.js) solo deja que `src/domain` importe de `src/domain` (ni paquetes ni otras capas), como exige la [arquitectura](arquitectura.md#4-capas-y-estructura-del-código). El hook `formatear` la aplica en cada edición.
+No es una pieza de Claude Code, pero cumple el mismo principio de imponer lo determinista: [eslint.config.js](../eslint.config.js) solo deja que `src/domain` importe de `src/domain` (ni paquetes ni otras capas), como exige la [arquitectura](arquitectura.md#4-capas-y-estructura-del-código). El hook `format` la aplica en cada edición.
 
 ### CI con GitHub Actions
 
 Tampoco es una pieza de Claude Code, pero es la red de seguridad de todo lo anterior: lo que los hooks y Claude comprueban en local, la CI lo vuelve a comprobar en GitHub.
 
-- [ci.yml](../.github/workflows/ci.yml), en cada Pull Request hacia `main`: **Verificar** (`npm run verificar`), obligatorio para hacer merge, y **Auditar** (`npm run auditar`), que solo informa.
-- [revision-semanal.yml](../.github/workflows/revision-semanal.yml), cada lunes: `npm run auditar` y `npx expo-doctor`. Si falla, GitHub avisa por correo.
+- [ci.yml](../.github/workflows/ci.yml), en cada Pull Request hacia `main`: **Verify** (`npm run verify`), obligatorio para hacer merge, y **Audit** (`npm run audit-deps`), que solo informa.
+- [weekly-review.yml](../.github/workflows/weekly-review.yml), cada lunes: `npm run audit-deps` y `npx expo-doctor`. Si falla, GitHub avisa por correo.
 
 Los detalles están en [CONTRIBUTING.md](../CONTRIBUTING.md#8-integración-continua).
 
@@ -84,7 +84,7 @@ Los detalles están en [CONTRIBUTING.md](../CONTRIBUTING.md#8-integración-conti
 
 [.claude/skills/pr/](../.claude/skills/pr/SKILL.md). Sube la rama actual y abre un Pull Request hacia `main` con título en Conventional Commits y la plantilla rellenada.
 
-- El script [contexto.mjs](../.claude/skills/pr/contexto.mjs) comprueba el estado de forma determinista: rama válida, cambios sin commit, commits nuevos, si va por detrás de `main`, si ya hay un PR y dónde está `gh`. Si encuentra un bloqueo, la skill se detiene.
+- El script [context.mjs](../.claude/skills/pr/context.mjs) comprueba el estado de forma determinista: rama válida, cambios sin commit, commits nuevos, si va por detrás de `main`, si ya hay un PR y dónde está `gh`. Si encuentra un bloqueo, la skill se detiene.
 - Nunca hace merge.
 - Se invoca con `/pr` (con notas opcionales) o al pedir "abre el PR".
 
@@ -92,7 +92,7 @@ Los detalles están en [CONTRIBUTING.md](../CONTRIBUTING.md#8-integración-conti
 
 [.claude/skills/adr/](../.claude/skills/adr/SKILL.md). Crea un ADR en `docs/adr/` en estado `Propuesto`, actualiza el índice y, si sustituye a otro, marca el antiguo.
 
-- El script [siguiente.mjs](../.claude/skills/adr/siguiente.mjs) calcula el siguiente número, el nombre del fichero (sin tildes) y la fecha.
+- El script [next.mjs](../.claude/skills/adr/next.mjs) calcula el siguiente número, el nombre del fichero (sin tildes) y la fecha.
 - Se invoca con `/adr <título>` o cuando se toma una decisión técnica importante.
 
 ## Piezas previstas
@@ -100,7 +100,7 @@ Los detalles están en [CONTRIBUTING.md](../CONTRIBUTING.md#8-integración-conti
 | Pieza | Cuándo |
 |-------|--------|
 | MCP de Supabase (limitado a un proyecto, solo lectura en producción) | Al crear el proyecto de Supabase |
-| Hook `Stop` que comprueba tipos antes de terminar | Si se olvida ejecutar `npm run verificar` |
+| Hook `Stop` que comprueba tipos antes de terminar | Si se olvida ejecutar `npm run verify` |
 | Evaluar el plugin oficial `expo` para Claude Code (la plantilla lo activa; aquí se quitó) | Cuando haya fricción con las APIs de Expo |
 | Subagente revisor (contra la especificación y los ADR) | Tras las primeras funcionalidades |
 | Subagente de tests | Cuando exista la capa de dominio |

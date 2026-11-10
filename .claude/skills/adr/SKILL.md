@@ -19,7 +19,7 @@ Lee `docs/adr/README.md` y los ADR existentes: si la decisión ya está cubierta
 Formula el título como una decisión ("Supabase como backend", no "Elegir backend") y ejecuta:
 
 ```bash
-node .claude/skills/adr/siguiente.mjs "<título>"
+node .claude/skills/adr/next.mjs "<título>"
 ```
 
 Usa el número, la ruta y la fecha que devuelve.

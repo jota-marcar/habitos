@@ -61,6 +61,7 @@ flowchart LR
 | Compilación y publicación | EAS Build, EAS Submit y TestFlight | [ADR-0002](adr/0002-expo-como-plataforma.md) |
 | Tests | Jest y React Native Testing Library | Estándar de Expo |
 | Calidad de código | ESLint y Prettier | Estándar de Expo |
+| Idioma | Código en inglés, documentación en español | [ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md) |
 
 Las versiones concretas se fijan al crear el proyecto y quedan registradas en `package.json`.
 
@@ -86,50 +87,52 @@ Las pantallas están en `src/app/` porque es la ubicación de la plantilla de Ex
 
 La especificación exige que los cambios en un hábito se apliquen solo hacia delante (RF-09) y que los días pasados muestren lo que tocaba entonces. Por eso la configuración de un hábito se guarda con **fecha de vigencia** ([ADR-0006](adr/0006-configuracion-de-habitos-con-vigencia.md)).
 
+Los nombres del modelo están en inglés ([ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)); su equivalencia con los términos de la especificación está en el [glosario](especificacion-funcional.md#2-glosario).
+
 ```mermaid
 erDiagram
-    USUARIO ||--o{ HABITO : tiene
-    HABITO ||--|{ VERSION_HABITO : "se configura con"
-    HABITO ||--o{ REGISTRO : "se registra en"
-    HABITO ||--o{ RECORDATORIO : "avisa con"
+    USER ||--o{ HABIT : tiene
+    HABIT ||--|{ HABIT_VERSION : "se configura con"
+    HABIT ||--o{ ENTRY : "se registra en"
+    HABIT ||--o{ REMINDER : "avisa con"
 
-    HABITO {
+    HABIT {
         uuid id
-        uuid usuario_id
-        text nombre
-        text tipo "booleano | cuantitativo"
-        date creado_el
-        date archivado_el "nullable"
+        uuid user_id
+        text name
+        text type "boolean | quantitative"
+        date created_on
+        date archived_on "nullable"
     }
-    VERSION_HABITO {
+    HABIT_VERSION {
         uuid id
-        uuid habito_id
-        date vigente_desde
-        int dias "máscara de días de la semana"
-        numeric meta "nullable"
-        text unidad "nullable"
-        numeric incremento "nullable"
+        uuid habit_id
+        date effective_from
+        int scheduled_days "máscara de días de la semana"
+        numeric target "nullable"
+        text unit "nullable"
+        numeric increment "nullable"
     }
-    REGISTRO {
+    ENTRY {
         uuid id
-        uuid habito_id
-        date fecha "fecha local, sin hora"
-        numeric valor "1/0 en booleanos"
+        uuid habit_id
+        date date "fecha local, sin hora"
+        numeric value "1/0 en booleanos"
     }
-    RECORDATORIO {
+    REMINDER {
         uuid id
-        uuid habito_id
-        time hora "hora local"
+        uuid habit_id
+        time time "hora local"
     }
 ```
 
 Decisiones del modelo:
 
 - **Las fechas son fechas de calendario** (`2026-10-28`), no instantes con hora. El día va de 00:00 a 23:59 en la hora local del dispositivo y no cambia si el usuario viaja a otra zona horaria.
-- **Qué hábitos tocan el día D:** los que se crearon como mucho en D, no están archivados en D y, según la versión vigente en D (la de mayor `vigente_desde` que sea ≤ D), están programados para ese día de la semana.
-- **Un registro por hábito y día** (clave única `habito_id + fecha`). Si no hay registro, el hábito está pendiente.
+- **Qué hábitos tocan el día D:** los que se crearon como mucho en D, no están archivados en D y, según la versión vigente en D (la de mayor `effective_from` que sea ≤ D), están programados para ese día de la semana.
+- **Un registro por hábito y día** (clave única `habit_id + date`). Si no hay registro, el hábito está pendiente.
 - **Los recordatorios no tienen versiones**: solo afectan al futuro.
-- **Campos de sincronización** en todas las tablas: identificador generado en el dispositivo (UUID), `actualizado_en` asignado por el servidor y `borrado` (borrado lógico) para propagar eliminaciones.
+- **Campos de sincronización** en todas las tablas: identificador generado en el dispositivo (UUID), `updated_at` asignado por el servidor y `deleted` (borrado lógico) para propagar eliminaciones.
 
 ## 6. Flujos principales
 
@@ -148,13 +151,13 @@ Decisiones del modelo:
 ### Sincronización
 
 1. **Push:** se suben las filas modificadas en el dispositivo desde la última sincronización.
-2. **Pull:** se descargan las filas que el servidor ha modificado desde el último `actualizado_en` recibido.
+2. **Pull:** se descargan las filas que el servidor ha modificado desde el último `updated_at` recibido.
 3. En caso de conflicto, gana la última escritura. Es aceptable porque cada cuenta tiene un solo usuario.
 4. Se lanza al abrir la app, al volver a primer plano, tras cada cambio local y al recuperar la conexión.
 
 ## 7. Seguridad y privacidad
 
-- Cada fila de Supabase lleva `usuario_id`, y las políticas de **Row Level Security** impiden que un usuario lea o modifique datos de otro.
+- Cada fila de Supabase lleva `user_id`, y las políticas de **Row Level Security** impiden que un usuario lea o modifique datos de otro.
 - La app usa solo la clave pública (`anon`) de Supabase. Ninguna clave privada vive en la app ni en el repositorio.
 - Los secretos y la configuración por entorno van en variables de entorno de EAS, nunca en git (ver `.gitignore`).
 - Eliminar la cuenta (RF-04) borra al usuario y, en cascada, todos sus datos.

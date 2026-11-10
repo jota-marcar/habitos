@@ -1,4 +1,4 @@
-# Dependencias
+# Dependencies
 node_modules/
 
 # Expo
@@ -7,11 +7,11 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Carpetas nativas generadas (Continuous Native Generation)
+# Generated native folders (Continuous Native Generation)
 /ios
 /android
 
-# Nativo y firma
+# Native and signing
 .kotlin/
 *.orig.*
 *.jks
@@ -24,12 +24,12 @@ expo-env.d.ts
 # Metro
 .metro-health-check*
 
-# Compilación y tests
+# Build and tests
 build/
 coverage/
 *.tsbuildinfo
 
-# Secretos
+# Secrets
 .env
 .env.*
 !.env.example
@@ -37,10 +37,10 @@ coverage/
 # Logs
 *.log
 
-# Sistema y editores
+# OS and editors
 .DS_Store
 .vscode/
 .idea/
 
-# Claude Code: preferencias personales
+# Claude Code: personal preferences
 .claude/settings.local.json
