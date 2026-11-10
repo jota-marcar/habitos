@@ -15,6 +15,22 @@
       "motivo": "Solo lo usan @expo/config y jest-config en el PC para fusionar configuración propia; no llega al bundle de la app. No existe versión corregida: el paquete está abandonado desde 2023.",
       "aceptado": "2026-10-28",
       "revisar": "2027-01-28"
+    },
+    {
+      "id": "GHSA-g3hv-75wg-m249",
+      "paquete": "minimatch",
+      "gravedad": "moderate",
+      "motivo": "Solo lo usan herramientas del PC (@expo/fingerprint y la cobertura de Jest) con patrones del propio proyecto; no llega al bundle de la app. El arreglo solo existe en minimatch 11 y no hay parche para las versiones 9 y 10, que son las que exigen Expo y Jest.",
+      "aceptado": "2026-11-10",
+      "revisar": "2027-01-28"
+    },
+    {
+      "id": "GHSA-3g3m-2fjr-6pw4",
+      "paquete": "glob",
+      "gravedad": "moderate",
+      "motivo": "Solo lo usan herramientas del PC (@expo/cli, @expo/fingerprint y Jest) sobre carpetas del propio proyecto; no llega al bundle de la app. El arreglo solo existe en glob 14; Expo exige la versión 13 y Jest la 10.",
+      "aceptado": "2026-11-10",
+      "revisar": "2027-01-28"
     }
   ]
 }
