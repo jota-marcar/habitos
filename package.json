@@ -43,7 +43,8 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "verify": "npm run format:check && npm run lint && npm run typecheck && npm test",
+    "test:coverage": "jest --coverage",
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage",
     "audit-deps": "node scripts/audit-deps.mjs"
   },
   "private": true,
