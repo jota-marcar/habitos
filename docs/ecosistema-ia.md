@@ -69,7 +69,7 @@ No comprueba tipos: `tsc` sobre todo el proyecto tarda demasiado para hacerlo en
 
 ### Regla de dependencias en ESLint
 
-No es una pieza de Claude Code, pero cumple el mismo principio de imponer lo determinista: [eslint.config.js](../eslint.config.js) impide que `src/domain` importe React, Expo u otras capas, como exige la [arquitectura](arquitectura.md#4-capas-y-estructura-del-código). El hook `formatear` la aplica en cada edición.
+No es una pieza de Claude Code, pero cumple el mismo principio de imponer lo determinista: [eslint.config.js](../eslint.config.js) solo deja que `src/domain` importe de `src/domain` (ni paquetes ni otras capas), como exige la [arquitectura](arquitectura.md#4-capas-y-estructura-del-código). El hook `formatear` la aplica en cada edición.
 
 ### Skill `/pr`
 
