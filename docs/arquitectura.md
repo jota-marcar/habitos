@@ -26,7 +26,6 @@ flowchart LR
         Notif["Planificador de<br/>recordatorios"]
         UI --> Dom
         UI --> DB
-        Dom --> DB
         Notif --> Dom
         Notif --> DB
         Sync --> DB
@@ -45,6 +44,7 @@ flowchart LR
 ```
 
 - La **interfaz** solo lee y escribe en la base de datos local, así que nunca espera a la red.
+- El **dominio** no accede a la base de datos ni a ninguna otra pieza: recibe los datos que le pasan la interfaz o el planificador y devuelve el resultado.
 - La **sincronización** copia los cambios entre la base local y Supabase en segundo plano.
 - El **planificador de recordatorios** calcula qué avisos tocan y los programa como notificaciones locales de iOS.
 
