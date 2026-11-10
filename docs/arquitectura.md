@@ -81,6 +81,12 @@ supabase/         Migraciones SQL y políticas de seguridad del backend
 
 Regla de dependencias: `app` y `ui` pueden usar todo; `domain` no depende de nada. Así las reglas más delicadas (qué hábitos tocan un día, cuándo está cumplido, qué recordatorios hay que programar) son funciones puras que se prueban con tests unitarios rápidos. ESLint impone esta regla en `src/domain`.
 
+Convenciones del dominio:
+
+- **No consulta el reloj ni genera identificadores.** "Hoy" y los UUID se le pasan como datos, así que el mismo dato de entrada da siempre el mismo resultado.
+- **Las reglas que pueden rechazar una operación devuelven códigos de error** (por ejemplo, `name_empty`), no textos. La interfaz decide el mensaje.
+- **Los tests van junto al código** (`dates.ts` y `dates.test.ts`) y la cobertura del dominio debe ser del 100 %: `npm run verify` falla si baja.
+
 Las pantallas están en `src/app/` porque es la ubicación de la plantilla de Expo; dentro solo van rutas, y los tests van fuera (en `src/__tests__/` o junto al código que prueban, fuera de `src/app/`). Los imports usan el alias `@/` → `src/`.
 
 ## 5. Modelo de datos
@@ -129,7 +135,10 @@ erDiagram
 Decisiones del modelo:
 
 - **Las fechas son fechas de calendario** (`2026-10-28`), no instantes con hora. El día va de 00:00 a 23:59 en la hora local del dispositivo y no cambia si el usuario viaja a otra zona horaria.
-- **Qué hábitos tocan el día D:** los que se crearon como mucho en D, no están archivados en D y, según la versión vigente en D (la de mayor `effective_from` que sea ≤ D), están programados para ese día de la semana.
+- **Qué hábitos tocan el día D:** los que se crearon como mucho en D, no están retirados por archivado en D y, según la versión vigente en D (la de mayor `effective_from` que sea ≤ D), están programados para ese día de la semana.
+- **Archivado:** un hábito archivado deja de tocar a partir del día siguiente al archivado. El propio día del archivado solo toca si ya tiene algo registrado (RF-10).
+- **Días programados:** máscara de 7 bits en `scheduled_days`, con el lunes en el bit 0 y el domingo en el bit 6.
+- **Cantidades:** `target`, `increment` y `value` tienen 2 decimales como máximo y nunca son negativas. Un registro con valor 0 equivale a no tener registro.
 - **Un registro por hábito y día** (clave única `habit_id + date`). Si no hay registro, el hábito está pendiente.
 - **Los recordatorios no tienen versiones**: solo afectan al futuro.
 - **Campos de sincronización** en todas las tablas: identificador generado en el dispositivo (UUID), `updated_at` asignado por el servidor y `deleted` (borrado lógico) para propagar eliminaciones.

@@ -197,7 +197,7 @@ GitHub Actions comprueba cada cambio. Los flujos están en `.github/workflows/`.
 
 | Flujo | Cuándo | Qué ejecuta | ¿Bloquea el merge? |
 |-------|--------|-------------|--------------------|
-| **CI → Verify** | En cada Pull Request hacia `main` y en cada commit de `main` | `npm run verify`: formato, lint, tipos y tests | Sí |
+| **CI → Verify** | En cada Pull Request hacia `main` y en cada commit de `main` | `npm run verify`: formato, lint, tipos y tests, con cobertura del 100 % en el dominio | Sí |
 | **CI → Audit** | Igual | `npm run audit-deps`: avisos de seguridad | No, solo informa |
 | **Weekly review** | Cada lunes a las 07:00 UTC, o a mano desde la pestaña Actions | `npm run audit-deps` y `npx expo-doctor` | No aplica; si falla, GitHub avisa por correo |
 

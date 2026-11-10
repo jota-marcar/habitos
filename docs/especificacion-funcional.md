@@ -59,16 +59,16 @@ La columna "En el código" es el nombre en inglés con el que cada término apar
   |------|-------------|-------|
   | Nombre | Sí | Texto corto. |
   | Tipo | Sí | Booleano o cuantitativo. No se puede cambiar después de crearlo. |
-  | Meta | Solo cuantitativo | Número mayor que 0. |
+  | Meta | Solo cuantitativo | Número mayor que 0, con 2 decimales como máximo. |
   | Unidad | Solo cuantitativo | Texto libre corto: "L", "páginas", "min"… |
-  | Incremento | Solo cuantitativo | Número mayor que 0. Por defecto, 1. |
+  | Incremento | Solo cuantitativo | Número mayor que 0, con 2 decimales como máximo. Por defecto, 1. |
   | Días programados | Sí | Al menos un día. Por defecto, todos. |
   | Recordatorios | No | Cero o más horas del día (ver 3.5). |
 
 - **RF-07.** El usuario puede ver el listado de todos sus hábitos activos.
 - **RF-08.** El usuario puede editar cualquier dato de un hábito salvo el tipo.
 - **RF-09.** Los cambios en un hábito (meta, días programados…) se aplican desde el día actual en adelante. Los días pasados conservan lo que se registró.
-- **RF-10.** El usuario puede archivar un hábito: deja de aparecer en los días siguientes y deja de recordarse, pero su historial se conserva y sigue visible en los días pasados.
+- **RF-10.** El usuario puede archivar un hábito: deja de aparecer en los días siguientes y deja de recordarse, pero su historial se conserva y sigue visible en los días pasados. El día en que se archiva solo aparece si ya tenía algo registrado.
 - **RF-11.** El usuario puede eliminar un hábito de forma permanente, junto con todo su historial, tras una confirmación explícita.
 
 ### 3.3 Vista de un día
@@ -80,7 +80,7 @@ Es la pantalla principal de la aplicación.
   - Booleano: cumplido o pendiente.
   - Cuantitativo: cantidad acumulada y meta (por ejemplo, "1,25 / 2 L").
 - **RF-14.** Un hábito booleano se marca y desmarca con un toque.
-- **RF-15.** Un hábito cuantitativo suma su incremento con un toque. También se puede restar el incremento o escribir la cantidad exacta.
+- **RF-15.** Un hábito cuantitativo suma su incremento con un toque. También se puede restar el incremento o escribir la cantidad exacta. La cantidad nunca baja de 0 y admite 2 decimales como máximo.
 - **RF-16.** Un hábito cuantitativo cuenta como cumplido cuando la cantidad acumulada alcanza la meta. Se puede superar la meta.
 - **RF-17.** Un hábito aparece en los días programados a partir de la fecha en que se creó, nunca en días anteriores.
 
@@ -128,6 +128,7 @@ Puntos a decidir antes de implementar la parte correspondiente:
 - **Posponer:** ¿cuánto tiempo? ¿Fijo (por ejemplo, 1 hora) o a elegir entre varias opciones? ¿Configurable por hábito?
 - **Recordatorios cuantitativos:** si a la hora del recordatorio se ha avanzado pero no se ha llegado a la meta, ¿se envía igualmente? ¿Debe indicar lo que falta?
 - **Resumen del día:** ¿un aviso al final del día con los hábitos pendientes?
+- **Longitud de los textos:** ¿cuántos caracteres admiten el nombre de un hábito y la unidad? La especificación solo dice "texto corto".
 - **Orden de la lista del día:** ¿por hora del primer recordatorio, alfabético o por fecha de creación?
 - **Hábitos cumplidos en la lista:** ¿se quedan en su sitio o bajan al final?
 

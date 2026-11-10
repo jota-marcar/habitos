@@ -36,7 +36,7 @@ Proyecto Expo (SDK 58) con TypeScript estricto y npm. Comandos:
 
 ```bash
 npm start                    # servidor de desarrollo (Metro)
-npm run verify               # formato, lint, tipos y tests: ejecútalo antes de cada commit
+npm run verify               # formato, lint, tipos y tests con cobertura: ejecútalo antes de cada commit
 npm run lint                 # ESLint (eslint-config-expo)
 npm run typecheck            # tsc --noEmit
 npm test                     # Jest (jest-expo + React Native Testing Library)
@@ -50,6 +50,7 @@ npm run audit-deps           # avisos de seguridad frente a los aceptados (neces
 
 - Expo cambia mucho entre versiones de SDK: antes de usar una API de Expo o React Native, consulta la documentación de la versión instalada (`https://docs.expo.dev/versions/v58.0.0/`) en lugar de fiarte de la memoria.
 - Las pantallas viven en `src/app/` (Expo Router: cada fichero es una ruta). Fuera de ahí va todo lo demás, también los tests.
+- `src/domain` son reglas puras: no importa paquetes ni otras capas (lo impone ESLint) y su cobertura de tests debe ser del 100 %. Los tests van junto al código (`x.ts` y `x.test.ts`).
 - Imports con el alias `@/` → `src/` (por ejemplo, `@/domain/habitos`).
 - Las carpetas `ios/` y `android/` se generan; no se crean ni se editan a mano. La configuración nativa va en `app.json`.
 - Tras cada edición, un hook formatea el fichero y pasa ESLint (ver `docs/ecosistema-ia.md`). Si te devuelve errores, corrígelos.
