@@ -33,3 +33,9 @@ Los comandos completos están en [CLAUDE.md](CLAUDE.md#desarrollo).
 - Ramas `<tipo>/<descripcion>` y commits con [Conventional Commits](https://www.conventionalcommits.org/es/v1.0.0/) (`feat: …`, `fix: …`).
 
 La metodología completa está en [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Licencia
+
+Copyright © 2026 jota_marcar.
+
+El código es público para que cualquiera pueda leerlo y aprender de él, pero no es software libre. Se publica bajo la [PolyForm Strict License 1.0.0](LICENSE.md): permite usarlo con fines no comerciales, y no permite el uso comercial, modificarlo ni redistribuirlo.
