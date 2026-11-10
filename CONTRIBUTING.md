@@ -149,7 +149,7 @@ gh release create v0.1.0 --generate-notes
 Para que la regla "nunca commit directo en `main`" no dependa solo de la disciplina, se configura en GitHub (Settings → Branches/Rules):
 
 - Exigir Pull Request para hacer merge en `main`.
-- Exigir que pase el check **Verificar** de la CI (ver sección 8).
+- Exigir que pase el check **Verify** de la CI (ver sección 8).
 - Bloquear force push y borrado de `main`.
 - Permitir solo squash merge y borrar ramas automáticamente tras el merge (Settings → General).
 
@@ -158,7 +158,7 @@ Para que la regla "nunca commit directo en `main`" no dependa solo de la discipl
 ### Añadir dependencias
 
 - Usa `npx expo install <paquete>`, que elige la versión compatible con el SDK de Expo. Nunca `npm install <paquete>`.
-- Tras añadir o actualizar dependencias, ejecuta `npm run auditar`.
+- Tras añadir o actualizar dependencias, ejecuta `npm run audit-deps`.
 
 ### Scripts de instalación
 
@@ -177,7 +177,7 @@ Paquetes denegados:
 
 ### Avisos de seguridad
 
-`npm audit` no permite ignorar avisos concretos, así que se usa `npm run auditar` ([scripts/auditar.mjs](scripts/auditar.mjs)). El script compara los avisos con los aceptados en [scripts/auditoria-aceptada.json](scripts/auditoria-aceptada.json) y falla si:
+`npm audit` no permite ignorar avisos concretos, así que se usa `npm run audit-deps` ([scripts/audit-deps.mjs](scripts/audit-deps.mjs)). El script compara los avisos con los aceptados en [scripts/accepted-advisories.json](scripts/accepted-advisories.json) y falla si:
 
 - aparece un aviso que no está aceptado,
 - un aviso aceptado ya no aparece (hay que quitarlo de la lista), o
@@ -187,7 +187,7 @@ Ante un aviso nuevo, por este orden:
 
 1. Actualizar la dependencia a una versión corregida, con `npx expo install --fix` si es del SDK.
 2. Si no hay versión corregida compatible, comprobar si el código vulnerable llega a la app o solo a las herramientas de desarrollo, y si se puede explotar.
-3. Solo si no se puede explotar, aceptarlo en `auditoria-aceptada.json` con el motivo y una fecha de revisión de, como mucho, tres meses. La aceptación se decide en el Pull Request.
+3. Solo si no se puede explotar, aceptarlo en `accepted-advisories.json` con el motivo (`reason`, en inglés) y una fecha de revisión de, como mucho, tres meses. La aceptación se decide en el Pull Request.
 
 No se usa `npm audit fix --force`: cambia versiones mayores sin respetar el SDK de Expo.
 
@@ -197,11 +197,26 @@ GitHub Actions comprueba cada cambio. Los flujos están en `.github/workflows/`.
 
 | Flujo | Cuándo | Qué ejecuta | ¿Bloquea el merge? |
 |-------|--------|-------------|--------------------|
-| **CI → Verificar** | En cada Pull Request hacia `main` y en cada commit de `main` | `npm run verificar`: formato, lint, tipos y tests | Sí |
-| **CI → Auditar** | Igual | `npm run auditar`: avisos de seguridad | No, solo informa |
-| **Revisión semanal** | Cada lunes a las 07:00 UTC, o a mano desde la pestaña Actions | `npm run auditar` y `npx expo-doctor` | No aplica; si falla, GitHub avisa por correo |
+| **CI → Verify** | En cada Pull Request hacia `main` y en cada commit de `main` | `npm run verify`: formato, lint, tipos y tests | Sí |
+| **CI → Audit** | Igual | `npm run audit-deps`: avisos de seguridad | No, solo informa |
+| **Weekly review** | Cada lunes a las 07:00 UTC, o a mano desde la pestaña Actions | `npm run audit-deps` y `npx expo-doctor` | No aplica; si falla, GitHub avisa por correo |
 
-- **Auditar no bloquea** porque un aviso de seguridad nuevo puede publicarse cualquier día y no debe frenar un PR que no tiene que ver. Si sale en rojo, se resuelve en un PR propio siguiendo la sección 7.
+- **Audit no bloquea** porque un aviso de seguridad nuevo puede publicarse cualquier día y no debe frenar un PR que no tiene que ver. Si sale en rojo, se resuelve en un PR propio siguiendo la sección 7.
 - **`expo-doctor` solo va en la revisión semanal** porque falla cada vez que Expo publica un parche. Se corrige con `npx expo install --fix` en un PR.
 - **Las acciones de terceros se fijan a un commit exacto**, con la versión en un comentario, y los flujos solo tienen permiso de lectura. Para actualizar una acción se cambia el commit en un PR.
 - La versión de Node de la CI es la de `.nvmrc`.
+
+## 9. Idioma
+
+El código se escribe en inglés y la documentación en español ([ADR-0007](docs/adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)). La regla: lo que está dentro de un fichero de código o de configuración va en inglés; la prosa para personas va en español.
+
+| En inglés | En español |
+|-----------|------------|
+| Nombres de variables, funciones, tipos y ficheros de código | Documentación (`docs/`, README, este fichero, `CLAUDE.md`) y ADR |
+| Tablas y columnas de las bases de datos | Mensajes de commit, títulos y descripciones de Pull Request |
+| Comentarios del código | Nombres de rama |
+| Nombres de los tests y códigos de error | Textos que ve el usuario en la aplicación |
+| Scripts, hooks y flujos de CI: nombres, comentarios y mensajes | Instrucciones de las skills de Claude Code |
+
+- **Textos de la aplicación:** van en español aunque estén dentro del código, y separados de la lógica.
+- **Términos del dominio:** se traducen con la columna "En el código" del [glosario](docs/especificacion-funcional.md#2-glosario). Si falta un término, se añade al glosario en el mismo Pull Request, antes de usarlo.

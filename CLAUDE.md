@@ -10,6 +10,12 @@ Aplicación móvil para registrar hábitos diarios, centrada en los recordatorio
 
 Responde siempre en español.
 
+**Idioma.** El código va en inglés y la documentación en español ([ADR-0007](docs/adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)):
+
+- En inglés: todo lo que está dentro de un fichero de código o de configuración (nombres, comentarios, nombres de tests, códigos de error, tablas y columnas, scripts, hooks y flujos de CI).
+- En español: documentación, ADR, mensajes de commit, Pull Requests, nombres de rama y los textos que ve el usuario en la aplicación.
+- Los términos del dominio se traducen con la columna "En el código" del glosario de `docs/especificacion-funcional.md`. No improvises una traducción: si falta un término, añádelo antes al glosario.
+
 **Fase de debate (antes de decidir).** Cuando haya que tomar una decisión (funcional, de arquitectura, de herramientas o de enfoque):
 
 - Debate antes de actuar: presenta las opciones con sus ventajas e inconvenientes y da una recomendación argumentada.
@@ -30,17 +36,17 @@ Proyecto Expo (SDK 58) con TypeScript estricto y npm. Comandos:
 
 ```bash
 npm start                    # servidor de desarrollo (Metro)
-npm run verificar            # formato, lint, tipos y tests: ejecútalo antes de cada commit
+npm run verify               # formato, lint, tipos y tests: ejecútalo antes de cada commit
 npm run lint                 # ESLint (eslint-config-expo)
 npm run typecheck            # tsc --noEmit
 npm test                     # Jest (jest-expo + React Native Testing Library)
 npm run format               # Prettier sobre todo el código
 npx expo install <paquete>   # añadir dependencias (elige la versión compatible con el SDK); nunca npm install <paquete>
 npx expo-doctor              # diagnosticar dependencias y configuración
-npm run auditar              # avisos de seguridad frente a los aceptados (necesita red)
+npm run audit-deps           # avisos de seguridad frente a los aceptados (necesita red)
 ```
 
-- Tras añadir o actualizar dependencias, ejecuta `npm run auditar` y sigue la sección "Dependencias y seguridad" de `CONTRIBUTING.md`. Nunca aceptes un aviso de seguridad ni apruebes un script de instalación sin plantearlo antes al usuario.
+- Tras añadir o actualizar dependencias, ejecuta `npm run audit-deps` y sigue la sección "Dependencias y seguridad" de `CONTRIBUTING.md`. Nunca aceptes un aviso de seguridad ni apruebes un script de instalación sin plantearlo antes al usuario.
 
 - Expo cambia mucho entre versiones de SDK: antes de usar una API de Expo o React Native, consulta la documentación de la versión instalada (`https://docs.expo.dev/versions/v58.0.0/`) en lugar de fiarte de la memoria.
 - Las pantallas viven en `src/app/` (Expo Router: cada fichero es una ruta). Fuera de ahí va todo lo demás, también los tests.
@@ -64,7 +70,7 @@ Sigue la metodología de `CONTRIBUTING.md`. En resumen:
 - Los cambios llegan a `main` solo mediante Pull Request con squash merge. El título del PR sigue el mismo formato que los commits.
 - Push y PR forman parte del flujo automático de la fase de desarrollo (ver "Forma de trabajar"). Nunca hagas merge: lo hace el usuario.
 - Los commits no llevan la línea `Co-Authored-By`.
-- El hook `.claude/hooks/proteger-main.mjs` bloquea commit y push en `main`. Si te bloquea, crea una rama; no intentes rodearlo.
+- El hook `.claude/hooks/protect-main.mjs` bloquea commit y push en `main`. Si te bloquea, crea una rama; no intentes rodearlo.
 
 ## Ecosistema de IA
 

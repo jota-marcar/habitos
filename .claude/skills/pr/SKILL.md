@@ -13,11 +13,11 @@ Sigue estos pasos en orden. No hagas merge del PR: eso lo decide el usuario.
 Ejecuta:
 
 ```bash
-node .claude/skills/pr/contexto.mjs
+node .claude/skills/pr/context.mjs
 ```
 
-- Si termina con **BLOQUEOS**, detente, explica al usuario qué falta y cómo resolverlo. No hagas commits, rebases ni merges por tu cuenta para desbloquearlo.
-- Si hay **AVISOS**, menciónalos. Si la rama va por detrás de `main` o ya existe un PR, pregunta al usuario antes de seguir.
+- Si termina con **BLOCKERS**, detente, explica al usuario qué falta y cómo resolverlo. No hagas commits, rebases ni merges por tu cuenta para desbloquearlo.
+- Si hay **WARNINGS**, menciónalos. Si la rama va por detrás de `main` o ya existe un PR, pregunta al usuario antes de seguir.
 
 ## 2. Escribir el título
 

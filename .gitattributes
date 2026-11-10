@@ -1,13 +1,13 @@
-# Saltos de línea: LF en el repositorio y en la copia de trabajo, en cualquier sistema.
-# Evita diffs falsos entre Windows y macOS y los avisos "LF will be replaced by CRLF".
+# Line endings: LF in the repository and in the working copy, on every system.
+# Avoids spurious diffs between Windows and macOS and the "LF will be replaced by CRLF" warnings.
 * text=auto eol=lf
 
-# Scripts que Windows necesita con CRLF
+# Scripts that Windows needs with CRLF
 *.bat  text eol=crlf
 *.cmd  text eol=crlf
 *.ps1  text eol=crlf
 
-# Binarios: sin conversión ni diff de texto
+# Binaries: no conversion and no text diff
 *.png  binary
 *.jpg  binary
 *.jpeg binary

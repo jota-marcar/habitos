@@ -10,9 +10,9 @@ module.exports = defineConfig([
     ignores: ["dist/*", "coverage/*", ".expo/*"],
   },
   {
-    // Regla de dependencias de docs/arquitectura.md: el dominio son reglas puras
-    // y no depende de nada. Es una lista de permitidos: solo puede importar de
-    // src/domain, con rutas relativas o con el alias @/domain.
+    // Dependency rule from docs/arquitectura.md: the domain is pure rules and
+    // depends on nothing. It is an allowlist: it can only import from src/domain,
+    // through relative paths or the @/domain alias.
     files: ["src/domain/**"],
     rules: {
       "no-restricted-imports": [
@@ -20,16 +20,16 @@ module.exports = defineConfig([
         {
           patterns: [
             {
-              // Cualquier paquete o alias que no sea @/domain.
+              // Any package or alias other than @/domain.
               regex: "^(?!\\.{1,2}/|@/domain(/|$))",
               message:
-                "El dominio son reglas puras: no puede depender de paquetes ni de otras capas.",
+                "The domain is pure rules: it cannot depend on packages or on other layers.",
             },
             {
-              // Rutas relativas que salen de src/domain hacia otra capa.
+              // Relative paths that leave src/domain towards another layer.
               regex: "^(\\.\\./)+(app|data|sync|notifications|auth|ui)(/|$)",
               message:
-                "El dominio no depende de otras capas: solo puede importar de src/domain.",
+                "The domain does not depend on other layers: it can only import from src/domain.",
             },
           ],
         },

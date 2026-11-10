@@ -1,15 +1,15 @@
 import { StyleSheet, Text, View } from "react-native";
 
-export default function Inicio() {
+export default function Home() {
   return (
-    <View style={styles.contenedor}>
+    <View style={styles.container}>
       <Text>Hábitos</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  contenedor: {
+  container: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",

@@ -1,4 +1,4 @@
-# Prettier se aplica solo al código: la documentación en Markdown se edita a mano.
+# Prettier only applies to code: Markdown documentation is edited by hand.
 *.md
 
 node_modules/

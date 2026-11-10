@@ -15,7 +15,7 @@ Requisitos: Node.js 24 (ver `.nvmrc`) y npm.
 ```bash
 npm install
 npm start
-npm run verificar
+npm run verify
 ```
 
 Los comandos completos están en [CLAUDE.md](CLAUDE.md#desarrollo).
@@ -31,6 +31,8 @@ Los comandos completos están en [CLAUDE.md](CLAUDE.md#desarrollo).
 
 - `main` contiene el código en producción; los cambios entran solo mediante Pull Request.
 - Ramas `<tipo>/<descripcion>` y commits con [Conventional Commits](https://www.conventionalcommits.org/es/v1.0.0/) (`feat: …`, `fix: …`).
+
+- El código se escribe en inglés y la documentación en español ([ADR-0007](docs/adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)).
 
 La metodología completa está en [CONTRIBUTING.md](CONTRIBUTING.md).
 

@@ -46,9 +46,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/proteger-main.mjs\"",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-main.mjs\"",
             "timeout": 10,
-            "statusMessage": "Comprobando que no se toca main"
+            "statusMessage": "Checking that main is not touched"
           }
         ]
       }
@@ -59,9 +59,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/formatear.mjs\"",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/format.mjs\"",
             "timeout": 60,
-            "statusMessage": "Formateando y revisando el fichero"
+            "statusMessage": "Formatting and linting the file"
           }
         ]
       }

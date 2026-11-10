@@ -24,19 +24,22 @@ A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo
 
 ## 2. Glosario
 
-| Término | Significado |
-|---------|-------------|
-| **Hábito** | Algo que el usuario quiere hacer de forma periódica (por ejemplo, "Meditar" o "Beber agua"). |
-| **Hábito booleano** | Se cumple o no se cumple (por ejemplo, "Meditar"). |
-| **Hábito cuantitativo** | Tiene una meta numérica con unidad (por ejemplo, "Beber agua: 2 L"). |
-| **Meta** | Cantidad que hay que alcanzar en un día para cumplir un hábito cuantitativo. |
-| **Incremento** | Cantidad que se suma con cada toque en un hábito cuantitativo (por ejemplo, 250 ml). |
-| **Días programados** | Días de la semana en los que toca un hábito. |
-| **Registro** | Lo que se ha apuntado de un hábito en un día concreto: cumplido o no, o la cantidad acumulada. |
-| **Día** | Periodo de 00:00 a 23:59 en la hora local del dispositivo. |
-| **Recordatorio** | Aviso a una hora concreta para que el usuario no olvide un hábito. |
-| **Posponer** | Aplazar un recordatorio para recibirlo de nuevo más tarde. |
-| **Archivar** | Retirar un hábito de uso sin borrar su historial. |
+| Término | En el código | Significado |
+|---------|--------------|-------------|
+| **Hábito** | `Habit` | Algo que el usuario quiere hacer de forma periódica (por ejemplo, "Meditar" o "Beber agua"). |
+| **Hábito booleano** | `boolean` | Se cumple o no se cumple (por ejemplo, "Meditar"). |
+| **Hábito cuantitativo** | `quantitative` | Tiene una meta numérica con unidad (por ejemplo, "Beber agua: 2 L"). |
+| **Meta** | `target` | Cantidad que hay que alcanzar en un día para cumplir un hábito cuantitativo. |
+| **Incremento** | `increment` | Cantidad que se suma con cada toque en un hábito cuantitativo (por ejemplo, 250 ml). |
+| **Unidad** | `unit` | Texto corto que acompaña a las cantidades de un hábito cuantitativo (por ejemplo, "L" o "páginas"). |
+| **Días programados** | `scheduledDays` | Días de la semana en los que toca un hábito. |
+| **Registro** | `Entry` | Lo que se ha apuntado de un hábito en un día concreto: cumplido o no, o la cantidad acumulada. |
+| **Día** | `day` | Periodo de 00:00 a 23:59 en la hora local del dispositivo. |
+| **Recordatorio** | `Reminder` | Aviso a una hora concreta para que el usuario no olvide un hábito. |
+| **Posponer** | `snooze` | Aplazar un recordatorio para recibirlo de nuevo más tarde. |
+| **Archivar** | `archive` | Retirar un hábito de uso sin borrar su historial. |
+
+La columna "En el código" es el nombre en inglés con el que cada término aparece en el código y en el modelo de datos ([ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)). Cada término se traduce siempre igual; uno nuevo se añade aquí antes de usarlo en el código. `goal` queda reservado para los objetivos de la [visión a futuro](#6-visión-a-futuro-tres-horizontes), y `Record` se evita porque ya tiene otro significado en el lenguaje de programación.
 
 ## 3. Funcionalidades del MVP
 

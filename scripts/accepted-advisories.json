@@ -1,0 +1,36 @@
+{
+  "advisories": [
+    {
+      "id": "GHSA-mrhx-c7xc-m3w5",
+      "package": "zod",
+      "severity": "high",
+      "reason": "Only used by tools on the development machine (@expo/cli and eslint-plugin-react-hooks) to validate our own configuration files; it does not reach the app bundle. The fix only exists in zod 4 and @expo/cli requires zod 3, in the canary version too.",
+      "acceptedOn": "2026-10-28",
+      "reviewBy": "2027-01-28"
+    },
+    {
+      "id": "GHSA-gcqx-w48m-w2h4",
+      "package": "deepmerge",
+      "severity": "low",
+      "reason": "Only used by @expo/config and jest-config on the development machine to merge our own configuration; it does not reach the app bundle. There is no fixed version: the package has been unmaintained since 2023.",
+      "acceptedOn": "2026-10-28",
+      "reviewBy": "2027-01-28"
+    },
+    {
+      "id": "GHSA-g3hv-75wg-m249",
+      "package": "minimatch",
+      "severity": "moderate",
+      "reason": "Only used by tools on the development machine (@expo/fingerprint and Jest coverage) with patterns from this project; it does not reach the app bundle. The fix only exists in minimatch 11 and there is no patch for versions 9 and 10, the ones Expo and Jest require.",
+      "acceptedOn": "2026-11-10",
+      "reviewBy": "2027-01-28"
+    },
+    {
+      "id": "GHSA-3g3m-2fjr-6pw4",
+      "package": "glob",
+      "severity": "moderate",
+      "reason": "Only used by tools on the development machine (@expo/cli, @expo/fingerprint and Jest) on folders of this project; it does not reach the app bundle. The fix only exists in glob 14; Expo requires version 13 and Jest version 10.",
+      "acceptedOn": "2026-11-10",
+      "reviewBy": "2027-01-28"
+    }
+  ]
+}
