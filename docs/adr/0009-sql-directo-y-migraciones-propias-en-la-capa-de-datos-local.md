@@ -1,6 +1,6 @@
 # ADR-0009: SQL directo y migraciones propias en la capa de datos local
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-11
 
 ## Contexto
