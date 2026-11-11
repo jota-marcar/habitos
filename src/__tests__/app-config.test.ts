@@ -3,7 +3,10 @@ import appConfig, { resolveVariant } from "../../app.config";
 const staticConfig = {
   name: "Hábitos",
   slug: "habitos",
-  ios: { icon: "./assets/expo.icon" },
+  ios: {
+    icon: "./assets/expo.icon",
+    infoPlist: { ITSAppUsesNonExemptEncryption: false },
+  },
 };
 
 function configFor(variant: string | undefined) {
@@ -46,7 +49,8 @@ describe("appConfig", () => {
   test("the development variant has its own name, scheme and bundle identifier", () => {
     const config = configFor("development");
 
-    expect(config.name).toBe("Hábitos Dev");
+    expect(config.name).toBe("Habitos Dev");
+    expect(config.ios?.infoPlist?.CFBundleDisplayName).toBe("Hábitos Dev");
     expect(config.scheme).toBe("habitos-dev");
     expect(config.ios?.bundleIdentifier).toBe("com.jotamarcar.habitos.dev");
   });
@@ -54,7 +58,8 @@ describe("appConfig", () => {
   test("the production variant has its own name, scheme and bundle identifier", () => {
     const config = configFor("production");
 
-    expect(config.name).toBe("Hábitos");
+    expect(config.name).toBe("Habitos");
+    expect(config.ios?.infoPlist?.CFBundleDisplayName).toBe("Hábitos");
     expect(config.scheme).toBe("habitos");
     expect(config.ios?.bundleIdentifier).toBe("com.jotamarcar.habitos");
   });
@@ -68,6 +73,9 @@ describe("appConfig", () => {
     const production = configFor("production");
 
     expect(development.name).not.toBe(production.name);
+    expect(development.ios?.infoPlist?.CFBundleDisplayName).not.toBe(
+      production.ios?.infoPlist?.CFBundleDisplayName,
+    );
     expect(development.scheme).not.toBe(production.scheme);
     expect(development.ios?.bundleIdentifier).not.toBe(
       production.ios?.bundleIdentifier,
@@ -79,7 +87,16 @@ describe("appConfig", () => {
 
     expect(config.slug).toBe("habitos");
     expect(config.ios?.icon).toBe("./assets/expo.icon");
+    expect(config.ios?.infoPlist?.ITSAppUsesNonExemptEncryption).toBe(false);
   });
+
+  // The Xcode target comes from the name, and the build tools disagree on non-ASCII letters.
+  test.each(["development", "production"])(
+    "the internal name of the %s variant is plain ASCII",
+    (variant) => {
+      expect(configFor(variant).name).toMatch(/^[A-Za-z ]+$/);
+    },
+  );
 
   test("an unknown variant stops the build", () => {
     expect(() => configFor("staging")).toThrow("Unknown APP_VARIANT");

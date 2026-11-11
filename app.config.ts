@@ -7,21 +7,29 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
 export type AppVariant = "development" | "production";
 
 interface VariantConfig {
+  /** Internal name: it names the Xcode project, so it must be plain ASCII. */
   readonly name: string;
+  /** The name the user sees under the icon. */
+  readonly displayName: string;
   readonly scheme: string;
   readonly bundleIdentifier: string;
 }
 
+// EAS CLI and Expo derive the Xcode target from `name` in different ways when it has
+// non-ASCII letters ("HbitosDev" against "HabitosDev"), and the build fails. That is why the
+// accent only goes in the display name.
 // Each variant has its own identity so both apps can be installed side by side and no value
 // of one environment can reach the other.
 const VARIANTS: Record<AppVariant, VariantConfig> = {
   development: {
-    name: "Hábitos Dev",
+    name: "Habitos Dev",
+    displayName: "Hábitos Dev",
     scheme: "habitos-dev",
     bundleIdentifier: "com.jotamarcar.habitos.dev",
   },
   production: {
-    name: "Hábitos",
+    name: "Habitos",
+    displayName: "Hábitos",
     scheme: "habitos",
     bundleIdentifier: "com.jotamarcar.habitos",
   },
@@ -50,6 +58,10 @@ export default function appConfig({ config }: ConfigContext): ExpoConfig {
     ios: {
       ...config.ios,
       bundleIdentifier: variant.bundleIdentifier,
+      infoPlist: {
+        ...config.ios?.infoPlist,
+        CFBundleDisplayName: variant.displayName,
+      },
     },
   };
 }

@@ -43,7 +43,8 @@ Dos variantes, **desarrollo** y **producción**, dentro del mismo proyecto de Ex
 | | Desarrollo | Producción |
 |---|---|---|
 | `APP_VARIANT` | `development` | `production` |
-| Nombre | Hábitos Dev | Hábitos |
+| Nombre visible | Hábitos Dev | Hábitos |
+| Nombre interno | Habitos Dev | Habitos |
 | Bundle identifier | `com.jotamarcar.habitos.dev` | `com.jotamarcar.habitos` |
 | Scheme | `habitos-dev` | `habitos` |
 | Perfil de EAS | `development` (development build, distribución interna) | `production` (tienda y TestFlight) |
@@ -60,5 +61,6 @@ Dos variantes, **desarrollo** y **producción**, dentro del mismo proyecto de Ex
 - `expo-dev-client` pasa a ser una dependencia. Sus herramientas de desarrollo solo se compilan en la configuración de depuración, así que no entran en el build de producción.
 - Los tests de `app.config.ts` comprueban que las variantes no comparten nombre, scheme ni identificador.
 - Compilar para el iPhone exige una cuenta de pago del Apple Developer Program.
+- El nombre interno, del que sale el nombre del proyecto de Xcode, va sin tilde: EAS y Expo lo calculan de forma distinta cuando lleva letras no ASCII y la compilación falla. La tilde va solo en el nombre visible.
 - El número de compilación lo lleva EAS (`appVersionSource: remote`), no el repositorio.
 - Queda pendiente decidir cómo se guardan las variables de cada entorno cuando exista el backend ([ADR-0003](0003-supabase-como-backend.md)).
