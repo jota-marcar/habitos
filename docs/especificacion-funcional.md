@@ -93,13 +93,13 @@ Es la pantalla principal de la aplicación.
 
 ### 3.5 Recordatorios
 
-- **RF-22.** Cada hábito puede tener cero, una o varias horas de recordatorio.
+- **RF-22.** Cada hábito puede tener cero, una o varias horas de recordatorio. Cada hora se fija con precisión de minuto y un hábito no puede repetir la misma hora.
 - **RF-23.** Un recordatorio solo se envía los días programados del hábito.
-- **RF-24.** Si el hábito ya está cumplido ese día, sus recordatorios pendientes de ese día no se envían.
+- **RF-24.** Si el hábito ya está cumplido ese día, sus recordatorios pendientes de ese día no se envían, tampoco los pospuestos. Un hábito cuantitativo que ha avanzado sin llegar a la meta sí se recuerda, y el recordatorio indica lo que lleva y la meta (por ejemplo, "llevas 1 de 2 L").
 - **RF-25.** Desde el propio recordatorio, sin abrir la aplicación, el usuario puede:
   - **Booleano:** marcarlo como cumplido.
   - **Cuantitativo:** sumar el incremento.
-  - **Ambos:** posponerlo.
+  - **Ambos:** posponerlo 1 hora. El tiempo es el mismo para todos los hábitos. Un recordatorio no sale del día de su hábito: si al posponerlo caería en el día siguiente, no se vuelve a enviar.
 - **RF-26.** Al tocar el recordatorio (fuera de sus botones), se abre la aplicación en el día actual.
 - **RF-27.** Los recordatorios funcionan sin conexión.
 
@@ -125,8 +125,6 @@ Funcionalidades descartadas por ahora, en orden aproximado de interés:
 
 Puntos a decidir antes de implementar la parte correspondiente:
 
-- **Posponer:** ¿cuánto tiempo? ¿Fijo (por ejemplo, 1 hora) o a elegir entre varias opciones? ¿Configurable por hábito?
-- **Recordatorios cuantitativos:** si a la hora del recordatorio se ha avanzado pero no se ha llegado a la meta, ¿se envía igualmente? ¿Debe indicar lo que falta?
 - **Resumen del día:** ¿un aviso al final del día con los hábitos pendientes?
 - **Longitud de los textos:** ¿cuántos caracteres admiten el nombre de un hábito y la unidad? La especificación solo dice "texto corto".
 - **Orden de la lista del día:** ¿por hora del primer recordatorio, alfabético o por fecha de creación?
