@@ -11,6 +11,7 @@ Cada ADR documenta una decisión técnica importante: el contexto, las opciones 
 | [0005](0005-recordatorios-locales-en-ventana-deslizante.md) | Recordatorios locales en ventana deslizante | Aceptado |
 | [0006](0006-configuracion-de-habitos-con-vigencia.md) | Configuración de hábitos con fecha de vigencia | Aceptado |
 | [0007](0007-codigo-en-ingles-y-documentacion-en-espanol.md) | Código en inglés y documentación en español | Aceptado |
+| [0008](0008-variantes-de-desarrollo-y-produccion.md) | Variantes de desarrollo y producción | Propuesto |
 
 ## Plantilla
 

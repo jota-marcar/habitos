@@ -52,7 +52,8 @@ npm run audit-deps           # avisos de seguridad frente a los aceptados (neces
 - Las pantallas viven en `src/app/` (Expo Router: cada fichero es una ruta). Fuera de ahí va todo lo demás, también los tests.
 - `src/domain` son reglas puras: no importa paquetes ni otras capas (lo impone ESLint) y su cobertura de tests debe ser del 100 %. Los tests van junto al código (`x.ts` y `x.test.ts`).
 - Imports con el alias `@/` → `src/` (por ejemplo, `@/domain/habitos`).
-- Las carpetas `ios/` y `android/` se generan; no se crean ni se editan a mano. La configuración nativa va en `app.json`.
+- Las carpetas `ios/` y `android/` se generan; no se crean ni se editan a mano. La configuración nativa común va en `app.json` y lo que cambia entre desarrollo y producción, en `app.config.ts` ([ADR-0008](docs/adr/0008-variantes-de-desarrollo-y-produccion.md)).
+- Nunca mezcles valores de desarrollo y de producción: todo lo que dependa del entorno sale de la variante (`APP_VARIANT`) o de variables de entorno de EAS.
 - Tras cada edición, un hook formatea el fichero y pasa ESLint (ver `docs/ecosistema-ia.md`). Si te devuelve errores, corrígelos.
 
 ## Arquitectura
