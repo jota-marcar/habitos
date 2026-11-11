@@ -129,7 +129,7 @@ erDiagram
     REMINDER {
         uuid id
         uuid habit_id
-        time time "hora local"
+        time time "hora local, sin segundos"
     }
 ```
 
@@ -141,7 +141,9 @@ Decisiones del modelo:
 - **Días programados:** máscara de 7 bits en `scheduled_days`, con el lunes en el bit 0 y el domingo en el bit 6.
 - **Cantidades:** `target`, `increment` y `value` tienen 2 decimales como máximo y nunca son negativas. Un registro con valor 0 equivale a no tener registro.
 - **Un registro por hábito y día** (clave única `habit_id + date`). Si no hay registro, el hábito está pendiente.
-- **Los recordatorios no tienen versiones**: solo afectan al futuro.
+- **Las horas son horas del día** (`08:30`), con precisión de minuto y sin zona horaria, igual que las fechas.
+- **Los recordatorios no tienen versiones**: solo afectan al futuro. Un hábito no puede tener dos a la misma hora (clave única `habit_id + time`).
+- **Qué recordatorios se programan:** a partir de ahora y por cercanía, los de cada hábito en sus días programados, salvo que el hábito esté cumplido ese día o archivado. Como mucho 60 ([ADR-0005](adr/0005-recordatorios-locales-en-ventana-deslizante.md)). Cada aviso lleva el progreso del hábito ese día para poder mostrarlo.
 - **Campos de sincronización** en todas las tablas: identificador generado en el dispositivo (UUID), `updated_at` asignado por el servidor y `deleted` (borrado lógico) para propagar eliminaciones.
 
 ## 6. Flujos principales
@@ -156,7 +158,7 @@ Decisiones del modelo:
 
 1. iOS muestra la notificación con sus botones ("Hecho" o "+incremento", y "Posponer").
 2. La acción se recibe en la app sin abrirla en primer plano y se ejecuta el mismo flujo de "Marcar un hábito".
-3. "Posponer" programa una notificación nueva para más tarde.
+3. "Posponer" programa una notificación nueva para una hora después. Si esa hora cae en el día siguiente, no programa nada. Las notificaciones pospuestas no forman parte de la ventana de 60: usan el margen que deja hasta las 64 de iOS.
 
 ### Sincronización
 
