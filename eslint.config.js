@@ -36,4 +36,23 @@ module.exports = defineConfig([
       ],
     },
   },
+  {
+    // The data layer only knows the domain: it does not depend on the screens or on the
+    // layers that use it.
+    files: ["src/data/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "^(@/|(\.\./)+)(app|sync|notifications|auth|ui)(/|$)",
+              message:
+                "The data layer can only depend on the domain, not on other layers.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
