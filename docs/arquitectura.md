@@ -61,6 +61,7 @@ flowchart LR
 | Compilación y publicación | EAS Build, EAS Submit y TestFlight | [ADR-0002](adr/0002-expo-como-plataforma.md) |
 | Tests | Jest y React Native Testing Library | Estándar de Expo |
 | Calidad de código | ESLint y Prettier | Estándar de Expo |
+| Variantes | Desarrollo y producción, con identidad propia cada una | [ADR-0008](adr/0008-variantes-de-desarrollo-y-produccion.md) |
 | Idioma | Código en inglés, documentación en español | [ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md) |
 
 Las versiones concretas se fijan al crear el proyecto y quedan registradas en `package.json`.
@@ -173,10 +174,14 @@ Decisiones del modelo:
 
 ## 8. Entornos y publicación
 
-| Entorno | Uso | Backend |
-|---------|-----|---------|
-| Desarrollo | Development build en el iPhone, conectado al servidor de desarrollo del PC por wifi | Proyecto Supabase de desarrollo |
-| Producción | Build de producción distribuido por TestFlight (y, más adelante, la App Store) | Proyecto Supabase de producción |
+| Entorno | Aplicación | Uso | Backend |
+|---------|------------|-----|---------|
+| Desarrollo | Hábitos Dev (`com.jotamarcar.habitos.dev`) | Development build en el iPhone, conectado al servidor de desarrollo del PC por wifi | Proyecto Supabase de desarrollo |
+| Producción | Hábitos (`com.jotamarcar.habitos`) | Build de producción distribuido por TestFlight (y, más adelante, la App Store) | Proyecto Supabase de producción |
+
+- Cada entorno es una variante de la aplicación con su propio nombre, identificador y scheme, así que las dos conviven en el mismo iPhone sin compartir datos ([ADR-0008](adr/0008-variantes-de-desarrollo-y-produccion.md)).
+- La variante la decide `APP_VARIANT`, que fija cada perfil de `eas.json`. Si falta, es desarrollo; un valor desconocido detiene la compilación.
+- Lo que cambia entre variantes está en `app.config.ts`; lo común, en `app.json`.
 
 - Los cambios solo de JavaScript pueden llegar a producción con **EAS Update**, sin pasar por una nueva compilación.
 - Los cambios nativos (dependencias nuevas, permisos) requieren una compilación con EAS Build y una nueva versión en TestFlight.

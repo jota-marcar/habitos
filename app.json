@@ -1,11 +1,9 @@
 {
   "expo": {
-    "name": "Hábitos",
     "slug": "habitos",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "habitos",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
