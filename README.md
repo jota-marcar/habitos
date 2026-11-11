@@ -6,7 +6,7 @@ Proyecto de aprendizaje: se desarrolla con Claude Code e irá incorporando agent
 
 ## Estado
 
-Fase 1: proyecto Expo creado, con CI, y la capa de dominio (las reglas de los hábitos de un día y de sus recordatorios) implementada y probada, y la capa de datos local (esquema, migraciones y repositorios). La aplicación tiene dos variantes, desarrollo y producción, preparadas para compilarse con EAS. Todavía no hay pantallas.
+Fase 1: proyecto Expo creado, con CI. Están implementadas y probadas la capa de dominio (las reglas de los hábitos de un día y de sus recordatorios) y la capa de datos local (esquema, migraciones y repositorios). La aplicación tiene dos variantes, desarrollo y producción, preparadas para compilarse con EAS. Todavía no hay pantallas.
 
 ## Desarrollo
 
