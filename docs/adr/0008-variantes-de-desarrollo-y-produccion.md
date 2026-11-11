@@ -1,6 +1,6 @@
 # ADR-0008: Variantes de desarrollo y producción
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-11
 
 ## Contexto

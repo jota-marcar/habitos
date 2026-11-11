@@ -51,6 +51,7 @@ npm run audit-deps           # avisos de seguridad frente a los aceptados (neces
 - Expo cambia mucho entre versiones de SDK: antes de usar una API de Expo o React Native, consulta la documentación de la versión instalada (`https://docs.expo.dev/versions/v58.0.0/`) en lugar de fiarte de la memoria.
 - Las pantallas viven en `src/app/` (Expo Router: cada fichero es una ruta). Fuera de ahí va todo lo demás, también los tests.
 - `src/domain` son reglas puras: no importa paquetes ni otras capas (lo impone ESLint) y su cobertura de tests debe ser del 100 %. Los tests van junto al código (`x.ts` y `x.test.ts`).
+- `src/data` es el acceso a la base local: SQL directo en repositorios que solo dependen del dominio y de la interfaz `Database` (lo impone ESLint), también con cobertura del 100 %. Sus tests usan el SQLite integrado en Node (`src/data/testing`). Un cambio de esquema es una migración nueva al final de `migrations.ts`; nunca edites una ya publicada ([ADR-0009](docs/adr/0009-sql-directo-y-migraciones-propias-en-la-capa-de-datos-local.md)).
 - Imports con el alias `@/` → `src/` (por ejemplo, `@/domain/habitos`).
 - Las carpetas `ios/` y `android/` se generan; no se crean ni se editan a mano. La configuración nativa común va en `app.json` y lo que cambia entre desarrollo y producción, en `app.config.ts` ([ADR-0008](docs/adr/0008-variantes-de-desarrollo-y-produccion.md)).
 - Nunca mezcles valores de desarrollo y de producción: todo lo que dependa del entorno sale de la variante (`APP_VARIANT`) o de variables de entorno de EAS.
