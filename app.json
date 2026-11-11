@@ -35,6 +35,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9321856d-8680-432d-ab9c-e35062400d59"
+      }
+    },
+    "owner": "jota_marcar"
   }
 }
