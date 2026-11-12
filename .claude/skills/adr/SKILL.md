@@ -1,6 +1,6 @@
 ---
 name: adr
-description: Crea un nuevo registro de decisión de arquitectura (ADR) en docs/adr con el siguiente número, la plantilla del proyecto y el índice actualizado. Úsala cuando se tome o se vaya a proponer una decisión técnica importante, o cuando el usuario pida documentar una decisión.
+description: Crea un nuevo registro de decisión de arquitectura (ADR) en docs/adr con el siguiente número, la plantilla del proyecto y el índice actualizado, o marca como aceptado uno existente. Úsala cuando se tome o se vaya a proponer una decisión técnica importante, cuando el usuario pida documentar una decisión o cuando diga que acepta un ADR.
 argument-hint: "<título de la decisión>"
 ---
 
@@ -45,3 +45,13 @@ Usa solo información de la conversación, del repositorio o de fuentes que haya
 ## 5. Informar
 
 Resume al usuario la decisión y las opciones descartadas, y pídele que la revise para pasarla a `Aceptado`. El ADR va en el mismo Pull Request que el cambio que introduce la decisión.
+
+## Aceptar un ADR
+
+Solo cuando el usuario lo diga de forma expresa ("acepto el ADR-0008"). Que apruebe el plan o haga el merge del PR no cuenta como aceptación.
+
+```bash
+node .claude/skills/adr/accept.mjs <número> [<número>…]
+```
+
+Cambia el estado a `Aceptado` en el fichero del ADR y en el índice. Si alguno no está en `Propuesto`, no cambia nada y lo dice. El cambio va en una rama y un Pull Request, como cualquier otro; si el PR que introduce el ADR sigue abierto, añádelo ahí.

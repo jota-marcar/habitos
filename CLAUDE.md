@@ -30,6 +30,12 @@ Responde siempre en español.
 
 **Resumen en cada PR.** La descripción del PR y el mensaje final al usuario resumen todo lo hecho: qué cambia y por qué, decisiones tomadas durante la implementación, cómo se ha probado y qué queda pendiente o sin verificar. El usuario no debe perder contexto de ningún cambio.
 
+**Contexto y consumo.** El contexto de una sesión cuesta en cada mensaje:
+
+- Una sesión por tarea o Pull Request. Lo que deba sobrevivir a la sesión va en la documentación, los ADR o la memoria, no en la conversación. Si el usuario cambia de tarea en una sesión larga, sugiérele empezar una nueva.
+- Lo voluminoso se investiga aparte: para leer registros de build o de CI, documentación extensa o muchos ficheros a la vez, usa un subagente de exploración (`Explore`) y trae solo la conclusión. Nunca vuelques una salida entera en la conversación: filtra antes.
+- Usa las skills del proyecto en lugar de repetir sus pasos a mano: `/sync` tras un merge, `/pr` para abrir el PR y esperar a la CI, `/adr` para crear o aceptar un ADR.
+
 ## Desarrollo
 
 Proyecto Expo (SDK 58) con TypeScript estricto y npm. Comandos:
@@ -44,6 +50,7 @@ npm run format               # Prettier sobre todo el código
 npx expo install <paquete>   # añadir dependencias (elige la versión compatible con el SDK); nunca npm install <paquete>
 npx expo-doctor              # diagnosticar dependencias y configuración
 npm run audit-deps           # avisos de seguridad frente a los aceptados (necesita red)
+npm run build:dev            # development build para el iPhone en EAS (gasta un build: solo si el usuario lo pide)
 ```
 
 - Tras añadir o actualizar dependencias, ejecuta `npm run audit-deps` y sigue la sección "Dependencias y seguridad" de `CONTRIBUTING.md`. Nunca aceptes un aviso de seguridad ni apruebes un script de instalación sin plantearlo antes al usuario.
@@ -55,6 +62,8 @@ npm run audit-deps           # avisos de seguridad frente a los aceptados (neces
 - Imports con el alias `@/` → `src/` (por ejemplo, `@/domain/habitos`).
 - Las carpetas `ios/` y `android/` se generan; no se crean ni se editan a mano. La configuración nativa común va en `app.json` y lo que cambia entre desarrollo y producción, en `app.config.ts` ([ADR-0008](docs/adr/0008-variantes-de-desarrollo-y-produccion.md)).
 - Nunca mezcles valores de desarrollo y de producción: todo lo que dependa del entorno sale de la variante (`APP_VARIANT`) o de variables de entorno de EAS.
+- Los comandos de `eas` reescriben `app.json` con valores que no deben quedarse ahí. Después de cualquiera de ellos, revisa `git diff app.json`; un test lo comprueba (`src/__tests__/app-json.test.ts`).
+- Los builds de EAS son limitados (15 de iOS en el plan gratuito). Solo hace falta uno nuevo cuando cambia algo nativo (una dependencia con código nativo, `app.json`, `app.config.ts`): agrupa esos cambios y propón el build al usuario, que es quien lo lanza.
 - Tras cada edición, un hook formatea el fichero y pasa ESLint (ver `docs/ecosistema-ia.md`). Si te devuelve errores, corrígelos.
 
 ## Arquitectura

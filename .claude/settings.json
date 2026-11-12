@@ -25,7 +25,22 @@
       "Bash(npx tsc *)",
       "Bash(npx jest *)",
       "Bash(npx prettier *)",
-      "Bash(npx eslint *)"
+      "Bash(npx eslint *)",
+      "Bash(git pull *)",
+      "Bash(git merge *)",
+      "Bash(git remote -v)",
+      "Bash(gh run view *)",
+      "Bash(gh run list *)",
+      "Bash(gh run watch *)",
+      "Bash(node .claude/skills/*)",
+      "Bash(npm ls *)",
+      "Bash(npm view *)",
+      "Bash(npx expo-doctor *)",
+      "Bash(npx expo config *)",
+      "Bash(eas whoami)",
+      "Bash(eas project:info)",
+      "Bash(eas build:view *)",
+      "Bash(eas build:list *)"
     ],
     "ask": [
       "Bash(git push *)",
@@ -35,7 +50,9 @@
       "Bash(git clean *)",
       "Bash(npm install *)",
       "Bash(npm uninstall *)",
-      "Bash(npx expo install *)"
+      "Bash(npx expo install *)",
+      "Bash(eas build *)",
+      "Bash(npm run build:dev *)"
     ],
     "deny": ["Read(./.env)", "Read(./.env.*)"]
   },

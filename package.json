@@ -46,7 +46,8 @@
     "test": "jest",
     "test:coverage": "jest --coverage",
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage",
-    "audit-deps": "node scripts/audit-deps.mjs"
+    "audit-deps": "node scripts/audit-deps.mjs",
+    "build:dev": "node scripts/build-dev.mjs"
   },
   "private": true,
   "allowScripts": {
