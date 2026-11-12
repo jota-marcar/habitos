@@ -13,6 +13,7 @@ Cada ADR documenta una decisión técnica importante: el contexto, las opciones 
 | [0007](0007-codigo-en-ingles-y-documentacion-en-espanol.md) | Código en inglés y documentación en español | Aceptado |
 | [0008](0008-variantes-de-desarrollo-y-produccion.md) | Variantes de desarrollo y producción | Aceptado |
 | [0009](0009-sql-directo-y-migraciones-propias-en-la-capa-de-datos-local.md) | SQL directo y migraciones propias en la capa de datos local | Aceptado |
+| [0010](0010-interfaz-con-stack-hooks-propios-sobre-expo-sqlite-y-estilos-sin-libreria.md) | Interfaz con Stack, hooks propios sobre expo-sqlite y estilos sin librería | Propuesto |
 
 ## Plantilla
 

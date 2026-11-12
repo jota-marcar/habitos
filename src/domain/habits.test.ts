@@ -2,6 +2,8 @@ import { localDate } from "./dates";
 import {
   DEFAULT_INCREMENT,
   DEFAULT_SCHEDULED_DAYS,
+  MAX_NAME_LENGTH,
+  MAX_UNIT_LENGTH,
   archiveHabit,
   changeConfig,
   createHabit,
@@ -95,6 +97,21 @@ describe("createHabit", () => {
     expect(errorsOf({ ...meditate, name })).toEqual(["name_empty"]);
   });
 
+  test("accepts a name of 40 characters, not counting the surrounding spaces", () => {
+    const name = ` ${"a".repeat(MAX_NAME_LENGTH)} `;
+    expect(errorsOf({ ...meditate, name })).toEqual([]);
+  });
+
+  test("rejects a name longer than 40 characters", () => {
+    const name = "a".repeat(MAX_NAME_LENGTH + 1);
+    expect(errorsOf({ ...meditate, name })).toEqual(["name_too_long"]);
+  });
+
+  test("counts an emoji as a single character", () => {
+    const name = "🧘".repeat(MAX_NAME_LENGTH);
+    expect(errorsOf({ ...meditate, name })).toEqual([]);
+  });
+
   test("requires at least one scheduled day", () => {
     const config = { ...booleanConfig, scheduledDays: NO_DAYS };
     expect(errorsOf({ ...meditate, config })).toEqual(["scheduled_days_empty"]);
@@ -138,6 +155,13 @@ describe("createHabit", () => {
   ])("rejects a unit that is %s", (_case, unit) => {
     const config = { ...waterConfig, unit };
     expect(errorsOf({ ...water, config })).toEqual(["unit_empty"]);
+  });
+
+  test("accepts a unit of 10 characters and rejects a longer one", () => {
+    const fits = { ...waterConfig, unit: "a".repeat(MAX_UNIT_LENGTH) };
+    const tooLong = { ...waterConfig, unit: "a".repeat(MAX_UNIT_LENGTH + 1) };
+    expect(errorsOf({ ...water, config: fits })).toEqual([]);
+    expect(errorsOf({ ...water, config: tooLong })).toEqual(["unit_too_long"]);
   });
 
   test.each([

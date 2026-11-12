@@ -1,5 +1,12 @@
-import { Stack } from "expo-router";
+import { AppStack, STACK_SETTINGS } from "@/ui/app-stack";
+import { DatabaseProvider } from "@/ui/database";
+
+export const unstable_settings = STACK_SETTINGS;
 
 export default function RootLayout() {
-  return <Stack />;
+  return (
+    <DatabaseProvider>
+      <AppStack />
+    </DatabaseProvider>
+  );
 }

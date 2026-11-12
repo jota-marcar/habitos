@@ -1,5 +1,6 @@
 import { localDate } from "@/domain/dates";
 import { scheduledDaysFrom } from "@/domain/schedule";
+import { localTime } from "@/domain/times";
 
 import {
   addHabit,
@@ -9,6 +10,7 @@ import {
   saveHabit,
   saveHabitVersion,
 } from "./habits-repository";
+import { listReminders } from "./reminders-repository";
 import {
   habit,
   markSynced,
@@ -158,6 +160,32 @@ describe("addHabit", () => {
 
     expect(await listHabits(db)).toEqual([]);
     expect(await listHabitVersions(db)).toEqual([]);
+  });
+
+  test("saves its reminders with it", async () => {
+    const reminders = [
+      { id: "r1", habitId: "read", time: localTime("08:00") },
+      { id: "r2", habitId: "read", time: localTime("21:30") },
+    ];
+
+    await addHabit(db, habit("read"), version("read"), reminders);
+
+    expect(await listReminders(db)).toEqual(reminders);
+  });
+
+  test("saves nothing if a reminder is rejected", async () => {
+    const duplicated = [
+      { id: "r1", habitId: "read", time: localTime("08:00") },
+      { id: "r2", habitId: "read", time: localTime("08:00") },
+    ];
+
+    await expect(
+      addHabit(db, habit("read"), version("read"), duplicated),
+    ).rejects.toThrow();
+
+    expect(await listHabits(db)).toEqual([]);
+    expect(await listHabitVersions(db)).toEqual([]);
+    expect(await listReminders(db)).toEqual([]);
   });
 });
 
