@@ -22,6 +22,17 @@ describe("app.json", () => {
     expect(extra.router).toBeUndefined();
   });
 
+  test("only enables local notifications, so the build needs no push entitlement", () => {
+    const plugins = (expo.plugins ?? []) as unknown[];
+    const notifications = plugins.find(
+      (plugin) => Array.isArray(plugin) && plugin[0] === "expo-notifications",
+    );
+    expect(notifications).toEqual([
+      "expo-notifications",
+      { enableRemoteNotifications: false },
+    ]);
+  });
+
   test("keeps the link with the EAS project", () => {
     expect(expo.owner).toBe("jota_marcar");
     expect(extra.eas).toEqual({

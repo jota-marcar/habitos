@@ -1,4 +1,4 @@
-import { isAmount, roundAmount } from "./amounts";
+import { isAmount, parseAmount, roundAmount } from "./amounts";
 
 describe("roundAmount", () => {
   test("removes the floating-point error of adding decimals", () => {
@@ -35,4 +35,24 @@ describe("isAmount", () => {
     expect(isAmount(Number.NaN)).toBe(false);
     expect(isAmount(Number.POSITIVE_INFINITY)).toBe(false);
   });
+});
+
+describe("parseAmount", () => {
+  test.each([
+    ["2", 2],
+    ["1,25", 1.25],
+    ["1.25", 1.25],
+    [" 0,5 ", 0.5],
+    ["0", 0],
+    ["1,234", 1.234],
+  ])("reads %j as %d", (text, amount) => {
+    expect(parseAmount(text)).toBe(amount);
+  });
+
+  test.each(["", "  ", "abc", "1,2,3", "-1", ",5", "5,", "1e3", "1 000"])(
+    "rejects %j",
+    (text) => {
+      expect(parseAmount(text)).toBeNull();
+    },
+  );
 });

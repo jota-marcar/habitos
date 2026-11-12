@@ -57,15 +57,15 @@ La columna "En el código" es el nombre en inglés con el que cada término apar
 
   | Dato | Obligatorio | Notas |
   |------|-------------|-------|
-  | Nombre | Sí | Texto corto. |
+  | Nombre | Sí | Texto corto, de 40 caracteres como máximo. |
   | Tipo | Sí | Booleano o cuantitativo. No se puede cambiar después de crearlo. |
   | Meta | Solo cuantitativo | Número mayor que 0, con 2 decimales como máximo. |
-  | Unidad | Solo cuantitativo | Texto libre corto: "L", "páginas", "min"… |
+  | Unidad | Solo cuantitativo | Texto libre corto, de 10 caracteres como máximo: "L", "páginas", "min"… |
   | Incremento | Solo cuantitativo | Número mayor que 0, con 2 decimales como máximo. Por defecto, 1. |
   | Días programados | Sí | Al menos un día. Por defecto, todos. |
   | Recordatorios | No | Cero o más horas del día (ver 3.5). |
 
-- **RF-07.** El usuario puede ver el listado de todos sus hábitos activos.
+- **RF-07.** El usuario puede ver el listado de todos sus hábitos activos, en el mismo orden que la vista de un día (RF-12).
 - **RF-08.** El usuario puede editar cualquier dato de un hábito salvo el tipo.
 - **RF-09.** Los cambios en un hábito (meta, días programados…) se aplican desde el día actual en adelante. Los días pasados conservan lo que se registró.
 - **RF-10.** El usuario puede archivar un hábito: deja de aparecer en los días siguientes y deja de recordarse, pero su historial se conserva y sigue visible en los días pasados. El día en que se archiva solo aparece si ya tenía algo registrado.
@@ -75,7 +75,7 @@ La columna "En el código" es el nombre en inglés con el que cada término apar
 
 Es la pantalla principal de la aplicación.
 
-- **RF-12.** Al abrir la aplicación se muestra el **día actual**, con la lista de hábitos programados para ese día de la semana.
+- **RF-12.** Al abrir la aplicación se muestra el **día actual**, con la lista de hábitos programados para ese día de la semana. Los hábitos se ordenan por la hora de su primer recordatorio, como una agenda; los que no tienen recordatorio van al final y, a igualdad, se mantiene el orden de creación. Un hábito cumplido se queda en su sitio, para que la lista no se mueva al marcarlo.
 - **RF-13.** Cada hábito de la lista muestra su nombre y su estado:
   - Booleano: cumplido o pendiente.
   - Cuantitativo: cantidad acumulada y meta (por ejemplo, "1,25 / 2 L").
@@ -126,9 +126,6 @@ Funcionalidades descartadas por ahora, en orden aproximado de interés:
 Puntos a decidir antes de implementar la parte correspondiente:
 
 - **Resumen del día:** ¿un aviso al final del día con los hábitos pendientes?
-- **Longitud de los textos:** ¿cuántos caracteres admiten el nombre de un hábito y la unidad? La especificación solo dice "texto corto".
-- **Orden de la lista del día:** ¿por hora del primer recordatorio, alfabético o por fecha de creación?
-- **Hábitos cumplidos en la lista:** ¿se quedan en su sitio o bajan al final?
 
 ## 6. Visión a futuro: tres horizontes
 

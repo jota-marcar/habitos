@@ -53,7 +53,9 @@ flowchart LR
 | Área | Elección | Decisión |
 |------|----------|----------|
 | Plataforma | Expo (React Native) con TypeScript en modo estricto | [ADR-0002](adr/0002-expo-como-plataforma.md) |
-| Navegación | Expo Router (rutas basadas en ficheros) | Estándar de Expo |
+| Navegación | Expo Router (rutas basadas en ficheros) con Stack: el día como pantalla principal | [ADR-0010](adr/0010-interfaz-con-stack-hooks-propios-sobre-expo-sqlite-y-estilos-sin-libreria.md) |
+| Datos en la interfaz | Hooks propios sobre `SQLiteProvider` de `expo-sqlite`, sin caché ni store global | [ADR-0010](adr/0010-interfaz-con-stack-hooks-propios-sobre-expo-sqlite-y-estilos-sin-libreria.md) |
+| Estilos | `StyleSheet` con tokens propios y modo oscuro, sin librería de UI | [ADR-0010](adr/0010-interfaz-con-stack-hooks-propios-sobre-expo-sqlite-y-estilos-sin-libreria.md) |
 | Base de datos local | SQLite (`expo-sqlite`), con SQL directo y migraciones propias | [ADR-0004](adr/0004-offline-first-con-sincronizacion.md), [ADR-0009](adr/0009-sql-directo-y-migraciones-propias-en-la-capa-de-datos-local.md) |
 | Backend y autenticación | Supabase (Postgres, Auth) | [ADR-0003](adr/0003-supabase-como-backend.md) |
 | Inicio de sesión | Sign in with Apple y Google nativos, con el token enviado a Supabase | [ADR-0003](adr/0003-supabase-como-backend.md) |
@@ -76,7 +78,7 @@ src/
   sync/           Sincronización con Supabase
   notifications/  Planificador de recordatorios y gestión de acciones
   auth/           Inicio y cierre de sesión, eliminación de cuenta
-  ui/             Componentes visuales reutilizables
+  ui/             Componentes visuales reutilizables, tokens de estilo y hooks de datos de las pantallas
 supabase/         Migraciones SQL y políticas de seguridad del backend
 ```
 

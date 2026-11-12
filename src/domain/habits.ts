@@ -40,20 +40,32 @@ export interface HabitVersion extends HabitConfig {
 
 export type HabitError =
   | "name_empty"
+  | "name_too_long"
   | "scheduled_days_invalid"
   | "scheduled_days_empty"
   | "amounts_not_allowed"
   | "target_not_positive"
   | "target_too_precise"
   | "unit_empty"
+  | "unit_too_long"
   | "increment_not_positive"
   | "increment_too_precise";
 
 export const DEFAULT_SCHEDULED_DAYS: ScheduledDays = EVERY_DAY;
 export const DEFAULT_INCREMENT = 1;
 
+/** Longest name and unit, in characters, without surrounding spaces (RF-06). */
+export const MAX_NAME_LENGTH = 40;
+export const MAX_UNIT_LENGTH = 10;
+
+// Counts characters as the user sees them, so that an emoji counts as one.
+function lengthOf(text: string): number {
+  return [...text.trim()].length;
+}
+
 function validateName(name: string): HabitError[] {
-  return name.trim() === "" ? ["name_empty"] : [];
+  if (name.trim() === "") return ["name_empty"];
+  return lengthOf(name) > MAX_NAME_LENGTH ? ["name_too_long"] : [];
 }
 
 function validateAmount(
@@ -94,6 +106,8 @@ function validateConfig(type: HabitType, config: HabitConfig): HabitError[] {
   );
   if (config.unit === null || config.unit.trim() === "") {
     errors.push("unit_empty");
+  } else if (lengthOf(config.unit) > MAX_UNIT_LENGTH) {
+    errors.push("unit_too_long");
   }
   errors.push(
     ...validateAmount(

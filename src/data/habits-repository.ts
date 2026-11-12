@@ -3,8 +3,10 @@
 
 import { localDate } from "@/domain/dates";
 import type { Habit, HabitType, HabitVersion } from "@/domain/habits";
+import type { Reminder } from "@/domain/reminders";
 
 import type { Database } from "./database";
+import { addReminder } from "./reminders-repository";
 
 interface HabitRow {
   id: string;
@@ -109,15 +111,22 @@ export async function saveHabitVersion(
   );
 }
 
-/** Saves a new habit together with its first version: both, or neither. */
+/**
+ * Saves a new habit together with its first version and its reminders: all of them, or none.
+ * The reminders belong to `habit`.
+ */
 export async function addHabit(
   db: Database,
   habit: Habit,
   version: HabitVersion,
+  reminders: readonly Reminder[] = [],
 ): Promise<void> {
   await db.transaction(async () => {
     await saveHabit(db, habit);
     await saveHabitVersion(db, version);
+    for (const reminder of reminders) {
+      await addReminder(db, reminder);
+    }
   });
 }
 
