@@ -1,5 +1,8 @@
-import { sortByFirstReminder } from "./order";
+import { localDate } from "./dates";
+import type { DayHabit } from "./day";
+import { keepOrder, sortByFirstReminder, sortDayHabits } from "./order";
 import type { Reminder } from "./reminders";
+import { EVERY_DAY } from "./schedule";
 import { localTime } from "./times";
 
 function reminder(habitId: string, time: string): Reminder {
@@ -58,5 +61,105 @@ describe("sortByFirstReminder", () => {
         reminder("a", "08:00"),
       ]),
     ).toEqual([{ habitId: "a" }, { habitId: "b" }]);
+  });
+});
+
+function dayHabit(id: string, done: boolean): DayHabit {
+  return {
+    habit: {
+      id,
+      name: id,
+      type: "boolean",
+      createdOn: localDate("2026-11-01"),
+      archivedOn: null,
+    },
+    version: {
+      id: `${id}-v1`,
+      habitId: id,
+      effectiveFrom: localDate("2026-11-01"),
+      scheduledDays: EVERY_DAY,
+      target: null,
+      unit: null,
+      increment: null,
+    },
+    value: done ? 1 : 0,
+    done,
+  };
+}
+
+const ids = (dayHabits: readonly DayHabit[]) =>
+  dayHabits.map((d) => d.habit.id);
+
+describe("sortDayHabits", () => {
+  test("puts the pending habits first and the done ones after (RF-12)", () => {
+    const dayHabits = [
+      dayHabit("read", true),
+      dayHabit("walk", false),
+      dayHabit("water", true),
+      dayHabit("meditate", false),
+    ];
+
+    expect(ids(sortDayHabits(dayHabits, []))).toEqual([
+      "walk",
+      "meditate",
+      "read",
+      "water",
+    ]);
+  });
+
+  test("sorts each group by the first reminder, without reminders last", () => {
+    const dayHabits = [
+      dayHabit("none", false),
+      dayHabit("late", false),
+      dayHabit("early", false),
+      dayHabit("done-late", true),
+      dayHabit("done-none", true),
+      dayHabit("done-early", true),
+    ];
+    const reminders = [
+      reminder("late", "21:00"),
+      reminder("early", "07:00"),
+      reminder("done-late", "22:00"),
+      reminder("done-early", "06:00"),
+    ];
+
+    expect(ids(sortDayHabits(dayHabits, reminders))).toEqual([
+      "early",
+      "late",
+      "none",
+      "done-early",
+      "done-late",
+      "done-none",
+    ]);
+  });
+});
+
+describe("keepOrder", () => {
+  test("puts the items in the given order of habits (RF-12)", () => {
+    expect(keepOrder(["a", "b", "c"], byId, ["c", "a", "b"])).toEqual([
+      "c",
+      "a",
+      "b",
+    ]);
+  });
+
+  test("puts the habits that were not in the order at the end, as they come", () => {
+    expect(keepOrder(["new2", "a", "new1", "b"], byId, ["b", "a"])).toEqual([
+      "b",
+      "a",
+      "new2",
+      "new1",
+    ]);
+  });
+
+  test("ignores the habits of the order that are no longer there", () => {
+    expect(keepOrder(["a"], byId, ["gone", "a"])).toEqual(["a"]);
+  });
+
+  test("does not change the given list", () => {
+    const items = ["b", "a"];
+    keepOrder(items, byId, ["a", "b"]);
+
+    expect(items).toEqual(["b", "a"]);
   });
 });

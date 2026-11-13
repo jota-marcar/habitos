@@ -12,6 +12,8 @@ export interface Colors {
   readonly primary: string;
   readonly onPrimary: string;
   readonly danger: string;
+  /** Dims the screen behind a sheet. */
+  readonly backdrop: string;
 }
 
 const LIGHT: Colors = {
@@ -23,6 +25,7 @@ const LIGHT: Colors = {
   primary: "#208AEF",
   onPrimary: "#FFFFFF",
   danger: "#D70015",
+  backdrop: "#000000",
 };
 
 const DARK: Colors = {
@@ -34,6 +37,7 @@ const DARK: Colors = {
   primary: "#4BA3F5",
   onPrimary: "#FFFFFF",
   danger: "#FF6961",
+  backdrop: "#000000",
 };
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;

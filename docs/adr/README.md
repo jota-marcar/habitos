@@ -14,6 +14,7 @@ Cada ADR documenta una decisión técnica importante: el contexto, las opciones 
 | [0008](0008-variantes-de-desarrollo-y-produccion.md) | Variantes de desarrollo y producción | Aceptado |
 | [0009](0009-sql-directo-y-migraciones-propias-en-la-capa-de-datos-local.md) | SQL directo y migraciones propias en la capa de datos local | Aceptado |
 | [0010](0010-interfaz-por-gestos-hooks-propios-sobre-expo-sqlite-y-estilos-sin-libreria.md) | Interfaz por gestos, hooks propios sobre expo-sqlite y estilos sin librería | Aceptado |
+| [0011](0011-sf-symbols-con-expo-symbols-para-los-iconos.md) | SF Symbols con expo-symbols para los iconos | Propuesto |
 
 ## Plantilla
 
