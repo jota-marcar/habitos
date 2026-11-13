@@ -53,9 +53,10 @@ flowchart LR
 | Área | Elección | Decisión |
 |------|----------|----------|
 | Plataforma | Expo (React Native) con TypeScript en modo estricto | [ADR-0002](adr/0002-expo-como-plataforma.md) |
-| Navegación | Expo Router (rutas basadas en ficheros) con Stack: el día como pantalla principal | [ADR-0010](adr/0010-interfaz-con-stack-hooks-propios-sobre-expo-sqlite-y-estilos-sin-libreria.md) |
-| Datos en la interfaz | Hooks propios sobre `SQLiteProvider` de `expo-sqlite`, sin caché ni store global | [ADR-0010](adr/0010-interfaz-con-stack-hooks-propios-sobre-expo-sqlite-y-estilos-sin-libreria.md) |
-| Estilos | `StyleSheet` con tokens propios y modo oscuro, sin librería de UI | [ADR-0010](adr/0010-interfaz-con-stack-hooks-propios-sobre-expo-sqlite-y-estilos-sin-libreria.md) |
+| Navegación | Expo Router (rutas basadas en ficheros): el día como única pantalla principal, sin cabecera, y los formularios como modales | [ADR-0010](adr/0010-interfaz-por-gestos-hooks-propios-sobre-expo-sqlite-y-estilos-sin-libreria.md) |
+| Gestos y animaciones | `react-native-gesture-handler` y `react-native-reanimated`: el calendario, el menú y las opciones de un hábito son capas de la pantalla principal | [ADR-0010](adr/0010-interfaz-por-gestos-hooks-propios-sobre-expo-sqlite-y-estilos-sin-libreria.md) |
+| Datos en la interfaz | Hooks propios sobre `SQLiteProvider` de `expo-sqlite`, sin caché ni store global | [ADR-0010](adr/0010-interfaz-por-gestos-hooks-propios-sobre-expo-sqlite-y-estilos-sin-libreria.md) |
+| Estilos | `StyleSheet` con tokens propios y modo oscuro, sin librería de UI | [ADR-0010](adr/0010-interfaz-por-gestos-hooks-propios-sobre-expo-sqlite-y-estilos-sin-libreria.md) |
 | Base de datos local | SQLite (`expo-sqlite`), con SQL directo y migraciones propias | [ADR-0004](adr/0004-offline-first-con-sincronizacion.md), [ADR-0009](adr/0009-sql-directo-y-migraciones-propias-en-la-capa-de-datos-local.md) |
 | Backend y autenticación | Supabase (Postgres, Auth) | [ADR-0003](adr/0003-supabase-como-backend.md) |
 | Inicio de sesión | Sign in with Apple y Google nativos, con el token enviado a Supabase | [ADR-0003](adr/0003-supabase-como-backend.md) |
@@ -140,7 +141,8 @@ Decisiones del modelo:
 
 - **Las fechas son fechas de calendario** (`2026-10-28`), no instantes con hora. El día va de 00:00 a 23:59 en la hora local del dispositivo y no cambia si el usuario viaja a otra zona horaria.
 - **Qué hábitos tocan el día D:** los que se crearon como mucho en D, no están retirados por archivado en D y, según la versión vigente en D (la de mayor `effective_from` que sea ≤ D), están programados para ese día de la semana.
-- **Archivado:** un hábito archivado deja de tocar a partir del día siguiente al archivado. El propio día del archivado solo toca si ya tiene algo registrado (RF-10).
+- **Archivado:** un hábito archivado deja de tocar a partir del día siguiente al archivado. El propio día del archivado solo toca si ya tiene algo registrado (RF-10). Archivar no se deshace: `archived_on` es una sola fecha, y reactivar exigiría guardar periodos de actividad para que los días intermedios no aparezcan como incumplidos (fuera del alcance del MVP).
+- **Edición desde cualquier día:** la configuración nueva siempre entra en vigor el día actual (`effective_from` = hoy), aunque se edite desde un día pasado o futuro (RF-09). Lo que pertenece al día que se está viendo es su registro.
 - **Días programados:** máscara de 7 bits en `scheduled_days`, con el lunes en el bit 0 y el domingo en el bit 6.
 - **Cantidades:** `target`, `increment` y `value` tienen 2 decimales como máximo y nunca son negativas. Un registro con valor 0 equivale a no tener registro.
 - **Un registro por hábito y día** (clave única `habit_id + date`). Si no hay registro, el hábito está pendiente.
@@ -155,7 +157,7 @@ Decisiones del modelo:
 
 ### Marcar un hábito
 
-1. La interfaz escribe el registro en la base local y se actualiza al instante.
+1. La interfaz escribe el registro en la base local y se actualiza al instante. Solo cambia el estado de la fila: la pantalla conserva el orden que calculó al mostrar el día, y la lista se reordena la próxima vez que se muestra (RF-12).
 2. El planificador cancela los recordatorios restantes de ese hábito para hoy si ya está cumplido (RF-24).
 3. La sincronización sube el cambio cuando hay conexión.
 
