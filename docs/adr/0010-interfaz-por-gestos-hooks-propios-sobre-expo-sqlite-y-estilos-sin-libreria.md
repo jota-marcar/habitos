@@ -1,6 +1,6 @@
 # ADR-0010: Interfaz por gestos, hooks propios sobre expo-sqlite y estilos sin librería
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-13
 
 ## Contexto
