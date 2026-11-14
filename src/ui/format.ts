@@ -1,9 +1,7 @@
-// How the interface writes amounts, days and times for the user, in Spanish.
+// How the interface writes dates and amounts for the user, in Spanish.
 
 import { weekdayOf, type LocalDate, type Weekday } from "@/domain/dates";
 import type { HabitConfig } from "@/domain/habits";
-import { EVERY_DAY, weekdaysIn } from "@/domain/schedule";
-import type { LocalTime } from "@/domain/times";
 
 /** Initials of the weekdays, from Monday to Sunday. */
 export const WEEKDAY_INITIALS: Readonly<Record<Weekday, string>> = {
@@ -26,25 +24,27 @@ export const WEEKDAY_NAMES: Readonly<Record<Weekday, string>> = {
   6: "domingo",
 };
 
-const MONTH_NAMES = [
-  "enero",
-  "febrero",
-  "marzo",
-  "abril",
-  "mayo",
-  "junio",
-  "julio",
-  "agosto",
-  "septiembre",
-  "octubre",
-  "noviembre",
-  "diciembre",
+const MONTH_ABBREVIATIONS = [
+  "ene",
+  "feb",
+  "mar",
+  "abr",
+  "may",
+  "jun",
+  "jul",
+  "ago",
+  "sept",
+  "oct",
+  "nov",
+  "dic",
 ] as const;
 
-/** A date as it is said: "jueves, 12 de noviembre". */
-export function formatLongDate(date: LocalDate): string {
+/** The title of the day view (RF-30): "Hoy", or the weekday and the date: "Martes, 10 nov". */
+export function formatDayTitle(date: LocalDate, today: LocalDate): string {
+  if (date === today) return "Hoy";
   const [, month, day] = date.split("-").map(Number);
-  return `${WEEKDAY_NAMES[weekdayOf(date)]}, ${day} de ${MONTH_NAMES[month - 1]}`;
+  const weekday = WEEKDAY_NAMES[weekdayOf(date)];
+  return `${weekday[0].toUpperCase()}${weekday.slice(1)}, ${day} ${MONTH_ABBREVIATIONS[month - 1]}`;
 }
 
 /** An amount with a decimal comma and no trailing zeros: 1.5 → "1,5". */
@@ -52,21 +52,8 @@ export function formatAmount(value: number): string {
   return String(value).replace(".", ",");
 }
 
-/** "Todos los días", or the initials of the scheduled days: "L, X, V". */
-export function formatScheduledDays(scheduledDays: number): string {
-  if (scheduledDays === EVERY_DAY) return "Todos los días";
-  return weekdaysIn(scheduledDays)
-    .map((weekday) => WEEKDAY_INITIALS[weekday])
-    .join(", ");
-}
-
-/** The target of a quantitative habit and its increment: "Meta 2 L · +0,25". */
-export function formatTarget(config: HabitConfig): string | null {
-  if (config.target === null || config.increment === null) return null;
-  return `Meta ${formatAmount(config.target)} ${config.unit ?? ""} · +${formatAmount(config.increment)}`;
-}
-
-/** The reminder times in order: "08:00 · 21:30". */
-export function formatReminderTimes(times: readonly LocalTime[]): string {
-  return [...times].sort().join(" · ");
+/** How a quantitative habit is going (RF-13): "1,25 / 2 L". */
+export function formatProgress(value: number, config: HabitConfig): string {
+  const target = formatAmount(config.target ?? 0);
+  return `${formatAmount(value)} / ${target} ${config.unit ?? ""}`.trim();
 }

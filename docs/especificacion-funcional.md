@@ -68,7 +68,7 @@ La aplicación tiene una sola pantalla principal: la vista de un día (3.4). Tod
 - **RF-31.** Al deslizar hacia abajo desde la fecha, o desde la lista cuando ya está arriba del todo, se despliega el **calendario** desde arriba (RF-18). Se cierra deslizándolo hacia arriba o tocando fuera de él.
 - **RF-32.** Al deslizar hacia arriba desde la franja se despliega el **menú** desde abajo. Se cierra deslizándolo hacia abajo o tocando fuera de él. Tiene dos opciones, cada una con su icono:
   - **Crear**, que en el MVP crea un hábito (RF-06). Cuando haya más horizontes ([sección 6](#6-visión-a-futuro-tres-horizontes)), creará un elemento del horizonte que se esté viendo.
-  - **Ajustes**, con las opciones de la cuenta (RF-03, RF-04).
+  - **Ajustes**, con las opciones de la cuenta (RF-03, RF-04). Aparece cuando la aplicación tenga cuenta de usuario (3.2); hasta entonces el menú solo muestra "Crear".
 - **RF-33.** Deslizar hacia la izquierda o hacia la derecha en la pantalla principal queda reservado para cambiar de horizonte ([sección 6](#6-visión-a-futuro-tres-horizontes)). En el MVP no hace nada.
 
 ### 3.2 Cuenta de usuario

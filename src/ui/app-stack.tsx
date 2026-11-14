@@ -1,5 +1,5 @@
-// The navigation of the app (ADR-0010): a Stack that opens on the day, with the list of habits
-// as another screen and the habit form as a modal. Its own file so the tests can use it.
+// The navigation of the app (ADR-0010): a Stack that opens on the day, the only main screen,
+// with the forms as modals over it. Its own file so the tests can use it.
 
 import { Stack } from "expo-router";
 
@@ -23,8 +23,7 @@ export function AppStack() {
         headerShadowVisible: false,
       }}
     >
-      <Stack.Screen name="index" options={{ title: "Hoy" }} />
-      <Stack.Screen name="habits/index" options={{ title: "Hábitos" }} />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen
         name="habits/new"
         options={{ title: "Nuevo hábito", presentation: "modal" }}
