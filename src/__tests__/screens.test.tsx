@@ -29,9 +29,10 @@ import { DatabaseContext } from "@/ui/database";
 
 // Thursday, 12 November 2026: after the day the fixtures are created (2026-11-01).
 const TODAY = localDate("2026-11-12");
+let mockToday: string = TODAY;
 jest.mock("@/ui/clock", () => ({
   ...jest.requireActual("@/ui/clock"),
-  today: () => jest.requireActual("@/domain/dates").localDate("2026-11-12"),
+  today: () => jest.requireActual("@/domain/dates").localDate(mockToday),
 }));
 
 let mockIdCounter = 0;
@@ -57,6 +58,7 @@ jest.mock("@react-native-community/datetimepicker", () => {
 let db: TestDatabase;
 
 beforeEach(async () => {
+  mockToday = TODAY;
   db = await openMigratedDatabase();
 });
 
@@ -254,6 +256,32 @@ describe("day view", () => {
     await appBecomes("background");
     await appBecomes("active");
     expect(habitNames()).toEqual(["Leer", "Sin hora", "Pasear"]);
+  });
+
+  test("moves on to the new day at midnight while the app stays open (RF-12)", async () => {
+    await addHabit(
+      db,
+      habit("thursday", { name: "Solo jueves" }),
+      version("thursday", { scheduledDays: scheduledDaysFrom([3]) }),
+    );
+    await addHabit(
+      db,
+      habit("friday", { name: "Solo viernes" }),
+      version("friday", { scheduledDays: scheduledDaysFrom([4]) }),
+    );
+    await renderApp();
+    expect(await screen.findByText("Solo jueves")).toBeTruthy();
+    expect(screen.queryByText("Solo viernes")).toBeNull();
+
+    // Midnight comes within a day, whatever the time the test runs at.
+    mockToday = "2026-11-13";
+    await act(async () => {
+      jest.advanceTimersByTime(24 * 60 * 60 * 1000);
+    });
+
+    expect(await screen.findByText("Solo viernes")).toBeTruthy();
+    expect(screen.queryByText("Solo jueves")).toBeNull();
+    expect(screen.getByText("Hoy")).toBeTruthy();
   });
 });
 

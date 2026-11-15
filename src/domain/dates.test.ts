@@ -2,6 +2,7 @@ import {
   addDays,
   localDate,
   localDateOf,
+  msUntilNextDay,
   parseLocalDate,
   weekdayOf,
 } from "./dates";
@@ -92,5 +93,21 @@ describe("addDays", () => {
   test("dates compare correctly as strings", () => {
     expect(localDate("2026-09-30") < localDate("2026-10-01")).toBe(true);
     expect(localDate("2026-12-31") < localDate("2027-01-01")).toBe(true);
+  });
+});
+
+describe("msUntilNextDay", () => {
+  test("counts down to the next local midnight", () => {
+    expect(msUntilNextDay(new Date(2026, 10, 12, 23, 59, 30))).toBe(30_000);
+    expect(msUntilNextDay(new Date(2026, 10, 12, 23, 59, 59, 999))).toBe(1);
+  });
+
+  test("is a whole day right at midnight", () => {
+    expect(msUntilNextDay(new Date(2026, 10, 12))).toBe(86_400_000);
+  });
+
+  test("crosses month and year boundaries", () => {
+    expect(msUntilNextDay(new Date(2026, 10, 30, 23))).toBe(3_600_000);
+    expect(msUntilNextDay(new Date(2026, 11, 31, 23))).toBe(3_600_000);
   });
 });

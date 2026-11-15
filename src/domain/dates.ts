@@ -67,3 +67,14 @@ export function addDays(date: LocalDate, days: number): LocalDate {
     instant.getUTCDate(),
   );
 }
+
+/** The milliseconds from `instant` until the next day starts in the device's local time. */
+export function msUntilNextDay(instant: Date): number {
+  // Built from local parts, so a day of 23 or 25 hours (daylight saving time) is right too.
+  const nextDay = new Date(
+    instant.getFullYear(),
+    instant.getMonth(),
+    instant.getDate() + 1,
+  );
+  return nextDay.getTime() - instant.getTime();
+}
