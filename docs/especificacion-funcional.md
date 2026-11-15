@@ -14,7 +14,7 @@ A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo
 
 1. **Minimalismo.** Solo lo imprescindible. Cada funcionalidad nueva debe justificar su presencia. La pantalla principal no tiene botones fijos ni textos de ayuda: se maneja tocando el contenido y deslizando (ver [3.1](#31-estructura-de-la-interfaz)).
 2. **Usabilidad directa.** Las acciones frecuentes (marcar un hábito, atender un recordatorio) se hacen con un solo toque.
-3. **El recordatorio es el centro.** Si la aplicación no recuerda bien, no cumple su objetivo.
+3. **El seguimiento es el centro y el recordatorio, su punto fuerte.** Lo esencial es seguir los hábitos: crearlos, apuntar el progreso y consultar cualquier día. Los recordatorios son lo que distingue a la aplicación: si no avisan bien, lo que se quiere hacer se vuelve a olvidar.
 4. **El registro es fiable.** Lo que se apunta no se pierde y está disponible siempre, también sin conexión.
 
 ### Usuarios
@@ -160,6 +160,10 @@ Es la pantalla principal de la aplicación (ver 3.1).
   - **Ambos:** posponerlo 1 hora. El tiempo es el mismo para todos los hábitos. Un recordatorio no sale del día de su hábito: si al posponerlo caería en el día siguiente, no se vuelve a enviar.
 - **RF-26.** Al tocar el recordatorio (fuera de sus botones), se abre la aplicación en el día actual.
 - **RF-27.** Los recordatorios funcionan sin conexión.
+- **RF-35.** La aplicación pide permiso para enviar recordatorios la primera vez que se abre. Si el usuario lo deniega, no se le vuelve a pedir al abrirla.
+- **RF-36.** Si los recordatorios no están permitidos, al guardar un hábito con recordatorios (al crearlo o al editarlo) se avisa al usuario con un diálogo del sistema, que explica que no los recibirá y ofrece abrir los ajustes del teléfono para activarlos. El hábito se guarda igualmente, con sus recordatorios, y estos empiezan a funcionar en cuanto se da el permiso, sin tener que volver a editarlo.
+
+  En general, si una acción necesita un permiso que el usuario ha denegado, el aviso aparece en ese momento, no al abrir la aplicación.
 
 ### 3.7 Disponibilidad y datos
 
@@ -223,7 +227,7 @@ Los tres horizontes podrían relacionarse: un objetivo a largo plazo se consigue
 ### Puntos a tener en cuenta
 
 - **Estructura.** Cada horizonte sería una página de la pantalla principal, y se pasaría de una a otra deslizando hacia los lados, gesto que ya queda reservado (RF-33). Todas seguirían la estructura de la sección 3.1: arriba el periodo (el día, la semana…), en el centro el recuadro con la lista y debajo el menú, cuya opción "Crear" crearía un elemento del horizonte que se esté viendo.
-- **Recordatorios en cada horizonte.** Siguiendo el principio de que el recordatorio es el centro, cada parte podría tener los suyos: a una hora para los hábitos, de progreso para la semana ("llevas 2 de 5 horas y es jueves") y de cuenta atrás para el largo plazo ("quedan 40 días").
+- **Recordatorios en cada horizonte.** Siguiendo el principio de que el recordatorio es el punto fuerte, cada parte podría tener los suyos: a una hora para los hábitos, de progreso para la semana ("llevas 2 de 5 horas y es jueves") y de cuenta atrás para el largo plazo ("quedan 40 días").
 - **Minimalismo.** Cada parte nueva tendrá que justificar su presencia cuando llegue, como cualquier otra funcionalidad.
 - **Visión del producto.** Hoy el problema que se resuelve es el olvido. Con los tres horizontes se ampliaría a no perder de vista lo que uno quiere hacer, hoy, esta semana y a largo plazo. Si se adopta, habrá que revisar la sección 1.
 - **Nombres.** "Meta" ya significa la cantidad diaria de un hábito cuantitativo (ver el glosario), así que la tercera parte no debe llamarse "metas". Por ahora: "Objetivos a largo plazo" (alternativa: "Propósitos").
