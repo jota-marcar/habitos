@@ -6,7 +6,7 @@ import type { Habit, HabitType, HabitVersion } from "@/domain/habits";
 import type { Reminder } from "@/domain/reminders";
 
 import type { Database } from "./database";
-import { addReminder } from "./reminders-repository";
+import { addReminder, deleteReminder } from "./reminders-repository";
 
 interface HabitRow {
   id: string;
@@ -125,6 +125,33 @@ export async function addHabit(
     await saveHabit(db, habit);
     await saveHabitVersion(db, version);
     for (const reminder of reminders) {
+      await addReminder(db, reminder);
+    }
+  });
+}
+
+/** What changes in a habit when it is edited (RF-08). */
+export interface HabitChanges {
+  /** The habit with its new name. */
+  readonly habit: Habit;
+  /** The version added or updated by the change of configuration, if it changed. */
+  readonly version: HabitVersion | null;
+  readonly addedReminders: readonly Reminder[];
+  readonly removedReminderIds: readonly string[];
+}
+
+/** Saves the changes made to a habit when editing it: all of them, or none. */
+export async function saveHabitChanges(
+  db: Database,
+  changes: HabitChanges,
+): Promise<void> {
+  await db.transaction(async () => {
+    await saveHabit(db, changes.habit);
+    if (changes.version !== null) await saveHabitVersion(db, changes.version);
+    for (const reminderId of changes.removedReminderIds) {
+      await deleteReminder(db, reminderId);
+    }
+    for (const reminder of changes.addedReminders) {
       await addReminder(db, reminder);
     }
   });

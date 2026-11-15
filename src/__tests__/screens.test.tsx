@@ -5,12 +5,20 @@ import {
   fireEvent,
   renderRouter,
   screen,
+  waitFor,
 } from "expo-router/testing-library";
-import { AppState, StyleSheet, type AppStateStatus } from "react-native";
+import {
+  Alert,
+  AppState,
+  StyleSheet,
+  type AlertButton,
+  type AppStateStatus,
+} from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { createGestureController } from "react-native-gesture-handler/jest-utils";
 
 import Today from "@/app/index";
+import EditHabit from "@/app/habits/[id]/edit";
 import NewHabit from "@/app/habits/new";
 import { listEntries } from "@/data/entries-repository";
 import {
@@ -82,6 +90,7 @@ async function renderApp(initialUrl = "/") {
       _layout: { default: Layout, unstable_settings: STACK_SETTINGS },
       index: Today,
       "habits/new": NewHabit,
+      "habits/[id]/edit": EditHabit,
     },
     { initialUrl },
   );
@@ -443,5 +452,310 @@ describe("new habit", () => {
 
     expect(screen).toHavePathname("/");
     expect(await listHabits(db)).toEqual([]);
+  });
+});
+
+describe("habit options (RF-34)", () => {
+  async function addWater() {
+    await addHabit(
+      db,
+      habit("water", { name: "Beber agua", type: "quantitative" }),
+      version("water", { target: 2, unit: "L", increment: 0.25 }),
+      [{ id: "water-r", habitId: "water", time: localTime("10:00") }],
+    );
+  }
+
+  /** Holds a habit down, which opens its options. */
+  async function hold(id: string) {
+    await fireEvent(await screen.findByTestId(`habit-${id}`), "longPress");
+  }
+
+  /** Presses a button of the last native alert or prompt, as iOS would. */
+  async function pressAlertButton(
+    alert: jest.SpyInstance,
+    label: string,
+    text?: string,
+  ) {
+    const buttons = alert.mock.lastCall?.[2] as AlertButton[];
+    const button = buttons.find((b) => b.text === label);
+    await act(async () => {
+      await button?.onPress?.(text);
+    });
+  }
+
+  test("holding a boolean habit down opens its options, which close when touching outside", async () => {
+    await addBoolean("walk", "Pasear");
+    await renderApp();
+    await screen.findByText("Pasear");
+    expect(screen.queryByLabelText("Editar")).toBeNull();
+
+    await hold("walk");
+
+    expect(screen.getByLabelText("Editar")).toBeTruthy();
+    expect(screen.getByLabelText("Archivar")).toBeTruthy();
+    expect(screen.getByLabelText("Eliminar")).toBeTruthy();
+    expect(screen.queryByLabelText(/^Restar/)).toBeNull();
+    expect(screen.queryByLabelText("Escribir la cantidad")).toBeNull();
+    // Holding it down does not mark it.
+    expect(screen.getByTestId("habit-walk")).not.toBeChecked();
+
+    await fireEvent.press(screen.getByLabelText("Cerrar las opciones"));
+
+    expect(screen.queryByLabelText("Editar")).toBeNull();
+  });
+
+  test("subtracts the increment, never below 0, and stays open (RF-15)", async () => {
+    await addWater();
+    await renderApp();
+    await fireEvent.press(await screen.findByTestId("habit-water"));
+    await fireEvent.press(screen.getByTestId("habit-water"));
+    await screen.findByText("0,5 / 2 L");
+
+    await hold("water");
+    await fireEvent.press(screen.getByLabelText("Restar 0,25 L"));
+
+    // In the row and in the title of the options.
+    expect(await screen.findAllByText("0,25 / 2 L")).toHaveLength(2);
+
+    await fireEvent.press(screen.getByLabelText("Restar 0,25 L"));
+    await fireEvent.press(screen.getByLabelText("Restar 0,25 L"));
+
+    expect(await screen.findAllByText("0 / 2 L")).toHaveLength(2);
+    expect(await listEntries(db, TODAY, TODAY)).toEqual([
+      expect.objectContaining({ habitId: "water", value: 0 }),
+    ]);
+  });
+
+  test("writes the exact amount in the native prompt, which rejects what is not an amount (RF-15)", async () => {
+    const prompt = jest.spyOn(Alert, "prompt").mockImplementation(() => {});
+    await addWater();
+    await renderApp();
+    await fireEvent.press(await screen.findByTestId("habit-water"));
+    await screen.findByText("0,25 / 2 L");
+
+    await hold("water");
+    await fireEvent.press(screen.getByLabelText("Escribir la cantidad"));
+
+    expect(screen.queryByLabelText("Escribir la cantidad")).toBeNull();
+    expect(prompt).toHaveBeenLastCalledWith(
+      "Beber agua",
+      "Cantidad en L",
+      expect.any(Array),
+      "plain-text",
+      "0,25",
+      "decimal-pad",
+    );
+
+    await pressAlertButton(prompt, "Guardar", "1,234");
+    expect(prompt).toHaveBeenLastCalledWith(
+      "Beber agua",
+      "La cantidad admite 2 decimales como máximo.",
+      expect.any(Array),
+      "plain-text",
+      "1,234",
+      "decimal-pad",
+    );
+
+    await pressAlertButton(prompt, "Guardar", "");
+    expect(prompt.mock.lastCall?.[1]).toBe("Escribe un número.");
+
+    await pressAlertButton(prompt, "Guardar", "1,5");
+    expect(prompt).toHaveBeenCalledTimes(3);
+    expect(await screen.findByText("1,5 / 2 L")).toBeTruthy();
+    expect(await listEntries(db, TODAY, TODAY)).toEqual([
+      expect.objectContaining({ habitId: "water", value: 1.5 }),
+    ]);
+  });
+
+  test("archives a habit after confirming: it leaves the day if nothing was recorded (RF-10)", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    await addBoolean("walk", "Pasear");
+    await addBoolean("read", "Leer");
+    await renderApp();
+
+    await hold("walk");
+    await fireEvent.press(screen.getByLabelText("Archivar"));
+
+    expect(screen.queryByLabelText("Archivar")).toBeNull();
+    expect(alert).toHaveBeenCalledWith(
+      "¿Archivar «Pasear»?",
+      expect.stringContaining("No se puede deshacer"),
+      expect.any(Array),
+    );
+
+    await pressAlertButton(alert, "Cancelar");
+    expect(habitNames()).toEqual(["Pasear", "Leer"]);
+
+    await pressAlertButton(alert, "Archivar");
+
+    await waitFor(() => expect(habitNames()).toEqual(["Leer"]));
+    expect(await listHabits(db)).toEqual([
+      expect.objectContaining({ id: "walk", archivedOn: TODAY }),
+      expect.objectContaining({ id: "read", archivedOn: null }),
+    ]);
+  });
+
+  test("an archived habit stays on the day it has something recorded, only to be corrected or deleted (RF-10)", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    await addWater();
+    await renderApp();
+    await fireEvent.press(await screen.findByTestId("habit-water"));
+    await screen.findByText("0,25 / 2 L");
+
+    await hold("water");
+    await fireEvent.press(screen.getByLabelText("Archivar"));
+    await pressAlertButton(alert, "Archivar");
+    expect(await listHabits(db)).toEqual([
+      expect.objectContaining({ archivedOn: TODAY }),
+    ]);
+
+    expect(screen.getByText("Beber agua")).toBeTruthy();
+
+    await hold("water");
+
+    expect(screen.getByLabelText("Restar 0,25 L")).toBeTruthy();
+    expect(screen.getByLabelText("Escribir la cantidad")).toBeTruthy();
+    expect(screen.getByLabelText("Eliminar")).toBeTruthy();
+    expect(screen.queryByLabelText("Editar")).toBeNull();
+    expect(screen.queryByLabelText("Archivar")).toBeNull();
+  });
+
+  test("deletes a habit with its history after confirming (RF-11)", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    await addBoolean("walk", "Pasear", "08:00");
+    await renderApp();
+    await fireEvent.press(await screen.findByTestId("habit-walk"));
+    await screen.findByRole("checkbox", { checked: true });
+
+    await hold("walk");
+    await fireEvent.press(screen.getByLabelText("Eliminar"));
+
+    expect(alert).toHaveBeenCalledWith(
+      "¿Eliminar «Pasear»?",
+      expect.stringContaining("No se puede deshacer"),
+      expect.any(Array),
+    );
+
+    await pressAlertButton(alert, "Eliminar");
+
+    expect(await screen.findByText("Todavía no tienes hábitos.")).toBeTruthy();
+    expect(await listHabits(db)).toEqual([]);
+    expect(await listEntries(db, TODAY, TODAY)).toEqual([]);
+    expect(await listReminders(db)).toEqual([]);
+  });
+});
+
+describe("edit habit (RF-08)", () => {
+  async function addWater() {
+    await addHabit(
+      db,
+      habit("water", { name: "Beber agua", type: "quantitative" }),
+      version("water", { target: 2, unit: "L", increment: 0.25 }),
+      [
+        { id: "water-r1", habitId: "water", time: localTime("10:00") },
+        { id: "water-r2", habitId: "water", time: localTime("18:00") },
+      ],
+    );
+  }
+
+  test("opens from the options with the habit as it is, without its type", async () => {
+    await addWater();
+    await renderApp();
+
+    await fireEvent(await screen.findByTestId("habit-water"), "longPress");
+    await fireEvent.press(screen.getByLabelText("Editar"));
+
+    expect(screen).toHavePathname("/habits/water/edit");
+    expect(await screen.findByDisplayValue("Beber agua")).toBeTruthy();
+    expect(screen.getByLabelText("Meta")).toHaveDisplayValue("2");
+    expect(screen.getByLabelText("Unidad")).toHaveDisplayValue("L");
+    expect(screen.getByLabelText("Incremento")).toHaveDisplayValue("0,25");
+    expect(screen.getByLabelText("domingo")).toBeChecked();
+    expect(screen.getByText("10:00")).toBeTruthy();
+    expect(screen.getByText("18:00")).toBeTruthy();
+    expect(screen.queryByText("Sí o no")).toBeNull();
+  });
+
+  test("saves the changes from today onwards and goes back to the day (RF-09)", async () => {
+    await addWater();
+    await renderApp("/habits/water/edit");
+    await screen.findByDisplayValue("Beber agua");
+
+    await fireEvent.changeText(screen.getByLabelText("Nombre"), "Agua");
+    await fireEvent.changeText(screen.getByLabelText("Meta"), "1,5");
+    await fireEvent.press(screen.getByLabelText("domingo"));
+    await fireEvent.press(
+      screen.getByLabelText("Quitar el recordatorio de las 10:00"),
+    );
+    await fireEvent.press(screen.getByText("Añadir recordatorio"));
+    await fireEvent.press(screen.getByTestId("reminder-picker"));
+    await fireEvent.press(screen.getByText("Añadir"));
+    await fireEvent.press(screen.getByLabelText("Guardar"));
+
+    await waitFor(() => expect(screen).toHavePathname("/"));
+    expect(await screen.findByText("Agua")).toBeTruthy();
+    expect(screen.getByText("0 / 1,5 L")).toBeTruthy();
+    expect(await listHabits(db)).toEqual([
+      expect.objectContaining({ id: "water", name: "Agua" }),
+    ]);
+    // The days before today keep the configuration they had.
+    expect(await listHabitVersions(db)).toEqual([
+      version("water", { target: 2, unit: "L", increment: 0.25 }),
+      expect.objectContaining({
+        habitId: "water",
+        effectiveFrom: TODAY,
+        target: 1.5,
+        unit: "L",
+        increment: 0.25,
+        scheduledDays: scheduledDaysFrom([0, 1, 2, 3, 4, 5]),
+      }),
+    ]);
+    expect(await listReminders(db)).toEqual([
+      expect.objectContaining({ habitId: "water", time: "08:30" }),
+      { id: "water-r2", habitId: "water", time: "18:00" },
+    ]);
+  });
+
+  test("a boolean habit has no amounts to edit", async () => {
+    await addBoolean("walk", "Pasear");
+    await renderApp("/habits/walk/edit");
+
+    expect(await screen.findByDisplayValue("Pasear")).toBeTruthy();
+    expect(screen.queryByLabelText("Meta")).toBeNull();
+    expect(screen.queryByText("Sí o no")).toBeNull();
+  });
+
+  test("shows the errors and saves nothing", async () => {
+    await addWater();
+    await renderApp("/habits/water/edit");
+    await screen.findByDisplayValue("Beber agua");
+
+    await fireEvent.changeText(screen.getByLabelText("Nombre"), " ");
+    await fireEvent.changeText(screen.getByLabelText("Meta"), "0");
+    await fireEvent.press(screen.getByLabelText("Guardar"));
+
+    expect(await screen.findByText("Escribe un nombre.")).toBeTruthy();
+    expect(
+      screen.getByText("La meta debe ser un número mayor que 0."),
+    ).toBeTruthy();
+    expect(screen).toHavePathname("/habits/water/edit");
+    expect(await listHabits(db)).toEqual([
+      expect.objectContaining({ name: "Beber agua" }),
+    ]);
+  });
+
+  test.each([
+    ["archived", "walk"],
+    ["missing", "nothing"],
+  ])("goes back to the day if the habit is %s (RF-10)", async (_case, id) => {
+    await addHabit(
+      db,
+      habit("walk", { name: "Pasear", archivedOn: TODAY }),
+      version("walk"),
+    );
+
+    await renderApp(`/habits/${id}/edit`);
+
+    await waitFor(() => expect(screen).toHavePathname("/"));
   });
 });

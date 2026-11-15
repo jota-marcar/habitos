@@ -6,8 +6,11 @@ import {
   EMPTY_HABIT_FORM,
   addReminderTime,
   buildHabit,
+  buildHabitChanges,
   fieldOf,
+  habitFormOf,
   type HabitFormValues,
+  type StoredHabit,
 } from "./habit-form";
 
 const today = localDate("2026-11-12");
@@ -121,5 +124,173 @@ describe("addReminderTime", () => {
       ok: false,
       errors: ["time_duplicated"],
     });
+  });
+});
+
+describe("editing a habit (RF-08)", () => {
+  const created = localDate("2026-11-01");
+  const water: StoredHabit = {
+    habit: {
+      id: "water",
+      name: "Beber agua",
+      type: "quantitative",
+      createdOn: created,
+      archivedOn: null,
+    },
+    versions: [
+      {
+        id: "water-v1",
+        habitId: "water",
+        effectiveFrom: created,
+        scheduledDays: EVERY_DAY,
+        target: 2,
+        unit: "L",
+        increment: 0.25,
+      },
+    ],
+    reminders: [
+      { id: "r2", habitId: "water", time: localTime("18:00") },
+      { id: "r1", habitId: "water", time: localTime("10:00") },
+    ],
+  };
+  const waterForm = habitFormOf(
+    water.habit,
+    water.versions[0],
+    water.reminders,
+  );
+
+  test("fills the form in with the habit, its amounts as text and its times in order", () => {
+    expect(waterForm).toEqual({
+      name: "Beber agua",
+      type: "quantitative",
+      target: "2",
+      unit: "L",
+      increment: "0,25",
+      scheduledDays: EVERY_DAY,
+      reminderTimes: ["10:00", "18:00"],
+    });
+  });
+
+  test("a boolean habit leaves the amounts of the form as in a new one", () => {
+    const walk = { ...water.habit, type: "boolean" as const };
+    const version = {
+      ...water.versions[0],
+      target: null,
+      unit: null,
+      increment: null,
+    };
+
+    expect(habitFormOf(walk, version, [])).toMatchObject({
+      target: "",
+      unit: "",
+      increment: "1",
+      reminderTimes: [],
+    });
+  });
+
+  test("a form left as it was changes nothing", () => {
+    expect(buildHabitChanges(water, waterForm, sequentialIds(), today)).toEqual(
+      {
+        ok: true,
+        changes: {
+          habit: water.habit,
+          version: null,
+          addedReminders: [],
+          removedReminderIds: [],
+        },
+      },
+    );
+  });
+
+  test("a new configuration is a new version from today; the name changes in the habit (RF-09)", () => {
+    const values = { ...waterForm, name: " Agua ", target: "1,5" };
+
+    const result = buildHabitChanges(water, values, sequentialIds(), today);
+
+    expect(result).toEqual({
+      ok: true,
+      changes: {
+        habit: { ...water.habit, name: "Agua" },
+        version: {
+          ...water.versions[0],
+          id: "id-1",
+          effectiveFrom: today,
+          target: 1.5,
+        },
+        addedReminders: [],
+        removedReminderIds: [],
+      },
+    });
+  });
+
+  test("a second change on the same day updates the version of today", () => {
+    const edited = {
+      ...water.versions[0],
+      id: "water-v2",
+      effectiveFrom: today,
+    };
+    const stored = { ...water, versions: [...water.versions, edited] };
+
+    const result = buildHabitChanges(
+      stored,
+      { ...waterForm, unit: "litros" },
+      sequentialIds(),
+      today,
+    );
+
+    expect(result.ok && result.changes.version).toEqual({
+      ...edited,
+      unit: "litros",
+    });
+  });
+
+  test("only the reminders whose time was added or removed change", () => {
+    const values = {
+      ...waterForm,
+      reminderTimes: [localTime("08:30"), localTime("18:00")],
+    };
+
+    const result = buildHabitChanges(water, values, sequentialIds(), today);
+
+    expect(result.ok && result.changes).toMatchObject({
+      addedReminders: [{ id: "id-2", habitId: "water", time: "08:30" }],
+      removedReminderIds: ["r1"],
+    });
+  });
+
+  test("the type stays as it was, whatever the form says (RF-06)", () => {
+    const result = buildHabitChanges(
+      water,
+      { ...waterForm, type: "boolean", target: "3" },
+      sequentialIds(),
+      today,
+    );
+
+    expect(result.ok && result.changes).toMatchObject({
+      habit: { type: "quantitative" },
+      version: { target: 3 },
+    });
+  });
+
+  test("rejects a wrong name and a wrong configuration at once", () => {
+    const values = { ...waterForm, name: "", target: "0", scheduledDays: 0 };
+
+    expect(buildHabitChanges(water, values, sequentialIds(), today)).toEqual({
+      ok: false,
+      errors: ["name_empty", "scheduled_days_empty", "target_not_positive"],
+    });
+  });
+
+  test("rejects each of them on its own", () => {
+    const build = (changes: Partial<HabitFormValues>) =>
+      buildHabitChanges(
+        water,
+        { ...waterForm, ...changes },
+        sequentialIds(),
+        today,
+      );
+
+    expect(build({ name: "" })).toEqual({ ok: false, errors: ["name_empty"] });
+    expect(build({ unit: "" })).toEqual({ ok: false, errors: ["unit_empty"] });
   });
 });

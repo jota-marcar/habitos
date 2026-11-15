@@ -1,5 +1,6 @@
 // The messages the user sees for the error codes of the domain (docs/arquitectura.md).
 
+import type { AmountError } from "@/domain/entries";
 import {
   MAX_NAME_LENGTH,
   MAX_UNIT_LENGTH,
@@ -25,3 +26,9 @@ export const REMINDER_ERROR_MESSAGES: Readonly<Record<ReminderError, string>> =
   {
     time_duplicated: "Ya hay un recordatorio a esa hora.",
   };
+
+export const AMOUNT_ERROR_MESSAGES: Readonly<Record<AmountError, string>> = {
+  amount_invalid: "Escribe un número.",
+  amount_negative: "La cantidad no puede ser negativa.",
+  amount_too_precise: "La cantidad admite 2 decimales como máximo.",
+};

@@ -8,6 +8,7 @@ import {
   listHabitVersions,
   listHabits,
   saveHabit,
+  saveHabitChanges,
   saveHabitVersion,
 } from "./habits-repository";
 import { listReminders } from "./reminders-repository";
@@ -186,6 +187,78 @@ describe("addHabit", () => {
     expect(await listHabits(db)).toEqual([]);
     expect(await listHabitVersions(db)).toEqual([]);
     expect(await listReminders(db)).toEqual([]);
+  });
+});
+
+describe("saveHabitChanges", () => {
+  const morning = { id: "r1", habitId: "read", time: localTime("08:00") };
+  const night = { id: "r2", habitId: "read", time: localTime("22:00") };
+
+  beforeEach(async () => {
+    await addHabit(db, habit("read"), version("read"), [morning, night]);
+  });
+
+  test("saves the new name, the changed version and the reminders added and removed", async () => {
+    const renamed = habit("read", { name: "Leer" });
+    const added = version("read", {
+      id: "read-v2",
+      effectiveFrom: localDate("2026-11-12"),
+      scheduledDays: scheduledDaysFrom([0, 2]),
+    });
+    const noon = { id: "r3", habitId: "read", time: localTime("12:00") };
+
+    await saveHabitChanges(db, {
+      habit: renamed,
+      version: added,
+      addedReminders: [noon],
+      removedReminderIds: ["r1"],
+    });
+
+    expect(await listHabits(db)).toEqual([renamed]);
+    expect(await listHabitVersions(db)).toEqual([version("read"), added]);
+    expect(await listReminders(db)).toEqual([noon, night]);
+  });
+
+  test("leaves the versions as they are when the configuration did not change", async () => {
+    await saveHabitChanges(db, {
+      habit: habit("read", { name: "Leer" }),
+      version: null,
+      addedReminders: [],
+      removedReminderIds: [],
+    });
+
+    expect(await listHabitVersions(db)).toEqual([version("read")]);
+    expect(await listReminders(db)).toEqual([morning, night]);
+  });
+
+  test("a time freed by a removed reminder can be added again", async () => {
+    const again = { id: "r3", habitId: "read", time: localTime("08:00") };
+
+    await saveHabitChanges(db, {
+      habit: habit("read"),
+      version: null,
+      addedReminders: [again],
+      removedReminderIds: ["r1"],
+    });
+
+    expect(await listReminders(db)).toEqual([again, night]);
+  });
+
+  test("saves nothing if any of the changes fails", async () => {
+    const duplicated = { id: "r3", habitId: "read", time: localTime("22:00") };
+
+    await expect(
+      saveHabitChanges(db, {
+        habit: habit("read", { name: "Leer" }),
+        version: version("read", { scheduledDays: scheduledDaysFrom([0]) }),
+        addedReminders: [duplicated],
+        removedReminderIds: ["r1"],
+      }),
+    ).rejects.toThrow();
+
+    expect(await listHabits(db)).toEqual([habit("read")]);
+    expect(await listHabitVersions(db)).toEqual([version("read")]);
+    expect(await listReminders(db)).toEqual([morning, night]);
   });
 });
 

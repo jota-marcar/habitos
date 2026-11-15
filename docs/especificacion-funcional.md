@@ -38,6 +38,7 @@ A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo
 | **Recordatorio** | `Reminder` | Aviso a una hora concreta para que el usuario no olvide un hábito. |
 | **Posponer** | `snooze` | Aplazar un recordatorio para recibirlo de nuevo más tarde. |
 | **Archivar** | `archive` | Retirar un hábito de uso sin borrar su historial. |
+| **Opciones** | `options` | Acciones sobre un hábito que se abren al mantenerlo pulsado: corregir la cantidad, editar, archivar y eliminar. |
 
 La columna "En el código" es el nombre en inglés con el que cada término aparece en el código y en el modelo de datos ([ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)). Cada término se traduce siempre igual; uno nuevo se añade aquí antes de usarlo en el código. `goal` queda reservado para los objetivos de la [visión a futuro](#6-visión-a-futuro-tres-horizontes), y `Record` se evita porque ya tiene otro significado en el lenguaje de programación.
 
@@ -127,6 +128,10 @@ Es la pantalla principal de la aplicación (ver 3.1).
   | Editar (RF-08) | Sí | Sí | No |
   | Archivar (RF-10) | Sí | Sí | No |
   | Eliminar (RF-11) | Sí | Sí | Sí |
+
+  - Las opciones se despliegan desde abajo, como el menú (RF-32), y se cierran igual. Arriba muestran el nombre del hábito y, si es cuantitativo, lo que lleva.
+  - Al restar el incremento, las opciones siguen abiertas para poder repetirlo; las demás las cierran.
+  - La cantidad exacta se escribe en un diálogo del sistema, que parte de lo que lleva el hábito. Si lo escrito no es una cantidad válida, el diálogo vuelve a pedirla e indica el motivo.
 
 ### 3.5 Navegación entre días
 

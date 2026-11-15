@@ -28,6 +28,10 @@ export function AppStack() {
         name="habits/new"
         options={{ title: "Nuevo hábito", presentation: "modal" }}
       />
+      <Stack.Screen
+        name="habits/[id]/edit"
+        options={{ title: "Editar hábito", presentation: "modal" }}
+      />
     </Stack>
   );
 }

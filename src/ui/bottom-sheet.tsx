@@ -1,5 +1,5 @@
 // A sheet that comes up from the bottom of the main screen and follows the finger (ADR-0010).
-// The menu uses it (RF-32), and so will the options of a habit (RF-34).
+// The menu uses it (RF-32), and so do the options of a habit (RF-34).
 //
 // `useBottomSheet` holds its state; `BottomSheet` draws it over the screen; and
 // `useOpenSheetGesture` gives the drag that pulls it up from another view, such as the strip
@@ -157,7 +157,7 @@ export function BottomSheet({
   const onLayout = (event: LayoutChangeEvent) => {
     const measured = event.nativeEvent.layout.height;
     height.set(measured);
-    // The content of an open sheet can change, as the options of each habit will.
+    // The content of an open sheet can change, as the options of each habit do.
     if (isOpen) visible.set(withSpring(measured, SPRING));
   };
 
@@ -219,20 +219,50 @@ export function BottomSheet({
   );
 }
 
+/** What a sheet is about, above its options: a title and, optionally, a detail next to it. */
+export function SheetTitle({
+  title,
+  detail,
+}: {
+  title: string;
+  detail?: string | null;
+}) {
+  const colors = useColors();
+  return (
+    <View style={styles.title}>
+      <Text
+        style={[styles.titleText, { color: colors.textSecondary }]}
+        numberOfLines={1}
+      >
+        {title}
+      </Text>
+      {detail ? (
+        <Text style={[styles.titleDetail, { color: colors.textSecondary }]}>
+          {detail}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
 /** An option of a sheet: an SF Symbol and a label (ADR-0011). */
 export function SheetOption({
   icon,
   fallbackIcon,
   label,
+  destructive = false,
   onPress,
 }: {
   icon: SFSymbol;
   /** What is shown where SF Symbols are not available. */
   fallbackIcon: string;
   label: string;
+  /** An option that loses data, shown in the color of danger. */
+  destructive?: boolean;
   onPress: () => void;
 }) {
   const colors = useColors();
+  const tint = destructive ? colors.danger : colors.primary;
   return (
     <Pressable
       accessibilityRole="button"
@@ -243,15 +273,22 @@ export function SheetOption({
       <SymbolView
         name={icon}
         size={ICON_SIZE}
-        tintColor={colors.primary}
+        tintColor={tint}
         weight="medium"
         fallback={
-          <Text style={[styles.fallbackIcon, { color: colors.primary }]}>
+          <Text style={[styles.fallbackIcon, { color: tint }]}>
             {fallbackIcon}
           </Text>
         }
       />
-      <Text style={[styles.optionLabel, { color: colors.text }]}>{label}</Text>
+      <Text
+        style={[
+          styles.optionLabel,
+          { color: destructive ? colors.danger : colors.text },
+        ]}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -279,6 +316,16 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     width: 36,
   },
+  title: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between",
+    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  titleText: { flexShrink: 1, fontSize: fontSize.caption, fontWeight: "600" },
+  titleDetail: { fontSize: fontSize.caption, fontVariant: ["tabular-nums"] },
   option: {
     alignItems: "center",
     borderRadius: radius.md,

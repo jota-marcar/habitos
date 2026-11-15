@@ -1,4 +1,5 @@
-// The habits of the day on screen and how to record them (RF-12 to RF-16). It reads the
+// The habits of the day on screen and how to change them: recording them (RF-12 to RF-16) and
+// the options of each one (RF-34). It reads the
 // database when the screen gains focus, when the app comes back from the background and when
 // the day changes at midnight, and again after each change it makes (ADR-0010).
 //
@@ -10,11 +11,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 
 import { listEntries, saveEntry } from "@/data/entries-repository";
-import { listHabitVersions, listHabits } from "@/data/habits-repository";
+import {
+  deleteHabit,
+  listHabitVersions,
+  listHabits,
+  saveHabit,
+} from "@/data/habits-repository";
 import { listReminders } from "@/data/reminders-repository";
 import type { LocalDate } from "@/domain/dates";
 import { habitsForDay, type DayHabit } from "@/domain/day";
-import { canRecordOn, incremented, toggled } from "@/domain/entries";
+import {
+  canRecordOn,
+  decremented,
+  incremented,
+  toggled,
+} from "@/domain/entries";
+import { archiveHabit } from "@/domain/habits";
 import { keepOrder, sortDayHabits } from "@/domain/order";
 
 import { msUntilTomorrow, newId, today } from "./clock";
@@ -29,6 +41,14 @@ export interface Day {
   readonly hasAnyHabit: boolean;
   /** Marks or unmarks a boolean habit, or adds the increment to a quantitative one. */
   readonly record: (habitId: string) => Promise<void>;
+  /** Subtracts the increment from a quantitative habit (RF-15). */
+  readonly decrement: (habitId: string) => Promise<void>;
+  /** Replaces what a quantitative habit has accumulated with an exact amount (RF-15). */
+  readonly setAmount: (habitId: string, amount: number) => Promise<void>;
+  /** Archives a habit as of today (RF-10). */
+  readonly archive: (habitId: string) => Promise<void>;
+  /** Deletes a habit with all its history (RF-11). */
+  readonly remove: (habitId: string) => Promise<void>;
 }
 
 const habitIdOf = (dayHabit: DayHabit) => dayHabit.habit.id;
@@ -112,9 +132,24 @@ export function useDay(): Day {
     return () => clearTimeout(timer);
   }, [show]);
 
-  const record = useCallback(
-    (habitId: string): Promise<void> => {
+  // Makes a change after the ones before it and reads the day again, without sorting it.
+  const change = useCallback(
+    (make: () => Promise<void>): Promise<void> => {
       const write = writes.current.then(async () => {
+        await make();
+        await load(date, false);
+      });
+      // A failed write is reported to the caller but does not block the next ones.
+      writes.current = write.catch(() => undefined);
+      return write;
+    },
+    [date, load],
+  );
+
+  // Records the value that `next` gives for a habit of the day on screen.
+  const setValue = useCallback(
+    (habitId: string, next: (dayHabit: DayHabit) => number): Promise<void> =>
+      change(async () => {
         if (!canRecordOn(date, today())) return;
         const [allHabits, versions, entries] = await Promise.all([
           listHabits(db),
@@ -127,26 +162,64 @@ export function useDay(): Day {
         ).find((d) => d.habit.id === habitId);
         if (dayHabit === undefined) return;
 
-        const { habit, version, value } = dayHabit;
-        const next =
-          habit.type === "boolean"
-            ? toggled(value)
-            : incremented(value, version.increment ?? 0);
         const existing = entries.find((e) => e.habitId === habitId);
         await saveEntry(db, {
           id: existing?.id ?? newId(),
           habitId,
           date,
-          value: next,
+          value: next(dayHabit),
         });
-        await load(date, false);
-      });
-      // A failed write is reported to the caller but does not block the next ones.
-      writes.current = write.catch(() => undefined);
-      return write;
-    },
-    [db, date, load],
+      }),
+    [db, date, change],
   );
 
-  return { date, habits, hasAnyHabit, record };
+  const record = useCallback(
+    (habitId: string) =>
+      setValue(habitId, ({ habit, version, value }) =>
+        habit.type === "boolean"
+          ? toggled(value)
+          : incremented(value, version.increment ?? 0),
+      ),
+    [setValue],
+  );
+
+  const decrement = useCallback(
+    (habitId: string) =>
+      setValue(habitId, ({ version, value }) =>
+        decremented(value, version.increment ?? 0),
+      ),
+    [setValue],
+  );
+
+  const setAmount = useCallback(
+    (habitId: string, amount: number) => setValue(habitId, () => amount),
+    [setValue],
+  );
+
+  const archive = useCallback(
+    (habitId: string) =>
+      change(async () => {
+        const habit = (await listHabits(db)).find((h) => h.id === habitId);
+        if (habit !== undefined) {
+          await saveHabit(db, archiveHabit(habit, today()));
+        }
+      }),
+    [db, change],
+  );
+
+  const remove = useCallback(
+    (habitId: string) => change(() => deleteHabit(db, habitId)),
+    [db, change],
+  );
+
+  return {
+    date,
+    habits,
+    hasAnyHabit,
+    record,
+    decrement,
+    setAmount,
+    archive,
+    remove,
+  };
 }
