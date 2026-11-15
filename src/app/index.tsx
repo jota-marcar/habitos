@@ -1,8 +1,9 @@
 // The day view, the only main screen (RF-30). No header and no fixed buttons: the date at the
 // top, a box with the habits of the day and, under it, the strip the menu is pulled up from
-// (RF-32). A tap records a habit (RF-14, RF-15).
+// (RF-32). A tap records a habit (RF-14, RF-15) and holding it down opens its options (RF-34).
 
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,6 +17,7 @@ import {
 } from "@/ui/bottom-sheet";
 import { today } from "@/ui/clock";
 import { formatDayTitle, formatProgress } from "@/ui/format";
+import { HabitOptionsSheet } from "@/ui/habit-options-sheet";
 import { fontSize, radius, spacing, useColors } from "@/ui/theme";
 import { useDay } from "@/ui/use-day";
 
@@ -25,7 +27,15 @@ const DONE_OPACITY = 0.4;
 // The strip is thin, but the area that catches the drag is as tall as a button.
 const STRIP_TOUCH_HEIGHT = 44;
 
-function HabitRow({ item, onPress }: { item: DayHabit; onPress: () => void }) {
+function HabitRow({
+  item,
+  onPress,
+  onLongPress,
+}: {
+  item: DayHabit;
+  onPress: () => void;
+  onLongPress: () => void;
+}) {
   const colors = useColors();
   const { habit, version, value, done } = item;
   const boolean = habit.type === "boolean";
@@ -39,6 +49,7 @@ function HabitRow({ item, onPress }: { item: DayHabit; onPress: () => void }) {
       accessibilityLabel={habit.name}
       accessibilityValue={progress === null ? undefined : { text: progress }}
       onPress={onPress}
+      onLongPress={onLongPress}
       style={({ pressed }) => [
         styles.row,
         done && styles.done,
@@ -79,9 +90,24 @@ export default function Today() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { date, habits, hasAnyHabit, record } = useDay();
+  const day = useDay();
+  const { date, habits, hasAnyHabit, record } = day;
   const menu = useBottomSheet();
   const openMenu = useOpenSheetGesture(menu, "menu-strip");
+  const options = useBottomSheet();
+  // The habit whose options were opened. Its row gives how it is now; what it was like when
+  // it was held down is kept for when it is no longer on the day, while the sheet closes.
+  const [held, setHeld] = useState<DayHabit | null>(null);
+  const heldNow =
+    habits?.find((item) => item.habit.id === held?.habit.id) ?? held;
+
+  const openOptions = (item: DayHabit) => {
+    setHeld(item);
+    options.open();
+  };
+
+  const edit = (habitId: string) =>
+    router.push({ pathname: "/habits/[id]/edit", params: { id: habitId } });
 
   const create = () => {
     menu.close();
@@ -105,6 +131,7 @@ export default function Today() {
               <HabitRow
                 item={item}
                 onPress={() => void record(item.habit.id)}
+                onLongPress={() => openOptions(item)}
               />
             )}
             ItemSeparatorComponent={() => (
@@ -133,6 +160,13 @@ export default function Today() {
           onPress={create}
         />
       </BottomSheet>
+
+      <HabitOptionsSheet
+        sheet={options}
+        dayHabit={heldNow}
+        day={day}
+        onEdit={edit}
+      />
     </View>
   );
 }

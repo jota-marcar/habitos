@@ -162,6 +162,12 @@ Decisiones del modelo:
 2. El planificador cancela los recordatorios restantes de ese hábito para hoy si ya está cumplido (RF-24).
 3. La sincronización sube el cambio cuando hay conexión.
 
+### Opciones de un hábito
+
+1. El dominio decide qué opciones tiene un hábito según el día que se ve y si está archivado (RF-34). La interfaz las muestra en la misma hoja inferior que el menú.
+2. Restar el incremento y escribir la cantidad exacta siguen el flujo de "Marcar un hábito". La cantidad se pide con el diálogo nativo de iOS (`Alert.prompt`), y archivar y eliminar se confirman con una alerta nativa.
+3. Editar abre el formulario como modal, el mismo que el de crear. Al guardar, el nombre cambia en el hábito y la configuración entra en vigor hoy: se añade una versión nueva o, si ya había una de hoy, se actualiza. Los recordatorios añadidos y quitados se guardan en la misma transacción.
+
 ### Acción desde un recordatorio
 
 1. iOS muestra la notificación con sus botones ("Hecho" o "+incremento", y "Posponer").

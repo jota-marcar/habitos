@@ -1,12 +1,16 @@
-// The state of the habit form and its conversion into a new habit (RF-06).
-// The rules are the domain's: this only turns what the user typed into its input.
+// The state of the habit form and its conversion into a new habit (RF-06) or into the changes
+// to an existing one (RF-08). The rules are the domain's: this only turns what the user typed
+// into its input.
 
+import type { HabitChanges } from "@/data/habits-repository";
 import { parseAmount } from "@/domain/amounts";
 import type { LocalDate } from "@/domain/dates";
 import {
   DEFAULT_INCREMENT,
   DEFAULT_SCHEDULED_DAYS,
+  changeConfig,
   createHabit,
+  renameHabit,
   type Habit,
   type HabitError,
   type HabitType,
@@ -86,6 +90,89 @@ export function buildHabit(
     time,
   }));
   return { ok: true, habit, version, reminders };
+}
+
+/** A habit as it is stored, with the versions and the reminders that belong to it. */
+export interface StoredHabit {
+  readonly habit: Habit;
+  readonly versions: readonly HabitVersion[];
+  readonly reminders: readonly Reminder[];
+}
+
+/** The form filled in with a habit and the version to edit: the one in force today. */
+export function habitFormOf(
+  habit: Habit,
+  version: HabitVersion,
+  reminders: readonly Reminder[],
+): HabitFormValues {
+  const amount = (value: number | null, missing: string) =>
+    value === null ? missing : formatAmount(value);
+  return {
+    name: habit.name,
+    type: habit.type,
+    target: amount(version.target, EMPTY_HABIT_FORM.target),
+    unit: version.unit ?? EMPTY_HABIT_FORM.unit,
+    increment: amount(version.increment, EMPTY_HABIT_FORM.increment),
+    scheduledDays: version.scheduledDays,
+    reminderTimes: reminders.map((reminder) => reminder.time).sort(),
+  };
+}
+
+export type HabitChangesResult =
+  | { readonly ok: true; readonly changes: HabitChanges }
+  | { readonly ok: false; readonly errors: readonly HabitError[] };
+
+/**
+ * Builds the changes to a habit from the form (RF-08). The configuration changes from today
+ * onwards (RF-09) and the type stays as it was, whatever the form says (RF-06). Only the
+ * reminders whose time was added or removed change.
+ */
+export function buildHabitChanges(
+  stored: StoredHabit,
+  values: HabitFormValues,
+  newId: () => string,
+  today: LocalDate,
+): HabitChangesResult {
+  const { habit, versions, reminders } = stored;
+  const quantitative = habit.type === "quantitative";
+  const renamed = renameHabit(habit, values.name);
+  const configured = changeConfig(
+    habit,
+    versions,
+    {
+      scheduledDays: values.scheduledDays,
+      target: quantitative ? parseAmount(values.target) : null,
+      unit: quantitative ? values.unit : null,
+      increment: quantitative ? parseAmount(values.increment) : null,
+    },
+    newId(),
+    today,
+  );
+  if (!renamed.ok || !configured.ok) {
+    return {
+      ok: false,
+      errors: [
+        ...(renamed.ok ? [] : renamed.errors),
+        ...(configured.ok ? [] : configured.errors),
+      ],
+    };
+  }
+
+  const times = values.reminderTimes;
+  return {
+    ok: true,
+    changes: {
+      habit: renamed.value,
+      // The domain returns the same versions when nothing changed.
+      version: configured.value.find((v) => !versions.includes(v)) ?? null,
+      addedReminders: times
+        .filter((time) => !reminders.some((r) => r.time === time))
+        .map((time) => ({ id: newId(), habitId: habit.id, time })),
+      removedReminderIds: reminders
+        .filter((r) => !times.includes(r.time))
+        .map((r) => r.id),
+    },
+  };
 }
 
 /** The form field each error belongs to, to show it next to it. */
