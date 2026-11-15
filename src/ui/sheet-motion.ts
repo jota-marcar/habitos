@@ -1,6 +1,7 @@
-// How the sheets move under the finger (ADR-0010). Every threshold of the gestures lives here,
-// so that their feel can be tuned after trying them on the iPhone. The functions are worklets:
-// they run on the UI thread, inside the gesture callbacks.
+// How the sheets and the months of the calendar move under the finger (ADR-0010). Every
+// threshold of the gestures lives here, so that their feel can be tuned after trying them on
+// the iPhone. The functions are worklets: they run on the UI thread, inside the gesture
+// callbacks.
 //
 // Distances are in points and speeds in points per second. "Towards open" is positive.
 
@@ -57,4 +58,24 @@ export function visibleHeight(raw: number, height: number): number {
   if (raw <= height || height <= 0) return raw;
   const excess = raw - height;
   return height + (1 - 1 / ((excess * RUBBER_BAND) / height + 1)) * height;
+}
+
+/**
+ * How many months the calendar moves when a sideways drag is let go: 1 to the next month, -1
+ * to the previous one, 0 to stay (RF-18). Dragging to the left, a negative `travel`, brings
+ * the next month. As in the sheets, a fast flick wins; otherwise the drag must have covered
+ * `DRAG_FRACTION` of the width.
+ */
+export function monthStep(
+  travel: number,
+  velocity: number,
+  width: number,
+): -1 | 0 | 1 {
+  "worklet";
+  if (velocity < -FLING_VELOCITY) return 1;
+  if (velocity > FLING_VELOCITY) return -1;
+  const threshold = width * DRAG_FRACTION;
+  if (travel < -threshold) return 1;
+  if (travel > threshold) return -1;
+  return 0;
 }

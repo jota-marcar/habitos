@@ -1,7 +1,13 @@
 import { localDate } from "@/domain/dates";
 import { EVERY_DAY } from "@/domain/schedule";
 
-import { formatAmount, formatDayTitle, formatProgress } from "./format";
+import {
+  formatAmount,
+  formatDayTitle,
+  formatFullDate,
+  formatMonthTitle,
+  formatProgress,
+} from "./format";
 
 const today = localDate("2026-11-12");
 
@@ -11,9 +17,28 @@ test("formatDayTitle says Hoy for the current day (RF-30)", () => {
 
 test("formatDayTitle says the weekday and the short date for other days", () => {
   expect(formatDayTitle(localDate("2026-11-10"), today)).toBe("Martes, 10 nov");
-  expect(formatDayTitle(localDate("2027-01-03"), today)).toBe("Domingo, 3 ene");
   expect(formatDayTitle(localDate("2026-09-02"), today)).toBe(
     "Miércoles, 2 sept",
+  );
+});
+
+test("formatDayTitle adds the year to a day of another year", () => {
+  expect(formatDayTitle(localDate("2027-01-03"), today)).toBe(
+    "Domingo, 3 ene 2027",
+  );
+  expect(formatDayTitle(localDate("2025-12-31"), today)).toBe(
+    "Miércoles, 31 dic 2025",
+  );
+});
+
+test("formatMonthTitle says the month and the year (RF-18)", () => {
+  expect(formatMonthTitle({ year: 2026, month: 11 })).toBe("Noviembre 2026");
+  expect(formatMonthTitle({ year: 2027, month: 1 })).toBe("Enero 2027");
+});
+
+test("formatFullDate writes a date in full", () => {
+  expect(formatFullDate(localDate("2026-11-02"))).toBe(
+    "2 de noviembre de 2026",
   );
 });
 

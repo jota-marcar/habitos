@@ -1,23 +1,28 @@
 // The day view, the only main screen (RF-30). No header and no fixed buttons: the date at the
 // top, a box with the habits of the day and, under it, the strip the menu is pulled up from
 // (RF-32). A tap records a habit (RF-14, RF-15) and holding it down opens its options (RF-34).
+// The calendar that changes the day is pulled down from the date or from the list (RF-31).
 
 import { useRouter } from "expo-router";
-import { useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { GestureDetector } from "react-native-gesture-handler";
+import { useEffect, useState } from "react";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from "react-native";
+import { FlatList, GestureDetector } from "react-native-gesture-handler";
+import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import type { LocalDate } from "@/domain/dates";
 import type { DayHabit } from "@/domain/day";
-import {
-  BottomSheet,
-  SheetOption,
-  useBottomSheet,
-  useOpenSheetGesture,
-} from "@/ui/bottom-sheet";
-import { today } from "@/ui/clock";
+import { CalendarSheet } from "@/ui/calendar-sheet";
 import { formatDayTitle, formatProgress } from "@/ui/format";
 import { HabitOptionsSheet } from "@/ui/habit-options-sheet";
+import { Sheet, SheetOption, useOpenSheetGesture, useSheet } from "@/ui/sheet";
 import { fontSize, radius, spacing, useColors } from "@/ui/theme";
 import { useDay } from "@/ui/use-day";
 
@@ -68,14 +73,22 @@ function HabitRow({
   );
 }
 
-function EmptyDay({ hasAnyHabit }: { hasAnyHabit: boolean }) {
+function EmptyDay({
+  hasAnyHabit,
+  isToday,
+}: {
+  hasAnyHabit: boolean;
+  isToday: boolean;
+}) {
   const colors = useColors();
   return (
     <View style={styles.empty}>
       <Text style={[styles.emptyTitle, { color: colors.text }]}>
-        {hasAnyHabit
-          ? "Hoy no toca ningún hábito."
-          : "Todavía no tienes hábitos."}
+        {!hasAnyHabit
+          ? "Todavía no tienes hábitos."
+          : isToday
+            ? "Hoy no toca ningún hábito."
+            : "Este día no toca ningún hábito."}
       </Text>
       {hasAnyHabit ? null : (
         <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
@@ -91,10 +104,26 @@ export default function Today() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const day = useDay();
-  const { date, habits, hasAnyHabit, record } = day;
-  const menu = useBottomSheet();
+  const { date, today, habits, hasAnyHabit, record } = day;
+  const isToday = date === today;
+
+  const calendar = useSheet("top");
+  const openCalendarFromDate = useOpenSheetGesture(calendar, "day-date");
+  // The list only pulls the calendar down when it cannot scroll up any more (RF-31).
+  const listAtTop = useSharedValue(true);
+  const openCalendarFromList = useOpenSheetGesture(
+    calendar,
+    "day-list",
+    listAtTop,
+  );
+  const onListScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) =>
+    listAtTop.set(event.nativeEvent.contentOffset.y <= 0);
+  // Each day has its own list, which starts at the top.
+  useEffect(() => listAtTop.set(true), [date, listAtTop]);
+
+  const menu = useSheet();
   const openMenu = useOpenSheetGesture(menu, "menu-strip");
-  const options = useBottomSheet();
+  const options = useSheet();
   // The habit whose options were opened. Its row gives how it is now; what it was like when
   // it was held down is kept for when it is no longer on the day, while the sheet closes.
   const [held, setHeld] = useState<DayHabit | null>(null);
@@ -106,8 +135,17 @@ export default function Today() {
     options.open();
   };
 
+  // The form is told the day it was opened from, to say when the changes apply (RF-09).
   const edit = (habitId: string) =>
-    router.push({ pathname: "/habits/[id]/edit", params: { id: habitId } });
+    router.push({
+      pathname: "/habits/[id]/edit",
+      params: { id: habitId, day: date },
+    });
+
+  const showDay = (chosen: LocalDate) => {
+    calendar.close();
+    day.select(chosen);
+  };
 
   const create = () => {
     menu.close();
@@ -115,33 +153,63 @@ export default function Today() {
   };
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + spacing.sm }]}>
-      <Text style={[styles.date, { color: colors.textSecondary }]}>
-        {formatDayTitle(date, today())}
-      </Text>
+    <View style={styles.screen}>
+      {/* The whole top of the screen pulls the calendar down, not only the text. */}
+      <GestureDetector gesture={openCalendarFromDate}>
+        <View
+          testID="day-date"
+          style={[styles.dateArea, { paddingTop: insets.top + spacing.sm }]}
+        >
+          {/* Touching the date of another day goes back to the current one (RF-21). */}
+          <Pressable
+            accessibilityRole={isToday ? "text" : "button"}
+            accessibilityHint={isToday ? undefined : "Vuelve a hoy"}
+            disabled={isToday}
+            hitSlop={spacing.sm}
+            onPress={() => showDay(today)}
+          >
+            <Text style={[styles.date, { color: colors.textSecondary }]}>
+              {formatDayTitle(date, today)}
+            </Text>
+          </Pressable>
+        </View>
+      </GestureDetector>
 
-      <View style={[styles.box, { backgroundColor: colors.surface }]}>
-        {habits === null ? null : habits.length === 0 ? (
-          <EmptyDay hasAnyHabit={hasAnyHabit} />
-        ) : (
-          <FlatList
-            data={habits}
-            keyExtractor={(item) => item.habit.id}
-            renderItem={({ item }) => (
-              <HabitRow
-                item={item}
-                onPress={() => void record(item.habit.id)}
-                onLongPress={() => openOptions(item)}
-              />
-            )}
-            ItemSeparatorComponent={() => (
-              <View
-                style={[styles.separator, { backgroundColor: colors.border }]}
-              />
-            )}
-          />
-        )}
-      </View>
+      <GestureDetector gesture={openCalendarFromList}>
+        <View
+          testID="day-list"
+          style={[styles.box, { backgroundColor: colors.surface }]}
+        >
+          {habits === null ? null : habits.length === 0 ? (
+            <EmptyDay hasAnyHabit={hasAnyHabit} isToday={isToday} />
+          ) : (
+            <FlatList
+              key={date}
+              testID="day-habits"
+              data={habits}
+              // The drag that opens the calendar goes along with the scroll of the list.
+              simultaneousWith={openCalendarFromList}
+              // A list that fits does not move, so pulling it down only brings the calendar.
+              alwaysBounceVertical={false}
+              onScroll={onListScroll}
+              scrollEventThrottle={16}
+              keyExtractor={(item) => item.habit.id}
+              renderItem={({ item }) => (
+                <HabitRow
+                  item={item}
+                  onPress={() => void record(item.habit.id)}
+                  onLongPress={() => openOptions(item)}
+                />
+              )}
+              ItemSeparatorComponent={() => (
+                <View
+                  style={[styles.separator, { backgroundColor: colors.border }]}
+                />
+              )}
+            />
+          )}
+        </View>
+      </GestureDetector>
 
       <GestureDetector gesture={openMenu}>
         <View
@@ -152,14 +220,21 @@ export default function Today() {
         </View>
       </GestureDetector>
 
-      <BottomSheet sheet={menu} closeLabel="Cerrar el menú" testID="menu">
+      <CalendarSheet
+        sheet={calendar}
+        date={date}
+        today={today}
+        onSelect={showDay}
+      />
+
+      <Sheet sheet={menu} closeLabel="Cerrar el menú" testID="menu">
         <SheetOption
           icon="plus"
           fallbackIcon="+"
           label="Crear"
           onPress={create}
         />
-      </BottomSheet>
+      </Sheet>
 
       <HabitOptionsSheet
         sheet={options}
@@ -173,12 +248,12 @@ export default function Today() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  date: {
-    fontSize: fontSize.body,
-    fontWeight: "600",
+  dateArea: {
+    alignItems: "flex-start",
     paddingBottom: spacing.sm,
     paddingHorizontal: spacing.md + spacing.md,
   },
+  date: { fontSize: fontSize.body, fontWeight: "600" },
   box: {
     borderRadius: radius.md,
     flex: 1,

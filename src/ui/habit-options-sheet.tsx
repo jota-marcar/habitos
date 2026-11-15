@@ -9,15 +9,9 @@ import type { DayHabit } from "@/domain/day";
 import { exactAmount } from "@/domain/entries";
 import { habitOptions, type HabitOption } from "@/domain/options";
 
-import {
-  BottomSheet,
-  SheetOption,
-  SheetTitle,
-  type BottomSheetState,
-} from "./bottom-sheet";
-import { today } from "./clock";
 import { formatAmount, formatProgress } from "./format";
 import { AMOUNT_ERROR_MESSAGES } from "./messages";
+import { Sheet, SheetOption, SheetTitle, type SheetState } from "./sheet";
 import type { Day } from "./use-day";
 
 const ICONS: Readonly<
@@ -31,7 +25,7 @@ const ICONS: Readonly<
 };
 
 interface Props {
-  sheet: BottomSheetState;
+  sheet: SheetState;
   /** The habit that was held down, as it is now on the day on screen. */
   dayHabit: DayHabit | null;
   day: Day;
@@ -41,13 +35,13 @@ interface Props {
 export function HabitOptionsSheet(props: Props) {
   const { sheet, dayHabit } = props;
   return (
-    <BottomSheet
+    <Sheet
       sheet={sheet}
       closeLabel="Cerrar las opciones"
       testID="habit-options"
     >
       {dayHabit === null ? null : <Options {...props} dayHabit={dayHabit} />}
-    </BottomSheet>
+    </Sheet>
   );
 }
 
@@ -141,7 +135,7 @@ function Options({
         title={habit.name}
         detail={quantitative ? formatProgress(value, version) : null}
       />
-      {habitOptions(habit, day.date, today()).map((option) => (
+      {habitOptions(habit, day.date, day.today).map((option) => (
         <SheetOption
           key={option}
           {...ICONS[option]}

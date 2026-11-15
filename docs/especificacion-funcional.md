@@ -38,6 +38,7 @@ A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo
 | **Recordatorio** | `Reminder` | Aviso a una hora concreta para que el usuario no olvide un hábito. |
 | **Posponer** | `snooze` | Aplazar un recordatorio para recibirlo de nuevo más tarde. |
 | **Archivar** | `archive` | Retirar un hábito de uso sin borrar su historial. |
+| **Calendario** | `calendar` | Cuadrícula de un mes con la que se elige el día que se quiere ver. |
 | **Opciones** | `options` | Acciones sobre un hábito que se abren al mantenerlo pulsado: corregir la cantidad, editar, archivar y eliminar. |
 
 La columna "En el código" es el nombre en inglés con el que cada término aparece en el código y en el modelo de datos ([ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)). Cada término se traduce siempre igual; uno nuevo se añade aquí antes de usarlo en el código. `goal` queda reservado para los objetivos de la [visión a futuro](#6-visión-a-futuro-tres-horizontes), y `Record` se evita porque ya tiene otro significado en el lenguaje de programación.
@@ -63,7 +64,7 @@ La aplicación tiene una sola pantalla principal: la vista de un día (3.4). Tod
 ```
 
 - **RF-30.** La pantalla principal tiene tres zonas, de arriba abajo:
-  - **La fecha** del día que se está viendo, pequeña y discreta: "Hoy" si es el día actual o, si no, el día de la semana y la fecha (por ejemplo, "Martes, 10 nov").
+  - **La fecha** del día que se está viendo, pequeña y discreta: "Hoy" si es el día actual o, si no, el día de la semana y la fecha (por ejemplo, "Martes, 10 nov"). Si el día es de otro año, también lo indica ("Domingo, 3 ene 2027").
   - **Un recuadro con la lista de hábitos** de ese día, que ocupa casi toda la pantalla.
   - **Una franja fina** justo debajo del recuadro, que indica que desde ahí se despliega el menú. Queda bien separada del borde inferior de la pantalla, para no confundirse con los gestos del propio teléfono.
 - **RF-31.** Al deslizar hacia abajo desde la fecha, o desde la lista cuando ya está arriba del todo, se despliega el **calendario** desde arriba (RF-18). Se cierra deslizándolo hacia arriba o tocando fuera de él.
@@ -110,7 +111,8 @@ Es la pantalla principal de la aplicación (ver 3.1).
 - **RF-12.** Al abrir la aplicación se muestra el **día actual**, con la lista de hábitos programados para ese día de la semana.
   - Primero van los pendientes y después los cumplidos. Dentro de cada grupo, los hábitos se ordenan por la hora de su primer recordatorio, como una agenda; los que no tienen recordatorio van al final y, a igualdad, se mantiene el orden de creación.
   - Mientras se está viendo un día, la lista no se reordena: un hábito que se cumple, o que deja de estar cumplido, se queda en su sitio, para que la lista no se mueva bajo el dedo. Se reordena la próxima vez que se muestra el día: al abrir la aplicación, al volver a ella o al elegir un día en el calendario.
-  - Si llega la medianoche con la aplicación abierta, la pantalla pasa sola al nuevo día actual.
+  - Si llega la medianoche con la aplicación abierta, la pantalla pasa sola al nuevo día actual. Si se estaba viendo otro día (RF-18), se queda en él.
+  - Al volver a la aplicación después de haber salido de ella se muestra de nuevo el día actual, aunque se estuviera viendo otro.
 - **RF-13.** Cada hábito de la lista muestra su nombre y su estado:
   - Booleano: solo el nombre.
   - Cuantitativo: el nombre, la cantidad acumulada y la meta (por ejemplo, "1,25 / 2 L").
@@ -136,10 +138,11 @@ Es la pantalla principal de la aplicación (ver 3.1).
 ### 3.5 Navegación entre días
 
 - **RF-18.** El usuario cambia de día eligiendo una fecha en el calendario (RF-31):
-  - El calendario muestra un mes en cuadrícula, solo con el número de cada día, y encima el año y el mes.
+  - El calendario muestra un mes en cuadrícula, solo con el número de cada día. Encima van el mes y el año y, sobre cada columna, la inicial del día de la semana. Las semanas empiezan en lunes.
+  - Se abre en el mes del día que se está viendo.
   - Deslizar hacia la izquierda o hacia la derecha dentro del calendario cambia de mes.
   - El día actual y el día que se está viendo se distinguen del resto.
-  - Al tocar un día, el calendario se cierra y la pantalla principal muestra ese día.
+  - Al tocar un día, el calendario se cierra y la pantalla principal muestra ese día. Se puede elegir cualquier día, pasado o futuro.
 
   No hay otra forma de pasar al día anterior o al siguiente: consultar otros días es algo puntual, y lo habitual es el día actual.
 - **RF-19.** Los **días pasados** se pueden consultar y editar sin límite de antigüedad, con las mismas acciones que el día actual.

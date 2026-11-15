@@ -1,9 +1,10 @@
-// A sheet that comes up from the bottom of the main screen and follows the finger (ADR-0010).
-// The menu uses it (RF-32), and so do the options of a habit (RF-34).
+// A sheet that comes out from an edge of the main screen and follows the finger (ADR-0010).
+// From the bottom come the menu (RF-32) and the options of a habit (RF-34); from the top, the
+// calendar (RF-31).
 //
-// `useBottomSheet` holds its state; `BottomSheet` draws it over the screen; and
-// `useOpenSheetGesture` gives the drag that pulls it up from another view, such as the strip
-// of the menu. It closes when dragged down or when the backdrop is touched.
+// `useSheet` holds its state; `Sheet` draws it over the screen; and `useOpenSheetGesture`
+// gives the drag that pulls it out from another view, such as the strip of the menu. It closes
+// when dragged back or when the backdrop is touched.
 
 import type { SFSymbol } from "expo-symbols";
 import { SymbolView } from "expo-symbols";
@@ -39,7 +40,11 @@ import {
 } from "./sheet-motion";
 import { fontSize, radius, spacing, useColors } from "./theme";
 
-export interface BottomSheetState {
+/** The edge of the screen a sheet comes out from. */
+export type SheetEdge = "top" | "bottom";
+
+export interface SheetState {
+  readonly edge: SheetEdge;
   readonly isOpen: boolean;
   readonly open: () => void;
   readonly close: () => void;
@@ -51,7 +56,7 @@ export interface BottomSheetState {
   readonly settle: (open: boolean, velocity: number) => void;
 }
 
-export function useBottomSheet(): BottomSheetState {
+export function useSheet(edge: SheetEdge = "bottom"): SheetState {
   const visible = useSharedValue(0);
   const height = useSharedValue(0);
   const [isOpen, setOpen] = useState(false);
@@ -75,70 +80,89 @@ export function useBottomSheet(): BottomSheetState {
     visible.set(withSpring(0, SPRING));
   }, [visible]);
 
-  return { isOpen, open, close, visible, height, settle };
+  return { edge, isOpen, open, close, visible, height, settle };
 }
 
 // The drag that moves the sheet: it follows the finger from where the sheet was and, when let
 // go, settles open or closed (sheet-motion.ts).
 function useSheetDrag(
-  sheet: BottomSheetState,
+  sheet: SheetState,
   config: {
     testID: string;
     wasOpen: boolean;
     activeOffsetY: number | [number, number];
+    /** If given, the drag only moves the sheet when it is true as the drag starts. */
+    onlyIf?: SharedValue<boolean>;
   },
 ): PanGesture {
-  const { visible, height, settle } = sheet;
-  const { wasOpen } = config;
+  const { edge, visible, height, settle } = sheet;
+  const { wasOpen, onlyIf } = config;
+  // A sheet at the bottom opens upwards, which is a negative translation.
+  const towardsOpen = edge === "bottom" ? -1 : 1;
   const start = useSharedValue(0);
+  const moving = useSharedValue(false);
   return usePanGesture({
     testID: config.testID,
     activeOffsetY: config.activeOffsetY,
     failOffsetX: [-HORIZONTAL_FAIL_DISTANCE, HORIZONTAL_FAIL_DISTANCE],
     onActivate: () => {
       "worklet";
+      moving.set(onlyIf === undefined || onlyIf.get());
       start.set(visible.get());
     },
     onUpdate: (event) => {
       "worklet";
+      if (!moving.get()) return;
       visible.set(
-        visibleHeight(start.get() - event.translationY, height.get()),
+        visibleHeight(
+          start.get() + towardsOpen * event.translationY,
+          height.get(),
+        ),
       );
     },
     onDeactivate: (event) => {
       "worklet";
+      if (!moving.get()) return;
+      const velocity = towardsOpen * event.velocityY;
       const open =
         !event.canceled &&
         settlesOpen(
           wasOpen,
-          -event.translationY,
-          -event.velocityY,
+          towardsOpen * event.translationY,
+          velocity,
           height.get(),
         );
-      settle(open, -event.velocityY);
+      settle(open, velocity);
     },
   });
 }
 
-/** The drag up that opens `sheet` from the view it is attached to. */
+/**
+ * The drag that opens `sheet` from the view it is attached to: up for a sheet at the bottom,
+ * down for one at the top. With `onlyIf`, the drag is ignored unless it is true when it
+ * starts: a list only pulls the calendar down when it is scrolled to the top (RF-31).
+ */
 export function useOpenSheetGesture(
-  sheet: BottomSheetState,
+  sheet: SheetState,
   testID: string,
+  onlyIf?: SharedValue<boolean>,
 ): PanGesture {
   return useSheetDrag(sheet, {
     testID,
     wasOpen: false,
-    activeOffsetY: -ACTIVATION_DISTANCE,
+    activeOffsetY:
+      sheet.edge === "bottom" ? -ACTIVATION_DISTANCE : ACTIVATION_DISTANCE,
+    onlyIf,
   });
 }
 
-export function BottomSheet({
+export function Sheet({
   sheet,
   closeLabel,
   testID,
   children,
 }: {
-  sheet: BottomSheetState;
+  sheet: SheetState;
   /** What the backdrop says to screen readers: it closes the sheet. */
   closeLabel: string;
   testID: string;
@@ -146,7 +170,8 @@ export function BottomSheet({
 }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { isOpen, close, visible, height } = sheet;
+  const { edge, isOpen, close, visible, height } = sheet;
+  const atBottom = edge === "bottom";
 
   const closeGesture = useSheetDrag(sheet, {
     testID: `${testID}-drag`,
@@ -169,10 +194,20 @@ export function BottomSheet({
 
   const sheetStyle = useAnimatedStyle(() => {
     const h = height.get();
-    // Until it is measured, a closed sheet stays out of sight below the screen.
-    const hidden = h > 0 ? h : 10_000;
-    return { transform: [{ translateY: hidden - visible.get() }] };
+    // Until it is measured, a closed sheet stays out of sight beyond its edge.
+    const hidden = (h > 0 ? h : 10_000) - visible.get();
+    return { transform: [{ translateY: atBottom ? hidden : -hidden }] };
   });
+
+  const grabber = (
+    <View
+      style={[
+        styles.grabber,
+        atBottom ? styles.grabberAbove : styles.grabberBelow,
+        { backgroundColor: colors.border },
+      ]}
+    />
+  );
 
   return (
     <View
@@ -203,15 +238,17 @@ export function BottomSheet({
           pointerEvents={isOpen ? "auto" : "none"}
           style={[
             styles.container,
-            { paddingBottom: insets.bottom + spacing.sm },
+            atBottom
+              ? { bottom: 0, paddingBottom: insets.bottom + spacing.sm }
+              : { top: 0, paddingTop: insets.top + spacing.sm },
             sheetStyle,
           ]}
         >
+          {/* The grabber is on the side the sheet is dragged from. */}
           <View style={[styles.card, { backgroundColor: colors.surface }]}>
-            <View
-              style={[styles.grabber, { backgroundColor: colors.border }]}
-            />
+            {atBottom ? grabber : null}
             {children}
+            {atBottom ? null : grabber}
           </View>
         </Animated.View>
       </GestureDetector>
@@ -297,7 +334,6 @@ const ICON_SIZE = 22;
 
 const styles = StyleSheet.create({
   container: {
-    bottom: 0,
     left: 0,
     paddingHorizontal: spacing.sm,
     position: "absolute",
@@ -305,17 +341,17 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: radius.md * 2,
-    paddingBottom: spacing.sm,
     paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
   },
   grabber: {
     alignSelf: "center",
     borderRadius: radius.round,
     height: 5,
-    marginBottom: spacing.sm,
-    marginTop: spacing.sm,
     width: 36,
   },
+  grabberAbove: { marginBottom: spacing.sm },
+  grabberBelow: { marginTop: spacing.sm },
   title: {
     alignItems: "center",
     flexDirection: "row",

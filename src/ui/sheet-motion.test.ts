@@ -1,6 +1,7 @@
 import {
   DRAG_FRACTION,
   FLING_VELOCITY,
+  monthStep,
   settlesOpen,
   visibleHeight,
 } from "./sheet-motion";
@@ -46,5 +47,28 @@ describe("visibleHeight", () => {
 
   test("follows the finger while the height is still unknown", () => {
     expect(visibleHeight(40, 0)).toBe(40);
+  });
+});
+
+describe("monthStep (RF-18)", () => {
+  const width = 300;
+  const far = width * DRAG_FRACTION + 1;
+
+  test("dragging far to the left brings the next month; to the right, the previous one", () => {
+    expect(monthStep(-far, 0, width)).toBe(1);
+    expect(monthStep(far, 0, width)).toBe(-1);
+  });
+
+  test("a short drag stays in the month", () => {
+    expect(monthStep(-far + 1, 0, width)).toBe(0);
+    expect(monthStep(far - 1, 0, width)).toBe(0);
+    expect(monthStep(0, 0, width)).toBe(0);
+  });
+
+  test("a fast flick changes the month whatever the distance", () => {
+    expect(monthStep(-5, -FLING_VELOCITY - 1, width)).toBe(1);
+    expect(monthStep(5, FLING_VELOCITY + 1, width)).toBe(-1);
+    // Even against a long drag the other way.
+    expect(monthStep(-far, FLING_VELOCITY + 1, width)).toBe(-1);
   });
 });
