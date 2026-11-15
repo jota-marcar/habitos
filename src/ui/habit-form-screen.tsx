@@ -60,9 +60,12 @@ function messagesByField(
 export function HabitFormScreen({
   initialValues,
   editing = false,
+  note,
   onSubmit,
 }: {
   initialValues: HabitFormValues;
+  /** A discreet line above the form. */
+  note?: string;
   /** Editing a habit that already exists: its type cannot change (RF-06). */
   editing?: boolean;
   /** Saves the habit. Returns the errors that reject it: none if it was saved. */
@@ -152,6 +155,12 @@ export function HabitFormScreen({
           ),
         }}
       />
+
+      {note ? (
+        <Text style={[styles.note, { color: colors.textSecondary }]}>
+          {note}
+        </Text>
+      ) : null}
 
       <Section title="Hábito" error={messages.name}>
         <Field
@@ -249,6 +258,7 @@ export function HabitFormScreen({
 
 const styles = StyleSheet.create({
   content: { gap: spacing.lg, padding: spacing.md },
+  note: { fontSize: fontSize.caption, paddingHorizontal: spacing.md },
   days: { flexDirection: "row", justifyContent: "space-between" },
   reminder: {
     alignItems: "center",

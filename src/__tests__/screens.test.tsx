@@ -29,7 +29,7 @@ import {
 import { listReminders } from "@/data/reminders-repository";
 import { habit, openMigratedDatabase, version } from "@/data/testing/fixtures";
 import type { TestDatabase } from "@/data/testing/node-database";
-import { localDate } from "@/domain/dates";
+import { localDate, type Weekday } from "@/domain/dates";
 import { scheduledDaysFrom } from "@/domain/schedule";
 import { localTime } from "@/domain/times";
 import { AppStack, STACK_SETTINGS } from "@/ui/app-stack";
@@ -110,15 +110,33 @@ async function drag(testID: string, translationY: number, velocityY = 0) {
   });
 }
 
-// Jest does not lay views out: the menu gets the height it would have on a phone. The
-// Reanimated mock of expo-router/testing-library creates new shared values on every render, so
-// the height must be given again after the menu renders, right before dragging it.
-async function layOutMenu() {
+// Jest does not lay views out: a sheet gets the size it would have on a phone. The Reanimated
+// mock of expo-router/testing-library creates new shared values on every render, so the size
+// must be given again after the sheet renders, right before dragging it.
+async function layOut(testID: string) {
   await fireEvent(
-    screen.getByTestId("menu", { includeHiddenElements: true }),
+    screen.getByTestId(testID, { includeHiddenElements: true }),
     "layout",
     { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 200 } } },
   );
+}
+
+const layOutMenu = () => layOut("menu");
+
+/** Replaces the state of the app, to make it leave and come back. */
+function spyOnAppState() {
+  const listeners: ((state: AppStateStatus) => void)[] = [];
+  jest
+    .spyOn(AppState, "addEventListener")
+    .mockImplementation((_type, listener) => {
+      listeners.push(listener);
+      return { remove: () => undefined };
+    });
+  return async (state: AppStateStatus) => {
+    await act(async () => {
+      listeners.forEach((listener) => listener(state));
+    });
+  };
 }
 
 async function openMenu() {
@@ -233,18 +251,7 @@ describe("day view", () => {
   });
 
   test("keeps the order while the day is on screen and sorts it when coming back (RF-12)", async () => {
-    const listeners: ((state: AppStateStatus) => void)[] = [];
-    jest
-      .spyOn(AppState, "addEventListener")
-      .mockImplementation((_type, listener) => {
-        listeners.push(listener);
-        return { remove: () => undefined };
-      });
-    const appBecomes = async (state: AppStateStatus) => {
-      await act(async () => {
-        listeners.forEach((listener) => listener(state));
-      });
-    };
+    const appBecomes = spyOnAppState();
     await addBoolean("read", "Leer", "22:00");
     await addBoolean("walk", "Pasear", "08:00");
     await addBoolean("none", "Sin hora");
@@ -757,5 +764,312 @@ describe("edit habit (RF-08)", () => {
     await renderApp(`/habits/${id}/edit`);
 
     await waitFor(() => expect(screen).toHavePathname("/"));
+  });
+});
+
+describe("calendar (RF-18, RF-31)", () => {
+  async function addWater() {
+    await addHabit(
+      db,
+      habit("water", { name: "Beber agua", type: "quantitative" }),
+      version("water", { target: 2, unit: "L", increment: 0.25 }),
+    );
+  }
+
+  async function addOnWeekday(id: string, name: string, weekday: Weekday) {
+    await addHabit(
+      db,
+      habit(id, { name }),
+      version(id, { scheduledDays: scheduledDaysFrom([weekday]) }),
+    );
+  }
+
+  /** Pulls the calendar down from the date. Down is a positive translation. */
+  async function openCalendar() {
+    await layOut("calendar");
+    await drag("day-date", 300, 800);
+    expect(screen.getByLabelText("Cerrar el calendario")).toBeTruthy();
+  }
+
+  async function chooseDay(label: string) {
+    await openCalendar();
+    await fireEvent.press(screen.getByLabelText(label));
+  }
+
+  /** Drags the months of the calendar sideways: to the left is a negative translation. */
+  async function swipeMonths(translationX: number, velocityX = 0) {
+    const finger = createGestureController("calendar-months");
+    await act(async () => {
+      finger.begin();
+      finger.activate();
+      finger.update({ translationX, velocityX });
+      finger.end({ translationX, velocityX });
+      jest.runAllTicks();
+    });
+  }
+
+  test("is hidden until it is pulled down from the date, and opens in the month of today", async () => {
+    await renderApp();
+    await screen.findByText("Todavía no tienes hábitos.");
+    expect(screen.queryByText("Noviembre 2026")).toBeNull();
+
+    await layOut("calendar");
+    await drag("day-date", 20);
+    expect(screen.queryByText("Noviembre 2026")).toBeNull();
+
+    await openCalendar();
+
+    expect(screen.getByText("Noviembre 2026")).toBeTruthy();
+    expect(screen.getByText("X")).toBeTruthy();
+    // The current day is told apart and, as it is the one on screen, selected.
+    expect(
+      screen.getByLabelText("Hoy, 12 de noviembre de 2026"),
+    ).toBeSelected();
+    expect(screen.getByLabelText("11 de noviembre de 2026")).not.toBeSelected();
+    expect(screen.queryByLabelText("31 de noviembre de 2026")).toBeNull();
+  });
+
+  test("choosing a past day closes it and shows that day, which can be recorded (RF-19)", async () => {
+    await addOnWeekday("tuesday", "Solo martes", 1);
+    await addOnWeekday("thursday", "Solo jueves", 3);
+    await renderApp();
+    await screen.findByText("Solo jueves");
+
+    await chooseDay("10 de noviembre de 2026");
+
+    expect(screen.queryByText("Noviembre 2026")).toBeNull();
+    expect(screen.getByText("Martes, 10 nov")).toBeTruthy();
+    expect(await screen.findByText("Solo martes")).toBeTruthy();
+    expect(screen.queryByText("Solo jueves")).toBeNull();
+
+    await fireEvent.press(screen.getByTestId("habit-tuesday"));
+
+    expect(await screen.findByRole("checkbox", { checked: true })).toBeTruthy();
+    expect(
+      await listEntries(db, localDate("2026-11-01"), localDate("2026-11-30")),
+    ).toEqual([
+      expect.objectContaining({
+        habitId: "tuesday",
+        date: "2026-11-10",
+        value: 1,
+      }),
+    ]);
+
+    // The calendar now tells both days apart.
+    await openCalendar();
+    expect(screen.getByLabelText("10 de noviembre de 2026")).toBeSelected();
+    expect(
+      screen.getByLabelText("Hoy, 12 de noviembre de 2026"),
+    ).not.toBeSelected();
+  });
+
+  test("a future day can be seen but not recorded (RF-20)", async () => {
+    await addWater();
+    await renderApp();
+    await screen.findByText("Beber agua");
+
+    await chooseDay("13 de noviembre de 2026");
+
+    expect(screen.getByText("Viernes, 13 nov")).toBeTruthy();
+
+    await fireEvent.press(await screen.findByTestId("habit-water"));
+    await fireEvent(screen.getByTestId("habit-water"), "longPress");
+
+    // In the row and in the title of the options: nothing was added.
+    expect(await screen.findAllByText("0 / 2 L")).toHaveLength(2);
+    expect(screen.queryByLabelText("Restar 0,25 L")).toBeNull();
+    expect(screen.queryByLabelText("Escribir la cantidad")).toBeNull();
+    expect(screen.getByLabelText("Editar")).toBeTruthy();
+    expect(screen.getByLabelText("Archivar")).toBeTruthy();
+    expect(screen.getByLabelText("Eliminar")).toBeTruthy();
+    expect(
+      await listEntries(db, localDate("2026-11-01"), localDate("2026-11-30")),
+    ).toEqual([]);
+  });
+
+  test("says when no habit is due on another day", async () => {
+    await addOnWeekday("thursday", "Solo jueves", 3);
+    await renderApp();
+    await screen.findByText("Solo jueves");
+
+    await chooseDay("13 de noviembre de 2026");
+
+    expect(
+      await screen.findByText("Este día no toca ningún hábito."),
+    ).toBeTruthy();
+  });
+
+  test("touching the date of another day goes back to today (RF-21)", async () => {
+    await addOnWeekday("thursday", "Solo jueves", 3);
+    await renderApp();
+    await chooseDay("10 de noviembre de 2026");
+    await waitFor(() => expect(screen.queryByText("Solo jueves")).toBeNull());
+
+    await fireEvent.press(screen.getByText("Martes, 10 nov"));
+
+    expect(screen.getByText("Hoy")).toBeTruthy();
+    expect(await screen.findByText("Solo jueves")).toBeTruthy();
+  });
+
+  test("dragging it sideways changes the month (RF-18)", async () => {
+    await renderApp();
+    await openCalendar();
+
+    await swipeMonths(-200);
+    expect(screen.getByText("Diciembre 2026")).toBeTruthy();
+
+    await swipeMonths(-5, -800);
+    expect(screen.getByText("Enero 2027")).toBeTruthy();
+
+    // A drag that does not go on stays in the month.
+    await layOut("calendar-months-box");
+    await swipeMonths(30);
+    expect(screen.getByText("Enero 2027")).toBeTruthy();
+
+    await swipeMonths(200);
+    await swipeMonths(200);
+    await swipeMonths(200);
+    expect(screen.getByText("Octubre 2026")).toBeTruthy();
+
+    await fireEvent.press(screen.getByLabelText("25 de octubre de 2026"));
+
+    expect(screen.getByText("Domingo, 25 oct")).toBeTruthy();
+
+    // It opens again in the month of the day on screen.
+    await openCalendar();
+    expect(screen.getByText("Octubre 2026")).toBeTruthy();
+  });
+
+  test("closed without choosing a day, it goes back to the month of the day on screen", async () => {
+    await renderApp();
+    await openCalendar();
+    await swipeMonths(-200);
+    expect(screen.getByText("Diciembre 2026")).toBeTruthy();
+
+    await fireEvent.press(screen.getByLabelText("Cerrar el calendario"));
+
+    expect(screen.queryByLabelText("Cerrar el calendario")).toBeNull();
+    expect(screen.getByText("Hoy")).toBeTruthy();
+
+    await openCalendar();
+    expect(screen.getByText("Noviembre 2026")).toBeTruthy();
+  });
+
+  test("closes when dragged up", async () => {
+    await renderApp();
+    await openCalendar();
+
+    await layOut("calendar");
+    await drag("calendar-drag", -10, -50);
+    expect(screen.getByText("Noviembre 2026")).toBeTruthy();
+
+    await layOut("calendar");
+    await drag("calendar-drag", -200, -800);
+    expect(screen.queryByText("Noviembre 2026")).toBeNull();
+  });
+
+  test("is pulled down from the list only when it is scrolled to the top (RF-31)", async () => {
+    await addBoolean("walk", "Pasear");
+    await renderApp();
+    await screen.findByText("Pasear");
+    const scrollTo = (y: number) =>
+      fireEvent.scroll(screen.getByTestId("day-habits"), {
+        nativeEvent: {
+          contentOffset: { x: 0, y },
+          contentSize: { width: 390, height: 2000 },
+          layoutMeasurement: { width: 390, height: 600 },
+        },
+      });
+
+    await layOut("calendar");
+    await scrollTo(120);
+    await drag("day-list", 300, 800);
+    expect(screen.queryByText("Noviembre 2026")).toBeNull();
+
+    await layOut("calendar");
+    await scrollTo(0);
+    await drag("day-list", 300, 800);
+    expect(screen.getByText("Noviembre 2026")).toBeTruthy();
+  });
+
+  test("is pulled down from an empty day too", async () => {
+    await renderApp();
+    await screen.findByText("Todavía no tienes hábitos.");
+
+    await layOut("calendar");
+    await drag("day-list", 300, 800);
+
+    expect(screen.getByText("Noviembre 2026")).toBeTruthy();
+  });
+
+  test("the form says the changes apply from today when it is opened from another day, and going back keeps the day (RF-09)", async () => {
+    await addWater();
+    await renderApp();
+    await chooseDay("10 de noviembre de 2026");
+
+    await fireEvent(await screen.findByTestId("habit-water"), "longPress");
+    await fireEvent.press(screen.getByLabelText("Editar"));
+
+    expect(screen).toHavePathname("/habits/water/edit");
+    expect(
+      await screen.findByText("Los cambios se aplican desde hoy"),
+    ).toBeTruthy();
+
+    await fireEvent.press(screen.getByLabelText("Cancelar"));
+
+    await waitFor(() => expect(screen).toHavePathname("/"));
+    expect(screen.getByText("Martes, 10 nov")).toBeTruthy();
+  });
+
+  test("the form opened from today does not say when the changes apply", async () => {
+    await addWater();
+    await renderApp();
+
+    await fireEvent(await screen.findByTestId("habit-water"), "longPress");
+    await fireEvent.press(screen.getByLabelText("Editar"));
+
+    expect(await screen.findByDisplayValue("Beber agua")).toBeTruthy();
+    expect(screen.queryByText("Los cambios se aplican desde hoy")).toBeNull();
+  });
+
+  test("coming back to the app shows today again (RF-12)", async () => {
+    const appBecomes = spyOnAppState();
+    await addOnWeekday("thursday", "Solo jueves", 3);
+    await renderApp();
+    await chooseDay("10 de noviembre de 2026");
+    expect(screen.getByText("Martes, 10 nov")).toBeTruthy();
+
+    // Opening the Control Center is not leaving the app.
+    await appBecomes("inactive");
+    await appBecomes("active");
+    expect(screen.getByText("Martes, 10 nov")).toBeTruthy();
+
+    await appBecomes("background");
+    await appBecomes("active");
+
+    expect(screen.getByText("Hoy")).toBeTruthy();
+    expect(await screen.findByText("Solo jueves")).toBeTruthy();
+  });
+
+  test("midnight leaves another day on screen, which may become today (RF-12)", async () => {
+    await renderApp();
+    await chooseDay("13 de noviembre de 2026");
+    expect(screen.getByText("Viernes, 13 nov")).toBeTruthy();
+
+    mockToday = "2026-11-13";
+    await act(async () => {
+      jest.advanceTimersByTime(24 * 60 * 60 * 1000);
+    });
+
+    // The day on screen has become the current one.
+    expect(screen.getByText("Hoy")).toBeTruthy();
+
+    await chooseDay("10 de noviembre de 2026");
+    mockToday = "2026-11-14";
+    await act(async () => {
+      jest.advanceTimersByTime(24 * 60 * 60 * 1000);
+    });
+
+    expect(screen.getByText("Martes, 10 nov")).toBeTruthy();
   });
 });

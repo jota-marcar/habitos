@@ -1,7 +1,6 @@
-// The habits of the day on screen and how to change them: recording them (RF-12 to RF-16) and
-// the options of each one (RF-34). It reads the
-// database when the screen gains focus, when the app comes back from the background and when
-// the day changes at midnight, and again after each change it makes (ADR-0010).
+// The day on screen, which the calendar changes (RF-18), its habits and how to change them:
+// recording them (RF-12 to RF-16) and the options of each one (RF-34). It reads the database
+// when a day is shown and again after each change it makes (ADR-0010).
 //
 // The order is computed when the day is shown (pending first) and then kept while it stays on
 // screen, so the list does not move under the finger when a habit is marked (RF-12).
@@ -35,6 +34,10 @@ import { useDatabase } from "./database";
 export interface Day {
   /** The day on screen. */
   readonly date: LocalDate;
+  /** The current day, which changes at midnight. */
+  readonly today: LocalDate;
+  /** Shows another day (RF-18), or the current one again (RF-21). */
+  readonly select: (date: LocalDate) => void;
   /** Its habits in the order of the screen, or null while they are being read. */
   readonly habits: readonly DayHabit[] | null;
   /** Whether there is any habit at all, on this day or not. */
@@ -56,6 +59,10 @@ const habitIdOf = (dayHabit: DayHabit) => dayHabit.habit.id;
 export function useDay(): Day {
   const db = useDatabase();
   const [date, setDate] = useState(today);
+  const [currentDay, setCurrentDay] = useState(today);
+  // The same two days, for what happens outside a render: timers and the state of the app.
+  const shown = useRef(date);
+  const current = useRef(currentDay);
   const [habits, setHabits] = useState<readonly DayHabit[] | null>(null);
   const [hasAnyHabit, setHasAnyHabit] = useState(false);
   // The order computed when the day was shown, as habit ids.
@@ -92,45 +99,60 @@ export function useDay(): Day {
     [db],
   );
 
-  // Showing the day again sorts it: when the screen gains focus (opening the app, coming back
-  // from a form) and when the app comes back from the background (RF-12). That is also when
-  // the current day may have changed.
-  const show = useCallback(() => {
-    const current = today();
-    setDate(current);
-    void load(current, true);
-  }, [load]);
+  const checkToday = useCallback(() => {
+    current.current = today();
+    setCurrentDay(current.current);
+    return current.current;
+  }, []);
 
-  useFocusEffect(show);
+  // Showing a day sorts it (RF-12): when it is chosen in the calendar, when the screen gains
+  // focus and when the app comes back from the background.
+  const show = useCallback(
+    (day: LocalDate) => {
+      checkToday();
+      shown.current = day;
+      setDate(day);
+      void load(day, true);
+    },
+    [checkToday, load],
+  );
+
+  // Gaining focus is opening the app, which starts on the current day, and coming back from a
+  // form, which keeps the day that was on screen.
+  useFocusEffect(useCallback(() => show(shown.current), [show]));
 
   useEffect(() => {
-    // Opening the Control Center makes the app inactive, but it has not been left: only a
-    // return from the background counts.
+    // Coming back to the app shows the current day, whatever day was on screen: looking at
+    // other days is occasional (RF-18). Opening the Control Center makes the app inactive, but
+    // it has not been left: only a return from the background counts.
     let wasInBackground = false;
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "background") wasInBackground = true;
       if (state === "active" && wasInBackground) {
         wasInBackground = false;
-        show();
+        show(today());
       }
     });
     return () => subscription.remove();
   }, [show]);
 
   useEffect(() => {
-    // With the app left open, the day on screen follows the clock past midnight (RF-12). The
-    // timer is set again every time: iOS holds it while the app is in the background, and a
-    // timer that fires early finds the same day and just waits for what is left.
+    // With the app left open on the current day, the screen follows the clock past midnight
+    // (RF-12). Another day stays on screen, although it may now be the current one. The timer
+    // is set again every time: iOS holds it while the app is in the background, and a timer
+    // that fires early finds the same day and just waits for what is left.
     let timer: ReturnType<typeof setTimeout>;
     const waitForTomorrow = () => {
       timer = setTimeout(() => {
-        show();
+        const wasOnToday = shown.current === current.current;
+        const newDay = checkToday();
+        if (wasOnToday) show(newDay);
         waitForTomorrow();
       }, msUntilTomorrow());
     };
     waitForTomorrow();
     return () => clearTimeout(timer);
-  }, [show]);
+  }, [checkToday, show]);
 
   // Makes a change after the ones before it and reads the day again, without sorting it.
   const change = useCallback(
@@ -214,6 +236,8 @@ export function useDay(): Day {
 
   return {
     date,
+    today: currentDay,
+    select: show,
     habits,
     hasAnyHabit,
     record,

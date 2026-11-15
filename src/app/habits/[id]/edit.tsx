@@ -1,5 +1,6 @@
 // The form to edit a habit (RF-08), presented as a modal. It is opened from the options of
-// the habit (RF-34). The changes apply from today onwards (RF-09).
+// the habit (RF-34), on any day it appears. The changes apply from today onwards (RF-09),
+// and the form says so when it was opened from another day.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -22,7 +23,7 @@ import {
 import { HabitFormScreen } from "@/ui/habit-form-screen";
 
 export default function EditHabit() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, day } = useLocalSearchParams<{ id: string; day?: string }>();
   const db = useDatabase();
   const router = useRouter();
   const [stored, setStored] = useState<StoredHabit | null>(null);
@@ -68,6 +69,15 @@ export default function EditHabit() {
   };
 
   return (
-    <HabitFormScreen initialValues={initialValues} editing onSubmit={save} />
+    <HabitFormScreen
+      initialValues={initialValues}
+      editing
+      note={
+        day !== undefined && day !== today()
+          ? "Los cambios se aplican desde hoy"
+          : undefined
+      }
+      onSubmit={save}
+    />
   );
 }
