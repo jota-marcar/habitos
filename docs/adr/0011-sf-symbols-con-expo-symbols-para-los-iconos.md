@@ -1,6 +1,6 @@
 # ADR-0011: SF Symbols con expo-symbols para los iconos
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-13
 
 ## Contexto
