@@ -1,6 +1,6 @@
 // The habits of the day on screen and how to record them (RF-12 to RF-16). It reads the
-// database when the screen gains focus and when the app comes back from the background, and
-// again after each change it makes (ADR-0010).
+// database when the screen gains focus, when the app comes back from the background and when
+// the day changes at midnight, and again after each change it makes (ADR-0010).
 //
 // The order is computed when the day is shown (pending first) and then kept while it stays on
 // screen, so the list does not move under the finger when a habit is marked (RF-12).
@@ -17,7 +17,7 @@ import { habitsForDay, type DayHabit } from "@/domain/day";
 import { canRecordOn, incremented, toggled } from "@/domain/entries";
 import { keepOrder, sortDayHabits } from "@/domain/order";
 
-import { newId, today } from "./clock";
+import { msUntilTomorrow, newId, today } from "./clock";
 import { useDatabase } from "./database";
 
 export interface Day {
@@ -95,6 +95,21 @@ export function useDay(): Day {
       }
     });
     return () => subscription.remove();
+  }, [show]);
+
+  useEffect(() => {
+    // With the app left open, the day on screen follows the clock past midnight (RF-12). The
+    // timer is set again every time: iOS holds it while the app is in the background, and a
+    // timer that fires early finds the same day and just waits for what is left.
+    let timer: ReturnType<typeof setTimeout>;
+    const waitForTomorrow = () => {
+      timer = setTimeout(() => {
+        show();
+        waitForTomorrow();
+      }, msUntilTomorrow());
+    };
+    waitForTomorrow();
+    return () => clearTimeout(timer);
   }, [show]);
 
   const record = useCallback(
