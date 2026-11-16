@@ -218,11 +218,13 @@ export function CalendarSheet({
 }
 
 const styles = StyleSheet.create({
+  // The month is as far from the top of the sheet as from its sides.
   month: {
     fontSize: fontSize.body,
     fontWeight: "600",
     paddingBottom: spacing.md,
     paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
   },
   week: { flexDirection: "row" },
   weekday: {

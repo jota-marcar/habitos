@@ -40,7 +40,7 @@ export const fontSize = {
 
 /**
  * Space between the top safe area and the first line of the screen. The calendar, which comes
- * down from the top, uses it too, so that its month lines up with the date it covers.
+ * down from the top, uses it too, so that its sheet starts just above the date it covers.
  */
 export const topGap = spacing.lg;
 
