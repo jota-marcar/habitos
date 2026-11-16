@@ -12,7 +12,7 @@ A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo
 
 ### Principios
 
-1. **Minimalismo.** Solo lo imprescindible. Cada funcionalidad nueva debe justificar su presencia. La pantalla principal no tiene botones fijos ni textos de ayuda: se maneja tocando el contenido y deslizando (ver [3.1](#31-estructura-de-la-interfaz)).
+1. **Minimalismo.** Solo lo imprescindible. Cada funcionalidad nueva debe justificar su presencia. La pantalla principal no tiene botones fijos ni textos de ayuda: se maneja tocando el contenido y deslizando (ver [3.1](#31-estructura-de-la-interfaz)). La estética es oscura, sobria y moderna, con un único color de acento.
 2. **Usabilidad directa.** Las acciones frecuentes (marcar un hábito, atender un recordatorio) se hacen con un solo toque.
 3. **El seguimiento es el centro y el recordatorio, su punto fuerte.** Lo esencial es seguir los hábitos: crearlos, apuntar el progreso y consultar cualquier día. Los recordatorios son lo que distingue a la aplicación: si no avisan bien, lo que se quiere hacer se vuelve a olvidar.
 4. **El registro es fiable.** Lo que se apunta no se pierde y está disponible siempre, también sin conexión.
