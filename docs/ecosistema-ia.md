@@ -120,7 +120,8 @@ Los detalles están en [CONTRIBUTING.md](../CONTRIBUTING.md#8-integración-conti
 [.claude/skills/sync/](../.claude/skills/sync/SKILL.md). Pone al día el repositorio local después de un merge.
 
 - El script [sync.mjs](../.claude/skills/sync/sync.mjs) actualiza `main` y borra las ramas locales cuyo Pull Request está fusionado y cuya rama remota ya no existe. Pregunta a GitHub porque un squash merge no deja rastro en git.
-- No hace nada si hay cambios sin commit, y no borra ramas con el PR abierto o sin PR.
+- Pone al día las ramas apiladas sobre un PR recién fusionado con `git rebase --onto`, pasa `npm run verify` y las sube con `--force-with-lease`. Un `git merge origin/main` daba conflictos casi siempre: con squash merge, `main` tiene el código del PR de abajo en un commit nuevo y git ve dos versiones de las mismas líneas. Nació de la regla de tres tras los conflictos de los PR 27, 28 y 32.
+- No hace nada si hay cambios sin commit, no fuerza ramas con conflictos ni con `verify` en rojo, y no borra ramas con el PR abierto o sin PR.
 - Se invoca con `/sync` o cuando el usuario dice que ha hecho un merge.
 
 ### Subagentes integrados
