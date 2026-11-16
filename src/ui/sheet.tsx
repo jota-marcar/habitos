@@ -38,7 +38,7 @@ import {
   settlesOpen,
   visibleHeight,
 } from "./sheet-motion";
-import { fontSize, radius, spacing, useColors } from "./theme";
+import { fontSize, radius, spacing, topGap, useColors } from "./theme";
 
 /** The edge of the screen a sheet comes out from. */
 export type SheetEdge = "top" | "bottom";
@@ -240,7 +240,8 @@ export function Sheet({
             styles.container,
             atBottom
               ? { bottom: 0, paddingBottom: insets.bottom + spacing.sm }
-              : { top: 0, paddingTop: insets.top + spacing.sm },
+              : // The first line of a top sheet sits where the date of the screen is.
+                { top: 0, paddingTop: insets.top + topGap - spacing.sm },
             sheetStyle,
           ]}
         >
