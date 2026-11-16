@@ -1,6 +1,7 @@
 // The day view, the only main screen (RF-30). No header and no fixed buttons: the date at the
 // top, a box with the habits of the day and, under it, the strip the menu is pulled up from
-// (RF-32). A tap records a habit (RF-14, RF-15) and holding it down opens its options (RF-34).
+// (RF-32). In the box, the pending habits sit at the top and the done ones at the bottom, with
+// the free space between them (RF-12). A tap records a habit (RF-14, RF-15) and holding it down opens its options (RF-34).
 // The calendar that changes the day is pulled down from the date or from the list (RF-31).
 
 import { useRouter } from "expo-router";
@@ -23,11 +24,14 @@ import { CalendarSheet } from "@/ui/calendar-sheet";
 import { formatDayTitle, formatProgress } from "@/ui/format";
 import { HabitOptionsSheet } from "@/ui/habit-options-sheet";
 import { Sheet, SheetOption, useOpenSheetGesture, useSheet } from "@/ui/sheet";
-import { fontSize, radius, spacing, useColors } from "@/ui/theme";
+import { fontSize, radius, spacing, topGap, useColors } from "@/ui/theme";
 import { useDay } from "@/ui/use-day";
 
 // A done habit stays in its place, dimmed (RF-13).
 const DONE_OPACITY = 0.4;
+
+// The least space between the two groups, when they fill the box and it scrolls (RF-12).
+const GROUP_GAP = spacing.xl;
 
 // The strip is thin, but the area that catches the drag is as tall as a button.
 const STRIP_TOUCH_HEIGHT = 44;
@@ -70,6 +74,13 @@ function HabitRow({
         </Text>
       )}
     </Pressable>
+  );
+}
+
+function Separator() {
+  const colors = useColors();
+  return (
+    <View style={[styles.separator, { backgroundColor: colors.border }]} />
   );
 }
 
@@ -127,8 +138,10 @@ export default function Today() {
   // The habit whose options were opened. Its row gives how it is now; what it was like when
   // it was held down is kept for when it is no longer on the day, while the sheet closes.
   const [held, setHeld] = useState<DayHabit | null>(null);
+  const allHabits =
+    habits === null ? null : [...habits.pending, ...habits.done];
   const heldNow =
-    habits?.find((item) => item.habit.id === held?.habit.id) ?? held;
+    allHabits?.find((item) => item.habit.id === held?.habit.id) ?? held;
 
   const openOptions = (item: DayHabit) => {
     setHeld(item);
@@ -158,7 +171,7 @@ export default function Today() {
       <GestureDetector gesture={openCalendarFromDate}>
         <View
           testID="day-date"
-          style={[styles.dateArea, { paddingTop: insets.top + spacing.sm }]}
+          style={[styles.dateArea, { paddingTop: insets.top + topGap }]}
         >
           {/* Touching the date of another day goes back to the current one (RF-21). */}
           <Pressable
@@ -180,13 +193,13 @@ export default function Today() {
           testID="day-list"
           style={[styles.box, { backgroundColor: colors.surface }]}
         >
-          {habits === null ? null : habits.length === 0 ? (
+          {habits === null ? null : allHabits?.length === 0 ? (
             <EmptyDay hasAnyHabit={hasAnyHabit} isToday={isToday} />
           ) : (
             <FlatList
               key={date}
               testID="day-habits"
-              data={habits}
+              data={habits.pending}
               // The drag that opens the calendar goes along with the scroll of the list.
               simultaneousWith={openCalendarFromList}
               // A list that fits does not move, so pulling it down only brings the calendar.
@@ -201,11 +214,27 @@ export default function Today() {
                   onLongPress={() => openOptions(item)}
                 />
               )}
-              ItemSeparatorComponent={() => (
-                <View
-                  style={[styles.separator, { backgroundColor: colors.border }]}
-                />
-              )}
+              ItemSeparatorComponent={Separator}
+              // The list fills the box, and the done group takes the space left under the
+              // pending one, pushed to the bottom.
+              contentContainerStyle={styles.groups}
+              ListFooterComponentStyle={styles.doneGroup}
+              ListFooterComponent={
+                habits.done.length === 0 ? undefined : (
+                  <View testID="day-habits-done">
+                    {habits.done.map((item, index) => (
+                      <View key={item.habit.id}>
+                        {index === 0 ? null : <Separator />}
+                        <HabitRow
+                          item={item}
+                          onPress={() => void record(item.habit.id)}
+                          onLongPress={() => openOptions(item)}
+                        />
+                      </View>
+                    ))}
+                  </View>
+                )
+              }
             />
           )}
         </View>
@@ -250,10 +279,10 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   dateArea: {
     alignItems: "flex-start",
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.md,
     paddingHorizontal: spacing.md + spacing.md,
   },
-  date: { fontSize: fontSize.body, fontWeight: "600" },
+  date: { fontSize: fontSize.heading, fontWeight: "600" },
   box: {
     borderRadius: radius.md,
     flex: 1,
@@ -272,6 +301,12 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.6 },
   name: { flexShrink: 1, fontSize: fontSize.body },
   progress: { fontSize: fontSize.body, fontVariant: ["tabular-nums"] },
+  groups: { flexGrow: 1 },
+  doneGroup: {
+    flexGrow: 1,
+    justifyContent: "flex-end",
+    paddingTop: GROUP_GAP,
+  },
   separator: {
     height: StyleSheet.hairlineWidth,
     marginLeft: spacing.md,

@@ -1,8 +1,8 @@
-// The order in which the habits of a day are shown (RF-12). Like an agenda: pending habits
-// first and done ones after, each group by the time of its first reminder, with the habits
-// without reminders at the end. While a day is on screen the order is kept, so the list does
-// not move when a habit is marked: the interface computes it when it shows the day and then
-// only keeps it.
+// The order in which the habits of a day are shown (RF-12). Like an agenda: two groups, the
+// pending habits and the done ones, each by the time of its first reminder, with the habits
+// without reminders at the end. While a day is on screen the order and the groups are kept, so
+// the list does not move when a habit is marked: the interface computes them when it shows the
+// day and then only keeps them.
 
 import type { DayHabit } from "./day";
 import type { Reminder } from "./reminders";
@@ -40,16 +40,47 @@ export function sortByFirstReminder<T>(
 // Sorts after every valid time of day ("23:59").
 const NO_REMINDER = "~";
 
+/** The two groups of the day view (RF-12): the top one and the bottom one. */
+export interface DayGroups<T> {
+  readonly pending: readonly T[];
+  readonly done: readonly T[];
+}
+
 /**
- * The order of the day view when it is shown (RF-12): pending habits first and done ones
- * after, each group sorted by its first reminder.
+ * The groups of the day view when it is shown (RF-12): pending habits and done ones, each
+ * sorted by its first reminder.
  */
 export function sortDayHabits(
   dayHabits: readonly DayHabit[],
   reminders: readonly Reminder[],
-): DayHabit[] {
+): DayGroups<DayHabit> {
   const sorted = sortByFirstReminder(dayHabits, (d) => d.habit.id, reminders);
-  return [...sorted.filter((d) => !d.done), ...sorted.filter((d) => d.done)];
+  return {
+    pending: sorted.filter((d) => !d.done),
+    done: sorted.filter((d) => d.done),
+  };
+}
+
+/**
+ * Puts `items` in the groups and the order of `groups`, computed when the day was shown, so
+ * that a habit marked while the day is on screen stays where it is (RF-12). Items whose habit
+ * is in neither group are new, and go at the end of the pending ones.
+ */
+export function keepGroups<T>(
+  items: readonly T[],
+  habitIdOf: (item: T) => string,
+  groups: DayGroups<string>,
+): DayGroups<T> {
+  const doneIds = new Set(groups.done);
+  const isDone = (item: T) => doneIds.has(habitIdOf(item));
+  return {
+    pending: keepOrder(
+      items.filter((item) => !isDone(item)),
+      habitIdOf,
+      groups.pending,
+    ),
+    done: keepOrder(items.filter(isDone), habitIdOf, groups.done),
+  };
 }
 
 /**

@@ -32,9 +32,17 @@ export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
 export const fontSize = {
   caption: 13,
   body: 17,
+  /** The date at the top of the day view: a touch larger than the body text. */
+  heading: 19,
   title: 22,
   large: 28,
 } as const;
+
+/**
+ * Space between the top safe area and the first line of the screen. The calendar, which comes
+ * down from the top, uses it too, so that its month lines up with the date it covers.
+ */
+export const topGap = spacing.lg;
 
 export const radius = { sm: 8, md: 12, round: 999 } as const;
 

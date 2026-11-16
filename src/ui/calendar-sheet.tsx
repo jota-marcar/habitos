@@ -221,9 +221,8 @@ const styles = StyleSheet.create({
   month: {
     fontSize: fontSize.body,
     fontWeight: "600",
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.md,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.xs,
   },
   week: { flexDirection: "row" },
   weekday: {

@@ -1,6 +1,6 @@
 # ADR-0013: Estética oscura única con acento violeta
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-16
 
 ## Contexto

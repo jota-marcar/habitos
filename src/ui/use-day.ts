@@ -2,8 +2,9 @@
 // recording them (RF-12 to RF-16) and the options of each one (RF-34). It reads the database
 // when a day is shown and again after each change it makes (ADR-0010).
 //
-// The order is computed when the day is shown (pending first) and then kept while it stays on
-// screen, so the list does not move under the finger when a habit is marked (RF-12).
+// The groups (pending and done) and their order are computed when the day is shown and then
+// kept while it stays on screen, so the list does not move under the finger when a habit is
+// marked (RF-12).
 
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -26,7 +27,7 @@ import {
   toggled,
 } from "@/domain/entries";
 import { archiveHabit } from "@/domain/habits";
-import { keepOrder, sortDayHabits } from "@/domain/order";
+import { keepGroups, sortDayHabits, type DayGroups } from "@/domain/order";
 import { onReminderRecorded } from "@/notifications/actions";
 import { refreshReminders } from "@/notifications/reminders";
 
@@ -40,8 +41,8 @@ export interface Day {
   readonly today: LocalDate;
   /** Shows another day (RF-18), or the current one again (RF-21). */
   readonly select: (date: LocalDate) => void;
-  /** Its habits in the order of the screen, or null while they are being read. */
-  readonly habits: readonly DayHabit[] | null;
+  /** Its habits in the groups and order of the screen, or null while they are being read. */
+  readonly habits: DayGroups<DayHabit> | null;
   /** Whether there is any habit at all, on this day or not. */
   readonly hasAnyHabit: boolean;
   /** Marks or unmarks a boolean habit, or adds the increment to a quantitative one. */
@@ -65,10 +66,10 @@ export function useDay(): Day {
   // The same two days, for what happens outside a render: timers and the state of the app.
   const shown = useRef(date);
   const current = useRef(currentDay);
-  const [habits, setHabits] = useState<readonly DayHabit[] | null>(null);
+  const [habits, setHabits] = useState<DayGroups<DayHabit> | null>(null);
   const [hasAnyHabit, setHasAnyHabit] = useState(false);
-  // The order computed when the day was shown, as habit ids.
-  const order = useRef<readonly string[] | null>(null);
+  // The groups computed when the day was shown, as habit ids.
+  const order = useRef<DayGroups<string> | null>(null);
   // Changes are written one after another, so that quick taps do not overwrite each other.
   const writes = useRef<Promise<void>>(Promise.resolve());
   // Discards the reads that finish after a newer one has started.
@@ -91,10 +92,13 @@ export function useDay(): Day {
       );
       if (sort || order.current === null) {
         const sorted = sortDayHabits(dayHabits, reminders);
-        order.current = sorted.map(habitIdOf);
+        order.current = {
+          pending: sorted.pending.map(habitIdOf),
+          done: sorted.done.map(habitIdOf),
+        };
         setHabits(sorted);
       } else {
-        setHabits(keepOrder(dayHabits, habitIdOf, order.current));
+        setHabits(keepGroups(dayHabits, habitIdOf, order.current));
       }
       setHasAnyHabit(allHabits.some((h) => h.archivedOn === null));
     },
