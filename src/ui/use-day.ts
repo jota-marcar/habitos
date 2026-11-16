@@ -27,6 +27,7 @@ import {
 } from "@/domain/entries";
 import { archiveHabit } from "@/domain/habits";
 import { keepOrder, sortDayHabits } from "@/domain/order";
+import { refreshReminders } from "@/notifications/reminders";
 
 import { msUntilTomorrow, newId, today } from "./clock";
 import { useDatabase } from "./database";
@@ -159,13 +160,16 @@ export function useDay(): Day {
     (make: () => Promise<void>): Promise<void> => {
       const write = writes.current.then(async () => {
         await make();
+        // Marking a habit done cancels its pending reminders of the day (RF-24); archiving
+        // or deleting it, all of them.
+        void refreshReminders(db);
         await load(date, false);
       });
       // A failed write is reported to the caller but does not block the next ones.
       writes.current = write.catch(() => undefined);
       return write;
     },
-    [date, load],
+    [db, date, load],
   );
 
   // Records the value that `next` gives for a habit of the day on screen.

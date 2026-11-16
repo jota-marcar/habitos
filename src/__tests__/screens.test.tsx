@@ -41,6 +41,8 @@ let mockToday: string = TODAY;
 jest.mock("@/ui/clock", () => ({
   ...jest.requireActual("@/ui/clock"),
   today: () => jest.requireActual("@/domain/dates").localDate(mockToday),
+  // 10:00 of the current day, for the reminders.
+  now: () => new Date(`${mockToday}T10:00:00`),
 }));
 
 let mockIdCounter = 0;
@@ -63,10 +65,42 @@ jest.mock("@react-native-community/datetimepicker", () => {
   };
 });
 
+// The notifications of the device: the permission and what is scheduled, by identifier.
+let mockNotificationsAllowed = true;
+const mockScheduled = new Map<string, unknown>();
+jest.mock("expo-notifications", () => ({
+  SchedulableTriggerInputTypes: { DATE: "date" },
+  IosAuthorizationStatus: { PROVISIONAL: 3 },
+  getPermissionsAsync: async () => ({
+    granted: mockNotificationsAllowed,
+    canAskAgain: false,
+  }),
+  requestPermissionsAsync: async () => ({
+    granted: mockNotificationsAllowed,
+    canAskAgain: false,
+  }),
+  getAllScheduledNotificationsAsync: async () =>
+    [...mockScheduled].map(([identifier, content]) => ({
+      identifier,
+      content,
+    })),
+  scheduleNotificationAsync: async (request: {
+    identifier: string;
+    content: unknown;
+  }) => {
+    mockScheduled.set(request.identifier, request.content);
+  },
+  cancelScheduledNotificationAsync: async (identifier: string) => {
+    mockScheduled.delete(identifier);
+  },
+}));
+
 let db: TestDatabase;
 
 beforeEach(async () => {
   mockToday = TODAY;
+  mockNotificationsAllowed = true;
+  mockScheduled.clear();
   db = await openMigratedDatabase();
 });
 
@@ -764,6 +798,70 @@ describe("edit habit (RF-08)", () => {
     await renderApp(`/habits/${id}/edit`);
 
     await waitFor(() => expect(screen).toHavePathname("/"));
+  });
+});
+
+describe("reminders (RF-22 to RF-24, RF-36)", () => {
+  const scheduledIds = () => [...mockScheduled.keys()];
+
+  async function createWithReminder() {
+    await renderApp("/habits/new");
+    await fireEvent.changeText(screen.getByLabelText("Nombre"), "Meditar");
+    await fireEvent.press(screen.getByText("Añadir recordatorio"));
+    await fireEvent.press(screen.getByTestId("reminder-picker"));
+    await fireEvent.press(screen.getByText("Añadir"));
+    await fireEvent.press(screen.getByLabelText("Guardar"));
+  }
+
+  test("saving a habit with a reminder schedules it from its next time on", async () => {
+    // The picker gives 08:30, and it is 10:00: today's has passed.
+    await createWithReminder();
+
+    await waitFor(() => expect(scheduledIds()).toHaveLength(60));
+    expect(scheduledIds()[0]).toMatch(/^reminder\..*\.2026-11-13$/);
+    expect(screen).toHavePathname("/");
+  });
+
+  test("warns when reminders are not allowed, and saves the habit anyway (RF-36)", async () => {
+    mockNotificationsAllowed = false;
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+
+    await createWithReminder();
+
+    await waitFor(() =>
+      expect(alert).toHaveBeenCalledWith(
+        "Recordatorios desactivados",
+        expect.any(String),
+        expect.arrayContaining([
+          expect.objectContaining({ text: "Abrir Ajustes" }),
+        ]),
+      ),
+    );
+    expect(await listHabits(db)).toHaveLength(1);
+    expect(screen).toHavePathname("/");
+  });
+
+  test("does not warn about a habit without reminders", async () => {
+    mockNotificationsAllowed = false;
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    await renderApp("/habits/new");
+
+    await fireEvent.changeText(screen.getByLabelText("Nombre"), "Leer");
+    await fireEvent.press(screen.getByLabelText("Guardar"));
+
+    await waitFor(() => expect(screen).toHavePathname("/"));
+    expect(alert).not.toHaveBeenCalled();
+  });
+
+  test("marking a habit done cancels its reminder of today (RF-24)", async () => {
+    await addBoolean("walk", "Pasear", "21:00");
+    await renderApp();
+
+    await fireEvent.press(await screen.findByTestId("habit-walk"));
+    await waitFor(() => expect(scheduledIds()).toHaveLength(60));
+
+    expect(scheduledIds()).not.toContain("reminder.walk-r.2026-11-12");
+    expect(scheduledIds()).toContain("reminder.walk-r.2026-11-13");
   });
 });
 

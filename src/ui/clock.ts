@@ -5,6 +5,11 @@ import { randomUUID } from "expo-crypto";
 
 import { localDateOf, msUntilNextDay, type LocalDate } from "@/domain/dates";
 
+/** The current instant. */
+export function now(): Date {
+  return new Date();
+}
+
 /** Today in the device's local time. */
 export function today(): LocalDate {
   return localDateOf(new Date());

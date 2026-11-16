@@ -10,6 +10,7 @@ import type { Weekday } from "@/domain/dates";
 import type { HabitError, HabitType } from "@/domain/habits";
 import { isScheduledOn } from "@/domain/schedule";
 import { localTime, localTimeOf, type LocalTime } from "@/domain/times";
+import { refreshReminders } from "@/notifications/reminders";
 
 import {
   Button,
@@ -19,6 +20,7 @@ import {
   SegmentedControl,
   ToggleChip,
 } from "./components";
+import { useDatabase } from "./database";
 import { WEEKDAY_INITIALS, WEEKDAY_NAMES } from "./format";
 import {
   addReminderTime,
@@ -27,6 +29,7 @@ import {
   type HabitFormValues,
 } from "./habit-form";
 import { HABIT_ERROR_MESSAGES, REMINDER_ERROR_MESSAGES } from "./messages";
+import { warnIfRemindersNotAllowed } from "./reminders";
 import { fontSize, spacing, useColors } from "./theme";
 
 const TYPE_OPTIONS: readonly { value: HabitType; label: string }[] = [
@@ -73,6 +76,7 @@ export function HabitFormScreen({
 }) {
   const colors = useColors();
   const router = useRouter();
+  const db = useDatabase();
   const [values, setValues] = useState<HabitFormValues>(initialValues);
   const [errors, setErrors] = useState<readonly HabitError[]>([]);
   const [pickedTime, setPickedTime] = useState<LocalTime | null>(null);
@@ -109,7 +113,10 @@ export function HabitFormScreen({
     try {
       const rejected = await onSubmit(values);
       setErrors(rejected);
-      if (rejected.length === 0) router.back();
+      if (rejected.length > 0) return;
+      if (values.reminderTimes.length > 0) await warnIfRemindersNotAllowed();
+      void refreshReminders(db);
+      router.back();
     } finally {
       setSaving(false);
     }

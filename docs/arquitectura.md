@@ -175,6 +175,17 @@ Decisiones del modelo:
 2. Restar el incremento y escribir la cantidad exacta siguen el flujo de "Marcar un hábito". La cantidad se pide con el diálogo nativo de iOS (`Alert.prompt`), y archivar y eliminar se confirman con una alerta nativa.
 3. Editar abre el formulario como modal, el mismo que el de crear. Al guardar, el nombre cambia en el hábito y la configuración entra en vigor hoy: se añade una versión nueva o, si ya había una de hoy, se actualiza. Los recordatorios añadidos y quitados se guardan en la misma transacción.
 
+### Programar los recordatorios
+
+1. Al abrir la app se pide el permiso de notificaciones si aún no se ha pedido (RF-35). iOS solo lo pregunta una vez: después, solo se cambia desde los ajustes del teléfono.
+2. El planificador (`src/notifications`) se ejecuta al abrir la app, al volver a primer plano y tras cada cambio en hábitos, registros o recordatorios. El dominio calcula los próximos 60 avisos, y el planificador los compara con las notificaciones ya programadas: solo cancela las que ya no tocan o han cambiado y solo programa las que faltan. Así, refrescar tras cada toque es barato.
+3. Cada aviso tiene un identificador estable (`reminder.<recordatorio>.<fecha>`) y guarda en sus datos una firma con la hora y el texto. Al leerla de vuelta, iOS devuelve la fecha programada como un intervalo, así que la comparación se hace con la firma. Las notificaciones con otro prefijo (las pospuestas) no se tocan.
+4. Las ejecuciones van una detrás de otra, y las peticiones que llegan mientras otra espera se agrupan en una sola. Si una falla, se reintenta en la siguiente.
+5. Al guardar un hábito con recordatorios sin permiso, un diálogo lo avisa y ofrece abrir los ajustes (RF-36). El hábito se guarda igualmente: como la app refresca al volver a primer plano, los recordatorios se programan en cuanto el usuario da el permiso.
+6. Los recordatorios que llegan con la app abierta también se muestran.
+
+El planificador usa el dominio, la capa de datos y, de la interfaz, solo el reloj y el formato de cantidades. Su lógica depende de la interfaz `Notifier`, y no de `expo-notifications`, para que los tests se ejecuten sin iOS.
+
 ### Acción desde un recordatorio
 
 1. iOS muestra la notificación con sus botones ("Hecho" o "+incremento", y "Posponer").
