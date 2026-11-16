@@ -17,7 +17,7 @@ node .claude/skills/pr/context.mjs
 ```
 
 - Si termina con **BLOCKERS**, detente, explica al usuario qué falta y cómo resolverlo. No hagas commits, rebases ni merges por tu cuenta para desbloquearlo.
-- Si hay **WARNINGS**, menciónalos. Si la rama va por detrás de `main`, ponla al día con `git merge origin/main` y vuelve a ejecutar `npm run verify`; si hay conflictos, detente y explícaselos al usuario. Si ya existe un PR, sube los commits nuevos y actualiza su descripción en lugar de crear otro.
+- Si hay **WARNINGS**, menciónalos. Si la rama va por detrás de `main`, ponla al día con `git merge origin/main` y vuelve a ejecutar `npm run verify`. Excepción: si estaba apilada sobre un PR que ya se ha fusionado, no uses merge (daría conflictos): ejecuta `/sync`, que la rebasa con `git rebase --onto`; si hay conflictos, detente y explícaselos al usuario. Si ya existe un PR, sube los commits nuevos y actualiza su descripción en lugar de crear otro.
 
 ## 2. Escribir el título
 
