@@ -109,8 +109,9 @@ La aplicación tiene una sola pantalla principal: la vista de un día (3.4). Tod
 Es la pantalla principal de la aplicación (ver 3.1).
 
 - **RF-12.** Al abrir la aplicación se muestra el **día actual**, con la lista de hábitos programados para ese día de la semana.
-  - Primero van los pendientes y después los cumplidos. Dentro de cada grupo, los hábitos se ordenan por la hora de su primer recordatorio, como una agenda; los que no tienen recordatorio van al final y, a igualdad, se mantiene el orden de creación.
-  - Mientras se está viendo un día, la lista no se reordena: un hábito que se cumple, o que deja de estar cumplido, se queda en su sitio, para que la lista no se mueva bajo el dedo. Se reordena la próxima vez que se muestra el día: al abrir la aplicación, al volver a ella o al elegir un día en el calendario.
+  - Los hábitos se muestran en dos grupos separados: los pendientes, pegados a la parte superior del recuadro, y los cumplidos, pegados a la parte inferior. El espacio libre que queda entre los dos los separa. Si no caben, el recuadro se desplaza con scroll y los grupos siguen separados por un hueco.
+  - Dentro de cada grupo, los hábitos se ordenan por la hora de su primer recordatorio, como una agenda; los que no tienen recordatorio van al final y, a igualdad, se mantiene el orden de creación.
+  - Mientras se está viendo un día, la lista no se reordena: un hábito que se cumple, o que deja de estar cumplido, se queda en su sitio y en su grupo, para que la lista no se mueva bajo el dedo. Pasa al otro grupo la próxima vez que se muestra el día: al abrir la aplicación, al volver a ella o al elegir un día en el calendario.
   - Si llega la medianoche con la aplicación abierta, la pantalla pasa sola al nuevo día actual. Si se estaba viendo otro día (RF-18), se queda en él.
   - Al volver a la aplicación después de haber salido de ella se muestra de nuevo el día actual, aunque se estuviera viendo otro.
 - **RF-13.** Cada hábito de la lista muestra su nombre y su estado:

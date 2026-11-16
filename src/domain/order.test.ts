@@ -1,6 +1,11 @@
 import { localDate } from "./dates";
 import type { DayHabit } from "./day";
-import { keepOrder, sortByFirstReminder, sortDayHabits } from "./order";
+import {
+  keepGroups,
+  keepOrder,
+  sortByFirstReminder,
+  sortDayHabits,
+} from "./order";
 import type { Reminder } from "./reminders";
 import { EVERY_DAY } from "./schedule";
 import { localTime } from "./times";
@@ -90,8 +95,13 @@ function dayHabit(id: string, done: boolean): DayHabit {
 const ids = (dayHabits: readonly DayHabit[]) =>
   dayHabits.map((d) => d.habit.id);
 
+const groupIds = (groups: {
+  pending: readonly DayHabit[];
+  done: readonly DayHabit[];
+}) => ({ pending: ids(groups.pending), done: ids(groups.done) });
+
 describe("sortDayHabits", () => {
-  test("puts the pending habits first and the done ones after (RF-12)", () => {
+  test("splits the pending habits from the done ones (RF-12)", () => {
     const dayHabits = [
       dayHabit("read", true),
       dayHabit("walk", false),
@@ -99,12 +109,10 @@ describe("sortDayHabits", () => {
       dayHabit("meditate", false),
     ];
 
-    expect(ids(sortDayHabits(dayHabits, []))).toEqual([
-      "walk",
-      "meditate",
-      "read",
-      "water",
-    ]);
+    expect(groupIds(sortDayHabits(dayHabits, []))).toEqual({
+      pending: ["walk", "meditate"],
+      done: ["read", "water"],
+    });
   });
 
   test("sorts each group by the first reminder, without reminders last", () => {
@@ -123,14 +131,10 @@ describe("sortDayHabits", () => {
       reminder("done-early", "06:00"),
     ];
 
-    expect(ids(sortDayHabits(dayHabits, reminders))).toEqual([
-      "early",
-      "late",
-      "none",
-      "done-early",
-      "done-late",
-      "done-none",
-    ]);
+    expect(groupIds(sortDayHabits(dayHabits, reminders))).toEqual({
+      pending: ["early", "late", "none"],
+      done: ["done-early", "done-late", "done-none"],
+    });
   });
 });
 
@@ -161,5 +165,34 @@ describe("keepOrder", () => {
     keepOrder(items, byId, ["a", "b"]);
 
     expect(items).toEqual(["b", "a"]);
+  });
+});
+
+describe("keepGroups", () => {
+  test("keeps each habit in its group and order, whatever it is now (RF-12)", () => {
+    const groups = { pending: ["b", "a"], done: ["d", "c"] };
+
+    expect(keepGroups(["a", "b", "c", "d"], byId, groups)).toEqual({
+      pending: ["b", "a"],
+      done: ["d", "c"],
+    });
+  });
+
+  test("puts the new habits at the end of the pending ones", () => {
+    const groups = { pending: ["a"], done: ["b"] };
+
+    expect(keepGroups(["new", "b", "a"], byId, groups)).toEqual({
+      pending: ["a", "new"],
+      done: ["b"],
+    });
+  });
+
+  test("leaves out the habits that are no longer there", () => {
+    const groups = { pending: ["a", "gone"], done: ["also-gone"] };
+
+    expect(keepGroups(["a"], byId, groups)).toEqual({
+      pending: ["a"],
+      done: [],
+    });
   });
 });

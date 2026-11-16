@@ -6,6 +6,7 @@ import {
   renderRouter,
   screen,
   waitFor,
+  within,
 } from "expo-router/testing-library";
 import {
   Alert,
@@ -188,6 +189,15 @@ function habitNames() {
     .map((row) => row.props.accessibilityLabel as string);
 }
 
+/** The names of the habits in the done group, at the bottom of the box (RF-12). */
+function doneNames() {
+  const group = screen.queryByTestId("day-habits-done");
+  if (group === null) return [];
+  return within(group)
+    .getAllByTestId(/^habit-/)
+    .map((row) => row.props.accessibilityLabel as string);
+}
+
 async function addBoolean(id: string, name: string, time?: string) {
   await addHabit(
     db,
@@ -299,6 +309,8 @@ describe("day view", () => {
 
     expect(await screen.findByRole("checkbox", { checked: true })).toBeTruthy();
     expect(habitNames()).toEqual(["Pasear", "Leer", "Sin hora"]);
+    // It stays in the pending group until the day is shown again.
+    expect(doneNames()).toEqual([]);
 
     // Opening the Control Center is not leaving the app.
     await appBecomes("inactive");
@@ -308,6 +320,25 @@ describe("day view", () => {
     await appBecomes("background");
     await appBecomes("active");
     expect(habitNames()).toEqual(["Leer", "Sin hora", "Pasear"]);
+    expect(doneNames()).toEqual(["Pasear"]);
+  });
+
+  test("a habit undone while the day is on screen stays in the done group (RF-12)", async () => {
+    const appBecomes = spyOnAppState();
+    await addBoolean("read", "Leer");
+    await addBoolean("walk", "Pasear");
+    await renderApp();
+    await fireEvent.press(await screen.findByTestId("habit-walk"));
+    await appBecomes("background");
+    await appBecomes("active");
+    expect(doneNames()).toEqual(["Pasear"]);
+
+    await fireEvent.press(screen.getByTestId("habit-walk"));
+
+    expect(
+      await screen.findByRole("checkbox", { checked: false, name: "Pasear" }),
+    ).toBeTruthy();
+    expect(doneNames()).toEqual(["Pasear"]);
   });
 
   test("moves on to the new day at midnight while the app stays open (RF-12)", async () => {
