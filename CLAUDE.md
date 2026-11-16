@@ -4,7 +4,7 @@ Instrucciones para Claude Code en este repositorio.
 
 ## Proyecto
 
-Aplicación móvil para registrar hábitos diarios, centrada en los recordatorios. Proyecto personal desarrollado con prácticas profesionales. La especificación funcional está en `docs/especificacion-funcional.md`.
+Aplicación móvil para hacer el seguimiento de hábitos diarios, con los recordatorios como punto fuerte. Proyecto personal desarrollado con prácticas profesionales. La especificación funcional está en `docs/especificacion-funcional.md`.
 
 ## Forma de trabajar
 
