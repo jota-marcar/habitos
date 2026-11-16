@@ -1,6 +1,6 @@
 # ADR-0012: Botones de los recordatorios en segundo plano con JavaScript
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-16
 
 ## Contexto
