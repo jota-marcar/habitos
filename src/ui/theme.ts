@@ -1,7 +1,6 @@
 // Style tokens: every color, spacing and font size of the interface comes from here (ADR-0010).
-// Colors have a light and a dark set, chosen from the system appearance.
-
-import { useColorScheme } from "react-native";
+// The app is dark only, with a single violet accent (ADR-0013); app.json declares the dark
+// appearance so native pieces (alerts, pickers, keyboard) match.
 
 export interface Colors {
   readonly background: string;
@@ -16,27 +15,15 @@ export interface Colors {
   readonly backdrop: string;
 }
 
-const LIGHT: Colors = {
-  background: "#F2F2F7",
-  surface: "#FFFFFF",
-  text: "#000000",
-  textSecondary: "#6C6C70",
-  border: "#D1D1D6",
-  primary: "#208AEF",
-  onPrimary: "#FFFFFF",
-  danger: "#D70015",
-  backdrop: "#000000",
-};
-
-const DARK: Colors = {
-  background: "#000000",
-  surface: "#1C1C1E",
-  text: "#FFFFFF",
-  textSecondary: "#AEAEB2",
-  border: "#38383A",
-  primary: "#4BA3F5",
-  onPrimary: "#FFFFFF",
-  danger: "#FF6961",
+const COLORS: Colors = {
+  background: "#0F0F11",
+  surface: "#18181B",
+  text: "#EDEDEF",
+  textSecondary: "#8A8A93",
+  border: "#27272A",
+  primary: "#8B7CF6",
+  onPrimary: "#0F0F11",
+  danger: "#F2555A",
   backdrop: "#000000",
 };
 
@@ -51,7 +38,7 @@ export const fontSize = {
 
 export const radius = { sm: 8, md: 12, round: 999 } as const;
 
-/** The colors for the current system appearance. */
+/** The colors of the interface. A hook so that screens keep working if a light set returns. */
 export function useColors(): Colors {
-  return useColorScheme() === "dark" ? DARK : LIGHT;
+  return COLORS;
 }
