@@ -124,6 +124,17 @@ Todos los PR se integran con **squash merge**: los commits de la rama se combina
 - En la rama puedes hacer commits intermedios sin preocuparte demasiado.
 - `main` tiene un historial limpio: un commit por cambio, con un mensaje convencional.
 
+### Ramas apiladas
+
+Cuando dos tareas tocan los mismos ficheros, la segunda rama se crea encima de la primera y ambos PR van contra `main`, con una nota que dice el orden de merge. Tras el squash merge de la primera, la segunda **no** se pone al día con `git merge origin/main`: daría conflictos, porque `main` tiene el mismo código en otro commit. Se reaplican solo sus propios commits:
+
+```bash
+git rebase --onto origin/main <cabeza-del-PR-fusionado> <rama-siguiente>
+git push --force-with-lease
+```
+
+La skill `/sync` lo hace automáticamente.
+
 ## 5. Versiones y releases
 
 Las versiones se marcan con tags de [versionado semántico](https://semver.org/lang/es/) sobre `main`: `vMAYOR.MENOR.PARCHE`.
