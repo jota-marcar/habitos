@@ -61,7 +61,7 @@ flowchart LR
 | Base de datos local | SQLite (`expo-sqlite`), con SQL directo y migraciones propias | [ADR-0004](adr/0004-offline-first-con-sincronizacion.md), [ADR-0009](adr/0009-sql-directo-y-migraciones-propias-en-la-capa-de-datos-local.md) |
 | Backend y autenticación | Supabase (Postgres, Auth) | [ADR-0003](adr/0003-supabase-como-backend.md) |
 | Inicio de sesión | Sign in with Apple y Google nativos, con el token enviado a Supabase | [ADR-0003](adr/0003-supabase-como-backend.md) |
-| Recordatorios | Notificaciones locales (`expo-notifications`) | [ADR-0005](adr/0005-recordatorios-locales-en-ventana-deslizante.md) |
+| Recordatorios | Notificaciones locales (`expo-notifications`) y tarea en segundo plano (`expo-background-task`) | [ADR-0005](adr/0005-recordatorios-locales-en-ventana-deslizante.md) |
 | Compilación y publicación | EAS Build, EAS Submit y TestFlight | [ADR-0002](adr/0002-expo-como-plataforma.md) |
 | Tests | Jest y React Native Testing Library | Estándar de Expo |
 | Calidad de código | ESLint y Prettier | Estándar de Expo |
@@ -178,7 +178,7 @@ Decisiones del modelo:
 ### Programar los recordatorios
 
 1. Al abrir la app se pide el permiso de notificaciones si aún no se ha pedido (RF-35). iOS solo lo pregunta una vez: después, solo se cambia desde los ajustes del teléfono.
-2. El planificador (`src/notifications`) se ejecuta al abrir la app, al volver a primer plano y tras cada cambio en hábitos, registros o recordatorios. El dominio calcula los próximos 60 avisos, y el planificador los compara con las notificaciones ya programadas: solo cancela las que ya no tocan o han cambiado y solo programa las que faltan. Así, refrescar tras cada toque es barato.
+2. El planificador (`src/notifications`) se ejecuta al abrir la app, al volver a primer plano, tras cada cambio en hábitos, registros o recordatorios y, con la app cerrada, en una tarea en segundo plano (`expo-background-task`). Esa tarea se pide a iOS cada 12 horas como mínimo, pero iOS decide si la ejecuta y cuándo; sirve para que la ventana no se agote si la app no se abre en días. El dominio calcula los próximos 60 avisos, y el planificador los compara con las notificaciones ya programadas: solo cancela las que ya no tocan o han cambiado y solo programa las que faltan. Así, refrescar tras cada toque es barato.
 3. Cada aviso tiene un identificador estable (`reminder.<recordatorio>.<fecha>`) y guarda en sus datos el día, la hora y una firma con la hora, el texto y la categoría. Al leerla de vuelta, iOS devuelve la fecha programada como un intervalo, así que la comparación se hace con la firma. Las pospuestas se tratan aparte (ver "Acción desde un recordatorio").
 4. Las ejecuciones van una detrás de otra, y las peticiones que llegan mientras otra espera se agrupan en una sola. Si una falla, se reintenta en la siguiente.
 5. Al guardar un hábito con recordatorios sin permiso, un diálogo lo avisa y ofrece abrir los ajustes (RF-36). El hábito se guarda igualmente: como la app refresca al volver a primer plano, los recordatorios se programan en cuanto el usuario da el permiso.
