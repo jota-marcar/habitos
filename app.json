@@ -40,7 +40,8 @@
         {
           "enableRemoteNotifications": false
         }
-      ]
+      ],
+      "expo-background-task"
     ],
     "experiments": {
       "typedRoutes": true,
