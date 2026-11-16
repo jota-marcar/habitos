@@ -17,6 +17,7 @@ Cada ADR documenta una decisión técnica importante: el contexto, las opciones 
 | [0011](0011-sf-symbols-con-expo-symbols-para-los-iconos.md) | SF Symbols con expo-symbols para los iconos | Aceptado |
 | [0012](0012-botones-de-los-recordatorios-en-segundo-plano-con-javascript.md) | Botones de los recordatorios en segundo plano con JavaScript | Aceptado |
 | [0013](0013-estetica-oscura-unica-con-acento-violeta.md) | Estética oscura única con acento violeta | Aceptado |
+| [0014](0014-colores-de-habito-como-dato-del-usuario-guardados-como-clave-de-paleta.md) | Colores de hábito como dato del usuario, guardados como clave de paleta | Propuesto |
 
 ## Plantilla
 

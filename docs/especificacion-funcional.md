@@ -12,7 +12,7 @@ A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo
 
 ### Principios
 
-1. **Minimalismo.** Solo lo imprescindible. Cada funcionalidad nueva debe justificar su presencia. La pantalla principal no tiene botones fijos ni textos de ayuda: se maneja tocando el contenido y deslizando (ver [3.1](#31-estructura-de-la-interfaz)). La estética es oscura, sobria y moderna, con un único color de acento.
+1. **Minimalismo.** Solo lo imprescindible. Cada funcionalidad nueva debe justificar su presencia. La pantalla principal no tiene botones fijos ni textos de ayuda: se maneja tocando el contenido y deslizando (ver [3.1](#31-estructura-de-la-interfaz)). La estética es oscura, sobria y moderna, con un único color de acento; el único otro color es el que el usuario da a sus hábitos para distinguirlos (RF-06).
 2. **Usabilidad directa.** Las acciones frecuentes (marcar un hábito, atender un recordatorio) se hacen con un solo toque.
 3. **El seguimiento es el centro y el recordatorio, su punto fuerte.** Lo esencial es seguir los hábitos: crearlos, apuntar el progreso y consultar cualquier día. Los recordatorios son lo que distingue a la aplicación: si no avisan bien, lo que se quiere hacer se vuelve a olvidar.
 4. **El registro es fiable.** Lo que se apunta no se pierde y está disponible siempre, también sin conexión.
@@ -37,6 +37,7 @@ A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo
 | **Día** | `day` | Periodo de 00:00 a 23:59 en la hora local del dispositivo. |
 | **Recordatorio** | `Reminder` | Aviso a una hora concreta para que el usuario no olvide un hábito. |
 | **Posponer** | `snooze` | Aplazar un recordatorio para recibirlo de nuevo más tarde. |
+| **Color** | `color` | Color que el usuario da a un hábito, de entre los de una paleta, para agruparlo con otros o distinguirlo de ellos. |
 | **Archivar** | `archive` | Retirar un hábito de uso sin borrar su historial. |
 | **Calendario** | `calendar` | Cuadrícula de un mes con la que se elige el día que se quiere ver. |
 | **Opciones** | `options` | Acciones sobre un hábito que se abren al mantenerlo pulsado: corregir la cantidad, editar, archivar y eliminar. |
@@ -94,10 +95,11 @@ La aplicación tiene una sola pantalla principal: la vista de un día (3.4). Tod
   | Incremento | Solo cuantitativo | Número mayor que 0, con 2 decimales como máximo. Por defecto, 1. |
   | Días programados | Sí | Al menos un día. Por defecto, todos. |
   | Recordatorios | No | Cero o más horas del día (ver 3.6). |
+  | Color | No | Uno de una paleta de 12 colores, o ninguno. Por defecto, ninguno. Tocar el color elegido lo quita. |
 
 - **RF-07.** *Retirado.* Los hábitos se gestionan desde un día en que tocan (RF-08). El listado de todos los hábitos queda fuera del alcance (sección 4).
 - **RF-08.** El usuario puede editar cualquier dato de un hábito salvo el tipo. Se edita desde sus opciones (RF-34), en cualquier día en que aparezca: pasado, actual o futuro.
-- **RF-09.** Los cambios en un hábito (nombre, meta, días programados, recordatorios…) se aplican desde el día actual en adelante, se edite desde el día que se edite. Los días pasados conservan lo que se registró. Si se edita desde un día distinto del actual, el formulario lo indica con una línea discreta: "Los cambios se aplican desde hoy".
+- **RF-09.** Los cambios en un hábito (nombre, meta, días programados, recordatorios…) se aplican desde el día actual en adelante, se edite desde el día que se edite. Los días pasados conservan lo que se registró. Si se edita desde un día distinto del actual, el formulario lo indica con una línea discreta: "Los cambios se aplican desde hoy". El nombre y el color son la excepción: identifican al hábito, así que cambian también en los días pasados.
 - **RF-10.** El usuario puede archivar un hábito. Archivar sirve para dejar de seguir un hábito sin perder lo que se hizo; por ejemplo, uno que ya forma parte de la rutina.
   - Deja de aparecer en los días siguientes y deja de recordarse, pero su historial se conserva y sigue visible en los días pasados. El día en que se archiva solo aparece si ya tenía algo registrado.
   - Archivar pide confirmación, porque no se puede deshacer: para retomar el hábito se crea uno nuevo.
@@ -118,6 +120,7 @@ Es la pantalla principal de la aplicación (ver 3.1).
   - Booleano: solo el nombre.
   - Cuantitativo: el nombre, la cantidad acumulada y la meta (por ejemplo, "1,25 / 2 L").
   - En los dos, un hábito cumplido se muestra atenuado.
+  - Un hábito con color lleva un punto de ese color delante del nombre. Si algún hábito del día tiene color, los que no lo tienen llevan un punto vacío, para que los nombres queden alineados; si ninguno lo tiene, no hay puntos.
 - **RF-14.** Un hábito booleano se marca y desmarca con un toque.
 - **RF-15.** Un hábito cuantitativo suma su incremento con un toque. Desde sus opciones (RF-34) también se puede restar el incremento o escribir la cantidad exacta. La cantidad nunca baja de 0 y admite 2 decimales como máximo.
 - **RF-16.** Un hábito cuantitativo cuenta como cumplido cuando la cantidad acumulada alcanza la meta. Se puede superar la meta.
