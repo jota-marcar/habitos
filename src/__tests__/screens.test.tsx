@@ -236,6 +236,34 @@ describe("day view", () => {
     expect(screen.queryByText("Solo domingos")).toBeNull();
   });
 
+  test("shows a dot with the color of each habit, empty for those without one (RF-13)", async () => {
+    await addHabit(
+      db,
+      habit("read", { name: "Leer", color: "teal" }),
+      version("read"),
+    );
+    await addBoolean("walk", "Pasear");
+    await renderApp();
+    await screen.findByText("Leer");
+
+    expect(screen.getByTestId("color-dot-read")).toHaveStyle({
+      backgroundColor: "#2DD4BF",
+    });
+    expect(screen.getByTestId("color-dot-walk")).toHaveStyle({
+      borderWidth: 1,
+    });
+    // The dots are not rows of the list.
+    expect(habitNames()).toEqual(["Leer", "Pasear"]);
+  });
+
+  test("a day with no colored habit has no dots (RF-13)", async () => {
+    await addBoolean("walk", "Pasear");
+    await renderApp();
+    await screen.findByText("Pasear");
+
+    expect(screen.queryByTestId(/^color-dot-/)).toBeNull();
+  });
+
   test("says when no habit is due today", async () => {
     await addHabit(
       db,
@@ -442,6 +470,42 @@ describe("new habit", () => {
     ]);
     expect(screen).toHavePathname("/");
     expect(await screen.findByText("Meditar")).toBeTruthy();
+  });
+
+  test("gives the habit the color chosen last (RF-06)", async () => {
+    await openForm();
+
+    await fireEvent.changeText(screen.getByLabelText("Nombre"), "Meditar");
+    expect(screen.getAllByRole("checkbox", { checked: true })).toHaveLength(7);
+    await fireEvent.press(screen.getByLabelText("Azul"));
+    expect(screen.getByLabelText("Azul")).toBeChecked();
+    await fireEvent.press(screen.getByLabelText("Verde"));
+    expect(screen.getByLabelText("Azul")).not.toBeChecked();
+    expect(screen.getByLabelText("Verde")).toBeChecked();
+    await save();
+
+    await waitFor(() => expect(screen).toHavePathname("/"));
+    expect(await listHabits(db)).toEqual([
+      expect.objectContaining({ name: "Meditar", color: "green" }),
+    ]);
+    expect(await screen.findByTestId(/^color-dot-/)).toHaveStyle({
+      backgroundColor: "#4ADE80",
+    });
+  });
+
+  test("touching the chosen color leaves the habit without one (RF-06)", async () => {
+    await openForm();
+
+    await fireEvent.changeText(screen.getByLabelText("Nombre"), "Meditar");
+    await fireEvent.press(screen.getByLabelText("Azul"));
+    await fireEvent.press(screen.getByLabelText("Azul"));
+    expect(screen.getByLabelText("Azul")).not.toBeChecked();
+    await save();
+
+    await waitFor(() => expect(screen).toHavePathname("/"));
+    expect(await listHabits(db)).toEqual([
+      expect.objectContaining({ name: "Meditar", color: null }),
+    ]);
   });
 
   test("creates a quantitative habit with decimal amounts", async () => {
@@ -788,6 +852,26 @@ describe("edit habit (RF-08)", () => {
       expect.objectContaining({ habitId: "water", time: "08:30" }),
       { id: "water-r2", habitId: "water", time: "18:00" },
     ]);
+  });
+
+  test("opens with the color of the habit and changes it without a new version (RF-08)", async () => {
+    await addHabit(
+      db,
+      habit("walk", { name: "Pasear", color: "teal" }),
+      version("walk"),
+    );
+    await renderApp("/habits/walk/edit");
+    await screen.findByDisplayValue("Pasear");
+    expect(screen.getByLabelText("Turquesa")).toBeChecked();
+
+    await fireEvent.press(screen.getByLabelText("Rosa"));
+    await fireEvent.press(screen.getByLabelText("Guardar"));
+
+    await waitFor(() => expect(screen).toHavePathname("/"));
+    expect(await listHabits(db)).toEqual([
+      expect.objectContaining({ id: "walk", color: "pink" }),
+    ]);
+    expect(await listHabitVersions(db)).toEqual([version("walk")]);
   });
 
   test("a boolean habit has no amounts to edit", async () => {

@@ -33,15 +33,21 @@ const DONE_OPACITY = 0.4;
 // The least space between the two groups, when they fill the box and it scrolls (RF-12).
 const GROUP_GAP = spacing.xl;
 
+// The dot with the color of a habit, before its name (RF-13).
+const DOT_SIZE = 10;
+
 // The strip is thin, but the area that catches the drag is as tall as a button.
 const STRIP_TOUCH_HEIGHT = 44;
 
 function HabitRow({
   item,
+  showColor,
   onPress,
   onLongPress,
 }: {
   item: DayHabit;
+  /** Whether the rows of the day have a dot for the color of their habit (RF-13). */
+  showColor: boolean;
   onPress: () => void;
   onLongPress: () => void;
 }) {
@@ -65,9 +71,23 @@ function HabitRow({
         pressed && styles.pressed,
       ]}
     >
-      <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
-        {habit.name}
-      </Text>
+      <View style={styles.label}>
+        {/* A habit without a color has an empty dot, so that the names line up. */}
+        {showColor ? (
+          <View
+            testID={`color-dot-${habit.id}`}
+            style={[
+              styles.dot,
+              habit.color === null
+                ? { borderColor: colors.border, borderWidth: 1 }
+                : { backgroundColor: colors.habit[habit.color] },
+            ]}
+          />
+        ) : null}
+        <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
+          {habit.name}
+        </Text>
+      </View>
       {progress === null ? null : (
         <Text style={[styles.progress, { color: colors.textSecondary }]}>
           {progress}
@@ -143,6 +163,10 @@ export default function Today() {
   const heldNow =
     allHabits?.find((item) => item.habit.id === held?.habit.id) ?? held;
 
+  // The dots only appear on a day with some habit that has a color (RF-13).
+  const showColor =
+    allHabits?.some((item) => item.habit.color !== null) ?? false;
+
   const openOptions = (item: DayHabit) => {
     setHeld(item);
     options.open();
@@ -210,6 +234,7 @@ export default function Today() {
               renderItem={({ item }) => (
                 <HabitRow
                   item={item}
+                  showColor={showColor}
                   onPress={() => void record(item.habit.id)}
                   onLongPress={() => openOptions(item)}
                 />
@@ -227,6 +252,7 @@ export default function Today() {
                         {index === 0 ? null : <Separator />}
                         <HabitRow
                           item={item}
+                          showColor={showColor}
                           onPress={() => void record(item.habit.id)}
                           onLongPress={() => openOptions(item)}
                         />
@@ -299,6 +325,13 @@ const styles = StyleSheet.create({
   },
   done: { opacity: DONE_OPACITY },
   pressed: { opacity: 0.6 },
+  label: {
+    alignItems: "center",
+    flexDirection: "row",
+    flexShrink: 1,
+    gap: spacing.sm + 2,
+  },
+  dot: { borderRadius: radius.round, height: DOT_SIZE, width: DOT_SIZE },
   name: { flexShrink: 1, fontSize: fontSize.body },
   progress: { fontSize: fontSize.body, fontVariant: ["tabular-nums"] },
   groups: { flexGrow: 1 },

@@ -7,13 +7,19 @@ import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import type { Weekday } from "@/domain/dates";
-import type { HabitError, HabitType } from "@/domain/habits";
+import {
+  HABIT_COLORS,
+  type HabitColor,
+  type HabitError,
+  type HabitType,
+} from "@/domain/habits";
 import { isScheduledOn } from "@/domain/schedule";
 import { localTime, localTimeOf, type LocalTime } from "@/domain/times";
 import { refreshReminders } from "@/notifications/reminders";
 
 import {
   Button,
+  ColorSwatch,
   Field,
   HeaderButton,
   Section,
@@ -21,7 +27,7 @@ import {
   ToggleChip,
 } from "./components";
 import { useDatabase } from "./database";
-import { WEEKDAY_INITIALS, WEEKDAY_NAMES } from "./format";
+import { HABIT_COLOR_NAMES, WEEKDAY_INITIALS, WEEKDAY_NAMES } from "./format";
 import {
   addReminderTime,
   fieldOf,
@@ -38,6 +44,13 @@ const TYPE_OPTIONS: readonly { value: HabitType; label: string }[] = [
 ];
 
 const WEEKDAYS: readonly Weekday[] = [0, 1, 2, 3, 4, 5, 6];
+
+// The colors are shown in rows, like the days of the week.
+const COLORS_PER_ROW = 6;
+const COLOR_ROWS: readonly (readonly HabitColor[])[] = [
+  HABIT_COLORS.slice(0, COLORS_PER_ROW),
+  HABIT_COLORS.slice(COLORS_PER_ROW),
+];
 
 // The time the reminder picker starts at.
 const DEFAULT_REMINDER_TIME = localTime("09:00");
@@ -91,6 +104,10 @@ export function HabitFormScreen({
 
   const toggleDay = (weekday: Weekday) =>
     update({ scheduledDays: values.scheduledDays ^ (1 << weekday) });
+
+  // Touching the chosen color leaves the habit without one (RF-06).
+  const toggleColor = (color: HabitColor) =>
+    update({ color: values.color === color ? null : color });
 
   const confirmReminder = () => {
     if (pickedTime === null) return;
@@ -181,6 +198,24 @@ export function HabitFormScreen({
         />
       </Section>
 
+      <Section title="Color">
+        <View style={styles.colors}>
+          {COLOR_ROWS.map((row) => (
+            <View key={row[0]} style={styles.colorRow}>
+              {row.map((color) => (
+                <ColorSwatch
+                  key={color}
+                  color={colors.habit[color]}
+                  accessibilityLabel={HABIT_COLOR_NAMES[color]}
+                  selected={values.color === color}
+                  onPress={() => toggleColor(color)}
+                />
+              ))}
+            </View>
+          ))}
+        </View>
+      </Section>
+
       {editing ? (
         quantitative ? (
           <Section title="Cantidad" error={messages.amounts}>
@@ -267,6 +302,8 @@ export function HabitFormScreen({
 const styles = StyleSheet.create({
   content: { gap: spacing.lg, padding: spacing.md },
   note: { fontSize: fontSize.caption, paddingHorizontal: spacing.md },
+  colors: { gap: spacing.xs },
+  colorRow: { flexDirection: "row", justifyContent: "space-between" },
   days: { flexDirection: "row", justifyContent: "space-between" },
   reminder: {
     alignItems: "center",
