@@ -20,7 +20,7 @@ import { createGestureController } from "react-native-gesture-handler/jest-utils
 import Today from "@/app/index";
 import EditHabit from "@/app/habits/[id]/edit";
 import NewHabit from "@/app/habits/new";
-import { listEntries } from "@/data/entries-repository";
+import { listEntries, saveEntry } from "@/data/entries-repository";
 import {
   addHabit,
   listHabitVersions,
@@ -28,6 +28,7 @@ import {
 } from "@/data/habits-repository";
 import { listReminders } from "@/data/reminders-repository";
 import { habit, openMigratedDatabase, version } from "@/data/testing/fixtures";
+import { notifyReminderRecorded } from "@/notifications/actions";
 import type { TestDatabase } from "@/data/testing/node-database";
 import { localDate, type Weekday } from "@/domain/dates";
 import { scheduledDaysFrom } from "@/domain/schedule";
@@ -93,6 +94,7 @@ jest.mock("expo-notifications", () => ({
   cancelScheduledNotificationAsync: async (identifier: string) => {
     mockScheduled.delete(identifier);
   },
+  setNotificationCategoryAsync: async () => undefined,
 }));
 
 let db: TestDatabase;
@@ -851,6 +853,17 @@ describe("reminders (RF-22 to RF-24, RF-36)", () => {
 
     await waitFor(() => expect(screen).toHavePathname("/"));
     expect(alert).not.toHaveBeenCalled();
+  });
+
+  test("shows at once what a button of a reminder records (RF-25)", async () => {
+    await addBoolean("walk", "Pasear", "21:00");
+    await renderApp();
+    expect(await screen.findByTestId("habit-walk")).not.toBeChecked();
+
+    await saveEntry(db, { id: "e1", habitId: "walk", date: TODAY, value: 1 });
+    await act(async () => notifyReminderRecorded());
+
+    expect(await screen.findByRole("checkbox", { checked: true })).toBeTruthy();
   });
 
   test("marking a habit done cancels its reminder of today (RF-24)", async () => {

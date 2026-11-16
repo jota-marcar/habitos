@@ -11,6 +11,8 @@ export interface PlannedNotification {
   readonly title: string;
   readonly body: string | null;
   readonly habitId: string;
+  /** The category, which gives the notification its buttons (RF-25). */
+  readonly category: string;
 }
 
 /** A notification already scheduled on the device. */
@@ -20,6 +22,18 @@ export interface ScheduledNotification {
   readonly signature: string | null;
 }
 
+/** A button of a notification. iOS does not allow `:` or `-` in its identifier. */
+export interface NotificationButton {
+  readonly id: string;
+  readonly title: string;
+}
+
+/** A set of buttons that notifications share. iOS does not allow `:` or `-` in its identifier. */
+export interface NotificationCategory {
+  readonly id: string;
+  readonly buttons: readonly NotificationButton[];
+}
+
 export interface Notifier {
   /** The notifications scheduled on the device that have not warned yet. */
   scheduled(): Promise<ScheduledNotification[]>;
@@ -27,4 +41,14 @@ export interface Notifier {
   schedule(notification: PlannedNotification, signature: string): Promise<void>;
   /** Cancels a scheduled notification. Cancelling one that is not there changes nothing. */
   cancel(id: string): Promise<void>;
+  /** Registers a category, replacing any other with the same identifier. */
+  setCategory(category: NotificationCategory): Promise<void>;
+}
+
+/** What the user did with a reminder: tapped one of its buttons, or the reminder itself. */
+export interface ReminderResponse {
+  /** The button, or null if the reminder itself was tapped (RF-26). */
+  readonly buttonId: string | null;
+  /** The notification that was answered, as it was scheduled. */
+  readonly notification: PlannedNotification;
 }

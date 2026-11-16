@@ -55,7 +55,7 @@ flowchart LR
 | Plataforma | Expo (React Native) con TypeScript en modo estricto | [ADR-0002](adr/0002-expo-como-plataforma.md) |
 | Navegación | Expo Router (rutas basadas en ficheros): el día como única pantalla principal, sin cabecera, y los formularios como modales | [ADR-0010](adr/0010-interfaz-por-gestos-hooks-propios-sobre-expo-sqlite-y-estilos-sin-libreria.md) |
 | Gestos y animaciones | `react-native-gesture-handler` y `react-native-reanimated`: el calendario, el menú y las opciones de un hábito son capas de la pantalla principal | [ADR-0010](adr/0010-interfaz-por-gestos-hooks-propios-sobre-expo-sqlite-y-estilos-sin-libreria.md) |
-| Datos en la interfaz | Hooks propios sobre `SQLiteProvider` de `expo-sqlite`, sin caché ni store global | [ADR-0010](adr/0010-interfaz-por-gestos-hooks-propios-sobre-expo-sqlite-y-estilos-sin-libreria.md) |
+| Datos en la interfaz | Hooks propios sobre una conexión única de `expo-sqlite`, sin caché ni store global | [ADR-0010](adr/0010-interfaz-por-gestos-hooks-propios-sobre-expo-sqlite-y-estilos-sin-libreria.md), [ADR-0012](adr/0012-botones-de-los-recordatorios-en-segundo-plano-con-javascript.md) |
 | Estilos | `StyleSheet` con tokens propios y modo oscuro, sin librería de UI | [ADR-0010](adr/0010-interfaz-por-gestos-hooks-propios-sobre-expo-sqlite-y-estilos-sin-libreria.md) |
 | Iconos | SF Symbols con `expo-symbols`, con un sustituto sencillo donde no hay | [ADR-0011](adr/0011-sf-symbols-con-expo-symbols-para-los-iconos.md) |
 | Base de datos local | SQLite (`expo-sqlite`), con SQL directo y migraciones propias | [ADR-0004](adr/0004-offline-first-con-sincronizacion.md), [ADR-0009](adr/0009-sql-directo-y-migraciones-propias-en-la-capa-de-datos-local.md) |
@@ -179,7 +179,7 @@ Decisiones del modelo:
 
 1. Al abrir la app se pide el permiso de notificaciones si aún no se ha pedido (RF-35). iOS solo lo pregunta una vez: después, solo se cambia desde los ajustes del teléfono.
 2. El planificador (`src/notifications`) se ejecuta al abrir la app, al volver a primer plano y tras cada cambio en hábitos, registros o recordatorios. El dominio calcula los próximos 60 avisos, y el planificador los compara con las notificaciones ya programadas: solo cancela las que ya no tocan o han cambiado y solo programa las que faltan. Así, refrescar tras cada toque es barato.
-3. Cada aviso tiene un identificador estable (`reminder.<recordatorio>.<fecha>`) y guarda en sus datos una firma con la hora y el texto. Al leerla de vuelta, iOS devuelve la fecha programada como un intervalo, así que la comparación se hace con la firma. Las notificaciones con otro prefijo (las pospuestas) no se tocan.
+3. Cada aviso tiene un identificador estable (`reminder.<recordatorio>.<fecha>`) y guarda en sus datos el día, la hora y una firma con la hora, el texto y la categoría. Al leerla de vuelta, iOS devuelve la fecha programada como un intervalo, así que la comparación se hace con la firma. Las pospuestas se tratan aparte (ver "Acción desde un recordatorio").
 4. Las ejecuciones van una detrás de otra, y las peticiones que llegan mientras otra espera se agrupan en una sola. Si una falla, se reintenta en la siguiente.
 5. Al guardar un hábito con recordatorios sin permiso, un diálogo lo avisa y ofrece abrir los ajustes (RF-36). El hábito se guarda igualmente: como la app refresca al volver a primer plano, los recordatorios se programan en cuanto el usuario da el permiso.
 6. Los recordatorios que llegan con la app abierta también se muestran.
@@ -188,9 +188,11 @@ El planificador usa el dominio, la capa de datos y, de la interfaz, solo el relo
 
 ### Acción desde un recordatorio
 
-1. iOS muestra la notificación con sus botones ("Hecho" o "+incremento", y "Posponer").
-2. La acción se recibe en la app sin abrirla en primer plano y se ejecuta el mismo flujo de "Marcar un hábito".
-3. "Posponer" programa una notificación nueva para una hora después. Si esa hora cae en el día siguiente, no programa nada. Las notificaciones pospuestas no forman parte de la ventana de 60: usan el margen que deja hasta las 64 de iOS.
+1. iOS muestra la notificación con sus botones: "Hecho" en los booleanos o "+incremento" en los cuantitativos (por ejemplo, "+0,25 L"), y "Posponer 1 h". Los booleanos comparten una categoría y cada cuantitativo tiene la suya, porque el botón muestra su incremento. Las categorías se registran al refrescar los recordatorios.
+2. La respuesta se atiende en JavaScript sin abrir la app ([ADR-0012](adr/0012-botones-de-los-recordatorios-en-segundo-plano-con-javascript.md)). Por si iOS arranca la app solo para entregarla, la entrada propia (`index.ts`) empieza a escuchar antes que Expo Router y abre la misma conexión a la base que usan las pantallas.
+3. "Hecho" y "+incremento" apuntan en el día del recordatorio, con las mismas reglas que un toque en la lista, salvo que "Hecho" nunca desmarca. Después se refrescan los recordatorios, lo que cancela los que quedan del día si el hábito ya está cumplido (RF-24). Si la app está en pantalla, el día se vuelve a leer sin reordenarse.
+4. "Posponer" programa una notificación nueva (`snooze.<hábito>.<fecha>.<hora>`) para una hora después, con el mismo contenido. Si esa hora cae en el día siguiente, no programa nada. Las pospuestas no forman parte de la ventana de 60: usan el margen que deja hasta las 64 de iOS. Al refrescar, se cancelan las de hábitos ya cumplidos, archivados o eliminados, y las de otros días.
+5. Tocar el recordatorio fuera de sus botones solo abre la app, que muestra el día actual (RF-26).
 
 ### Sincronización
 

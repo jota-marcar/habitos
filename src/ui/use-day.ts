@@ -27,6 +27,7 @@ import {
 } from "@/domain/entries";
 import { archiveHabit } from "@/domain/habits";
 import { keepOrder, sortDayHabits } from "@/domain/order";
+import { onReminderRecorded } from "@/notifications/actions";
 import { refreshReminders } from "@/notifications/reminders";
 
 import { msUntilTomorrow, newId, today } from "./clock";
@@ -154,6 +155,13 @@ export function useDay(): Day {
     waitForTomorrow();
     return () => clearTimeout(timer);
   }, [checkToday, show]);
+
+  // A button of a reminder may record something while the day is on screen (RF-25): it is
+  // read again without sorting it, like any other change.
+  useEffect(
+    () => onReminderRecorded(() => void load(shown.current, false)),
+    [load],
+  );
 
   // Makes a change after the ones before it and reads the day again, without sorting it.
   const change = useCallback(
