@@ -5,7 +5,7 @@
 // Usage: node .claude/skills/sync/sync.mjs
 // Exits with code 1, changing nothing, if there are uncommitted changes.
 
-import { execFileSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 
 const BASE = "main";
@@ -147,15 +147,24 @@ for (const branch of candidates) {
   }
   moves.set(oldTip, git("rev-parse", branch));
 
-  const verified =
-    attempt(() =>
-      execFileSync("npm", ["run", "verify"], { stdio: "ignore", shell: true }),
-    ) !== null;
+  let verifyError = null;
+  try {
+    execSync("npm run verify", {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch (error) {
+    verifyError = `${error.stdout ?? ""}\n${error.stderr ?? ""}`
+      .split("\n")
+      .filter((line) => /error|fail|✖/i.test(line))
+      .slice(0, 5)
+      .join(" | ");
+  }
   const remoteTip = attempt(() => git("rev-parse", `origin/${branch}`));
   const ownCommits = countCommits(`origin/${BASE}..${branch}`);
-  if (!verified) {
+  if (verifyError !== null) {
     restackProblems.push(
-      `${branch}: rebased, but npm run verify fails; not pushed`,
+      `${branch}: rebased, but npm run verify fails (${verifyError}); not pushed`,
     );
   } else if (remoteTip && remoteTip !== oldTip) {
     restackProblems.push(
@@ -204,6 +213,8 @@ console.log(
 if (restackProblems.length) {
   console.log(`RESTACK PROBLEMS: ${restackProblems.join("; ")}`);
 }
-console.log(`Deleted branches:${deleted.length ? deleted.join(", ") : "none"}`);
+console.log(
+  `Deleted branches: ${deleted.length ? deleted.join(", ") : "none"}`,
+);
 console.log(`Kept branches: ${kept.length ? kept.join(", ") : "none"}`);
 if (!gh) console.log("WARNING: GitHub CLI (gh) not found; no branch deleted.");
