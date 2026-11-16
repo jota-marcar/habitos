@@ -5,10 +5,7 @@
 import { useEffect } from "react";
 import { Alert, AppState, Linking } from "react-native";
 
-import {
-  ensureNotificationPermission,
-  showRemindersInForeground,
-} from "@/notifications/expo-notifier";
+import { ensureNotificationPermission } from "@/notifications/expo-notifier";
 import { refreshReminders } from "@/notifications/reminders";
 
 import { useDatabase } from "./database";
@@ -17,7 +14,6 @@ export function ReminderKeeper() {
   const db = useDatabase();
 
   useEffect(() => {
-    showRemindersInForeground();
     void ensureNotificationPermission().then(() => refreshReminders(db));
 
     const subscription = AppState.addEventListener("change", (state) => {

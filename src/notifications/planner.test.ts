@@ -5,19 +5,19 @@ import type { TestDatabase } from "@/data/testing/node-database";
 import { localDate } from "@/domain/dates";
 import { localTime, type LocalDateTime } from "@/domain/times";
 
-import type {
-  Notifier,
-  PlannedNotification,
-  ScheduledNotification,
-} from "./notifier";
+import type { PlannedNotification } from "./notifier";
 import {
+  categoryOf,
   instantOf,
   localDateTimeOf,
-  plannedNotifications,
+  planReminders,
   serialized,
   signatureOf,
+  snoozedNotification,
   syncNotifications,
+  type ReminderPlan,
 } from "./planner";
+import { fakeNotifier } from "./testing/fake-notifier";
 
 let db: TestDatabase;
 
@@ -31,23 +31,13 @@ function reminder(habitId: string, time: string) {
   return { id: `${habitId}@${time}`, habitId, time: localTime(time) };
 }
 
-/** A notifier that keeps the scheduled notifications in memory and logs what it is asked. */
-function fakeNotifier(initial: ScheduledNotification[] = []) {
-  const scheduled = new Map(initial.map((n) => [n.id, n.signature]));
-  const log: string[] = [];
-  const notifier: Notifier = {
-    scheduled: async () =>
-      [...scheduled].map(([id, signature]) => ({ id, signature })),
-    schedule: async (notification, signature) => {
-      log.push(`schedule ${notification.id}`);
-      scheduled.set(notification.id, signature);
-    },
-    cancel: async (id) => {
-      log.push(`cancel ${id}`);
-      scheduled.delete(id);
-    },
-  };
-  return { notifier, scheduled, log };
+function addWater() {
+  return addHabit(
+    db,
+    habit("water", { name: "Beber agua", type: "quantitative" }),
+    version("water", { target: 2, unit: "L", increment: 0.25 }),
+    [reminder("water", "18:00")],
+  );
 }
 
 beforeEach(async () => {
@@ -69,8 +59,8 @@ describe("localDateTimeOf and instantOf", () => {
   });
 });
 
-describe("plannedNotifications", () => {
-  test("a boolean habit warns with its name only", async () => {
+describe("planReminders", () => {
+  test("a boolean habit warns with its name only, with the buttons of its type", async () => {
     await addHabit(
       db,
       habit("meditate", { name: "Meditar" }),
@@ -78,24 +68,29 @@ describe("plannedNotifications", () => {
       [reminder("meditate", "21:00")],
     );
 
-    const [first] = await plannedNotifications(db, NOW);
+    const { notifications, categories } = await planReminders(db, NOW);
 
-    expect(first).toEqual({
+    expect(notifications[0]).toEqual({
       id: "reminder.meditate@21:00.2026-11-12",
       at: { date: "2026-11-12", time: "21:00" },
       title: "Meditar",
       body: null,
       habitId: "meditate",
+      category: "reminder_boolean",
     });
+    expect(categories).toEqual([
+      {
+        id: "reminder_boolean",
+        buttons: [
+          { id: "done", title: "Hecho" },
+          { id: "snooze", title: "Posponer 1 h" },
+        ],
+      },
+    ]);
   });
 
   test("a quantitative habit says how it is going that day (RF-24)", async () => {
-    await addHabit(
-      db,
-      habit("water", { name: "Beber agua", type: "quantitative" }),
-      version("water", { target: 2, unit: "L", increment: 0.25 }),
-      [reminder("water", "18:00")],
-    );
+    await addWater();
     await saveEntry(db, {
       id: "e1",
       habitId: "water",
@@ -103,10 +98,29 @@ describe("plannedNotifications", () => {
       value: 1.25,
     });
 
-    const [today, tomorrow] = await plannedNotifications(db, NOW);
+    const {
+      notifications: [today, tomorrow],
+    } = await planReminders(db, NOW);
 
     expect(today.body).toBe("Llevas 1,25 de 2 L");
     expect(tomorrow.body).toBe("Llevas 0 de 2 L");
+  });
+
+  test("a quantitative habit has a button with its own increment (RF-25)", async () => {
+    await addWater();
+
+    const { notifications, categories } = await planReminders(db, NOW);
+
+    expect(notifications[0].category).toBe("reminder_add_water");
+    expect(categories).toEqual([
+      {
+        id: "reminder_add_water",
+        buttons: [
+          { id: "add", title: "+0,25 L" },
+          { id: "snooze", title: "Posponer 1 h" },
+        ],
+      },
+    ]);
   });
 
   test("a habit done today stops warning today, but not tomorrow (RF-24)", async () => {
@@ -120,9 +134,10 @@ describe("plannedNotifications", () => {
       value: 1,
     });
 
-    const [first] = await plannedNotifications(db, NOW);
+    const { notifications, pendingToday } = await planReminders(db, NOW);
 
-    expect(first.at).toEqual({ date: "2026-11-13", time: "22:00" });
+    expect(notifications[0].at).toEqual({ date: "2026-11-13", time: "22:00" });
+    expect(pendingToday.has("read")).toBe(false);
   });
 
   test("a quantitative habit with no unit only shows the amounts", async () => {
@@ -133,9 +148,29 @@ describe("plannedNotifications", () => {
       [reminder("push-ups", "18:00")],
     );
 
-    const [first] = await plannedNotifications(db, NOW);
+    const { notifications, categories } = await planReminders(db, NOW);
 
-    expect(first.body).toBe("Llevas 0 de 20");
+    expect(notifications[0].body).toBe("Llevas 0 de 20");
+    expect(categories[0].buttons[0].title).toBe("+5");
+  });
+
+  test("lists the habits still pending today", async () => {
+    await addWater();
+
+    const { today, pendingToday } = await planReminders(db, NOW);
+
+    expect(today).toBe(NOW.date);
+    expect([...pendingToday]).toEqual(["water"]);
+  });
+});
+
+describe("categoryOf", () => {
+  test("leaves out of the identifier the characters iOS does not allow", () => {
+    const id = "6f1c-4a:2b";
+
+    expect(categoryOf(habit(id, { type: "quantitative" }))).toBe(
+      "reminder_add_6f1c_4a_2b",
+    );
   });
 });
 
@@ -147,13 +182,27 @@ describe("syncNotifications", () => {
       title: id,
       body: null,
       habitId: id,
+      category: "reminder_boolean",
+    };
+  }
+
+  function plan(
+    notifications: PlannedNotification[],
+    changes: Partial<ReminderPlan> = {},
+  ): ReminderPlan {
+    return {
+      notifications,
+      categories: [],
+      today: NOW.date,
+      pendingToday: new Set(),
+      ...changes,
     };
   }
 
   test("schedules the planned notifications that are missing", async () => {
     const { notifier, scheduled } = fakeNotifier();
 
-    await syncNotifications(notifier, [planned("a"), planned("b")]);
+    await syncNotifications(notifier, plan([planned("a"), planned("b")]));
 
     expect([...scheduled.keys()]).toEqual(["reminder.a", "reminder.b"]);
     expect(scheduled.get("reminder.a")).toBe(signatureOf(planned("a")));
@@ -164,7 +213,7 @@ describe("syncNotifications", () => {
       { id: "reminder.a", signature: signatureOf(planned("a")) },
     ]);
 
-    await syncNotifications(notifier, [planned("a")]);
+    await syncNotifications(notifier, plan([planned("a")]));
 
     expect(log).toEqual([]);
   });
@@ -174,7 +223,7 @@ describe("syncNotifications", () => {
       { id: "reminder.a", signature: signatureOf(planned("a", "08:00")) },
     ]);
 
-    await syncNotifications(notifier, [planned("a", "09:00")]);
+    await syncNotifications(notifier, plan([planned("a", "09:00")]));
 
     expect(log).toEqual(["cancel reminder.a", "schedule reminder.a"]);
     expect(scheduled.get("reminder.a")).toBe(
@@ -188,19 +237,103 @@ describe("syncNotifications", () => {
       { id: "reminder.old", signature: null },
     ]);
 
-    await syncNotifications(notifier, [planned("a")]);
+    await syncNotifications(notifier, plan([planned("a")]));
 
     expect([...scheduled.keys()]).toEqual(["reminder.a"]);
   });
 
-  test("leaves alone the notifications that are not reminders of the window", async () => {
+  test("keeps the snoozed reminders of habits still pending today", async () => {
     const { notifier, log } = fakeNotifier([
-      { id: "snooze.a", signature: null },
+      { id: "snooze.a.2026-11-12.11:00", signature: null },
     ]);
 
-    await syncNotifications(notifier, []);
+    await syncNotifications(
+      notifier,
+      plan([], { pendingToday: new Set(["a"]) }),
+    );
 
     expect(log).toEqual([]);
+  });
+
+  test("cancels the snoozed reminders of habits done, archived or deleted (RF-24)", async () => {
+    const { notifier, scheduled } = fakeNotifier([
+      { id: "snooze.a.2026-11-12.11:00", signature: null },
+    ]);
+
+    await syncNotifications(notifier, plan([]));
+
+    expect(scheduled.size).toBe(0);
+  });
+
+  test("cancels the snoozed reminders of other days", async () => {
+    const { notifier, scheduled } = fakeNotifier([
+      { id: "snooze.a.2026-11-11.23:00", signature: null },
+    ]);
+
+    await syncNotifications(
+      notifier,
+      plan([], { pendingToday: new Set(["a"]) }),
+    );
+
+    expect(scheduled.size).toBe(0);
+  });
+
+  test("leaves alone the notifications that are not reminders", async () => {
+    const { notifier, log } = fakeNotifier([{ id: "other", signature: null }]);
+
+    await syncNotifications(notifier, plan([]));
+
+    expect(log).toEqual([]);
+  });
+
+  test("registers the categories only when they are new or have changed", async () => {
+    const { notifier, log } = fakeNotifier();
+    const known = new Map<string, string>();
+    const category = (title: string) => ({
+      id: "reminder_add_water",
+      buttons: [{ id: "add", title }],
+    });
+
+    await syncNotifications(
+      notifier,
+      plan([], { categories: [category("+1 L")] }),
+      known,
+    );
+    await syncNotifications(
+      notifier,
+      plan([], { categories: [category("+1 L")] }),
+      known,
+    );
+    await syncNotifications(
+      notifier,
+      plan([], { categories: [category("+2 L")] }),
+      known,
+    );
+
+    expect(log).toEqual([
+      "category reminder_add_water",
+      "category reminder_add_water",
+    ]);
+  });
+});
+
+describe("snoozedNotification", () => {
+  test("warns again like the original, with an identifier of its own", () => {
+    const original: PlannedNotification = {
+      id: "reminder.r1.2026-11-12",
+      at: NOW,
+      title: "Leer",
+      body: null,
+      habitId: "read",
+      category: "reminder_boolean",
+    };
+    const at = { date: NOW.date, time: localTime("11:00") };
+
+    expect(snoozedNotification(original, at)).toEqual({
+      ...original,
+      id: "snooze.read.2026-11-12.11:00",
+      at,
+    });
   });
 });
 
