@@ -15,11 +15,42 @@ import {
 
 export type HabitType = "boolean" | "quantitative";
 
+/**
+ * The colors a habit can be given to tell it apart from others (RF-06). They are the keys of
+ * a palette: the interface decides the tone of each one (ADR-0014).
+ */
+export const HABIT_COLORS = [
+  "red",
+  "orange",
+  "amber",
+  "lime",
+  "green",
+  "teal",
+  "cyan",
+  "blue",
+  "violet",
+  "fuchsia",
+  "pink",
+  "gray",
+] as const;
+
+export type HabitColor = (typeof HABIT_COLORS)[number];
+
+/**
+ * The color with the key `text`, or null if there is none: a habit without a color, or a key
+ * of a palette this version does not know (ADR-0014).
+ */
+export function parseHabitColor(text: string | null): HabitColor | null {
+  return HABIT_COLORS.find((color) => color === text) ?? null;
+}
+
 export interface Habit {
   readonly id: string;
   readonly name: string;
   /** Cannot change after the habit is created (RF-06). */
   readonly type: HabitType;
+  /** Not versioned, like the name: it changes in the whole history (ADR-0014). */
+  readonly color: HabitColor | null;
   readonly createdOn: LocalDate;
   readonly archivedOn: LocalDate | null;
 }
@@ -141,6 +172,7 @@ function sameConfig(a: HabitConfig, b: HabitConfig): boolean {
 export interface NewHabit {
   readonly name: string;
   readonly type: HabitType;
+  readonly color: HabitColor | null;
   readonly config: HabitConfig;
 }
 
@@ -163,6 +195,7 @@ export function createHabit(
     id: ids.habitId,
     name: input.name.trim(),
     type: input.type,
+    color: input.color,
     createdOn: today,
     archivedOn: null,
   };
@@ -183,6 +216,11 @@ export function renameHabit(
   const errors = validateName(name);
   if (errors.length > 0) return fail(errors);
   return ok({ ...habit, name: name.trim() });
+}
+
+/** Gives a habit another color, or none. Like the name, it is not versioned (ADR-0014). */
+export function recolorHabit(habit: Habit, color: HabitColor | null): Habit {
+  return { ...habit, color };
 }
 
 /** Archives a habit as of today (RF-10). Archiving an archived habit changes nothing. */

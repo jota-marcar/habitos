@@ -2,11 +2,14 @@ import { localDate } from "./dates";
 import {
   DEFAULT_INCREMENT,
   DEFAULT_SCHEDULED_DAYS,
+  HABIT_COLORS,
   MAX_NAME_LENGTH,
   MAX_UNIT_LENGTH,
   archiveHabit,
   changeConfig,
   createHabit,
+  parseHabitColor,
+  recolorHabit,
   renameHabit,
   versionOn,
   type Habit,
@@ -34,11 +37,13 @@ const waterConfig: HabitConfig = {
 const meditate: NewHabit = {
   name: "Meditar",
   type: "boolean",
+  color: null,
   config: booleanConfig,
 };
 const water: NewHabit = {
   name: "Beber agua",
   type: "quantitative",
+  color: null,
   config: waterConfig,
 };
 
@@ -53,13 +58,41 @@ function created(input: NewHabit) {
   return result.value;
 }
 
+describe("parseHabitColor", () => {
+  test("the palette has 12 colors, all different (RF-06)", () => {
+    expect(new Set(HABIT_COLORS).size).toBe(12);
+  });
+
+  test.each(HABIT_COLORS)("reads %s", (color) => {
+    expect(parseHabitColor(color)).toBe(color);
+  });
+
+  test("a habit without a color has none", () => {
+    expect(parseHabitColor(null)).toBeNull();
+  });
+
+  test("a color that is not in the palette is read as none", () => {
+    expect(parseHabitColor("magenta")).toBeNull();
+    expect(parseHabitColor("")).toBeNull();
+  });
+});
+
 describe("createHabit", () => {
+  test("gives the habit its color, or none (RF-06)", () => {
+    const colored = createHabit({ ...meditate, color: "teal" }, ids, today);
+    const plain = createHabit(meditate, ids, today);
+
+    expect(colored.ok && colored.value.habit.color).toBe("teal");
+    expect(plain.ok && plain.value.habit.color).toBeNull();
+  });
+
   test("creates a boolean habit with its first version effective today", () => {
     expect(created(meditate)).toEqual({
       habit: {
         id: "habit-1",
         name: "Meditar",
         type: "boolean",
+        color: null,
         createdOn: today,
         archivedOn: null,
       },
@@ -185,7 +218,9 @@ describe("createHabit", () => {
       unit: "",
       increment: 0,
     };
-    expect(errorsOf({ name: "", type: "quantitative", config })).toEqual([
+    expect(
+      errorsOf({ name: "", type: "quantitative", color: null, config }),
+    ).toEqual([
       "name_empty",
       "scheduled_days_empty",
       "target_not_positive",
@@ -210,6 +245,25 @@ describe("renameHabit", () => {
       ok: false,
       errors: ["name_empty"],
     });
+  });
+});
+
+describe("recolorHabit", () => {
+  const habit: Habit = {
+    id: "habit-1",
+    name: "Meditar",
+    type: "boolean",
+    color: "teal",
+    createdOn: today,
+    archivedOn: null,
+  };
+
+  test("changes the color and nothing else", () => {
+    expect(recolorHabit(habit, "pink")).toEqual({ ...habit, color: "pink" });
+  });
+
+  test("takes the color away", () => {
+    expect(recolorHabit(habit, null)).toEqual({ ...habit, color: null });
   });
 });
 
@@ -262,6 +316,7 @@ describe("changeConfig", () => {
     id: "habit-1",
     name: "Beber agua",
     type: "quantitative",
+    color: null,
     createdOn,
     archivedOn: null,
   };

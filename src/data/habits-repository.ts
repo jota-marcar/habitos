@@ -2,7 +2,12 @@
 // Every write marks the row as pending synchronization; deleted rows are never returned.
 
 import { localDate } from "@/domain/dates";
-import type { Habit, HabitType, HabitVersion } from "@/domain/habits";
+import {
+  parseHabitColor,
+  type Habit,
+  type HabitType,
+  type HabitVersion,
+} from "@/domain/habits";
 import type { Reminder } from "@/domain/reminders";
 
 import type { Database } from "./database";
@@ -12,6 +17,7 @@ interface HabitRow {
   id: string;
   name: string;
   type: string;
+  color: string | null;
   created_on: string;
   archived_on: string | null;
 }
@@ -32,6 +38,8 @@ function toHabit(row: HabitRow): Habit {
     name: row.name,
     // The table only admits the two types.
     type: row.type as HabitType,
+    // A key this version does not know is read as no color (ADR-0014).
+    color: parseHabitColor(row.color),
     createdOn: localDate(row.created_on),
     archivedOn: row.archived_on === null ? null : localDate(row.archived_on),
   };
@@ -52,7 +60,7 @@ function toHabitVersion(row: HabitVersionRow): HabitVersion {
 /** Every habit, archived ones included, from the oldest to the newest. */
 export async function listHabits(db: Database): Promise<Habit[]> {
   const rows = await db.all<HabitRow>(
-    `SELECT id, name, type, created_on, archived_on
+    `SELECT id, name, type, color, created_on, archived_on
        FROM habits
       WHERE deleted = 0
       ORDER BY created_on, rowid`,
@@ -71,16 +79,24 @@ export async function listHabitVersions(db: Database): Promise<HabitVersion[]> {
   return rows.map(toHabitVersion);
 }
 
-/** Creates a habit or updates what can change in it: its name and its archive date. */
+/** Creates a habit or updates what can change in it: its name, color and archive date. */
 export async function saveHabit(db: Database, habit: Habit): Promise<void> {
   await db.run(
-    `INSERT INTO habits (id, name, type, created_on, archived_on)
-     VALUES (?, ?, ?, ?, ?)
+    `INSERT INTO habits (id, name, type, color, created_on, archived_on)
+     VALUES (?, ?, ?, ?, ?, ?)
      ON CONFLICT (id) DO UPDATE SET
        name = excluded.name,
+       color = excluded.color,
        archived_on = excluded.archived_on,
        pending_sync = 1`,
-    [habit.id, habit.name, habit.type, habit.createdOn, habit.archivedOn],
+    [
+      habit.id,
+      habit.name,
+      habit.type,
+      habit.color,
+      habit.createdOn,
+      habit.archivedOn,
+    ],
   );
 }
 
@@ -132,7 +148,7 @@ export async function addHabit(
 
 /** What changes in a habit when it is edited (RF-08). */
 export interface HabitChanges {
-  /** The habit with its new name. */
+  /** The habit with its new name and color. */
   readonly habit: Habit;
   /** The version added or updated by the change of configuration, if it changed. */
   readonly version: HabitVersion | null;
