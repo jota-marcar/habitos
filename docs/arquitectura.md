@@ -64,6 +64,7 @@ flowchart LR
 | Recordatorios | Notificaciones locales (`expo-notifications`) y tarea en segundo plano (`expo-background-task`) | [ADR-0005](adr/0005-recordatorios-locales-en-ventana-deslizante.md) |
 | Compilación y publicación | EAS Build, EAS Submit y TestFlight | [ADR-0002](adr/0002-expo-como-plataforma.md) |
 | Tests | Jest y React Native Testing Library | Estándar de Expo |
+| Tests del esquema de la nube | pgTAP contra la base local de Supabase, en la CI | [ADR-0015](adr/0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md) |
 | Calidad de código | ESLint y Prettier | Estándar de Expo |
 | Variantes | Desarrollo y producción, con identidad propia cada una | [ADR-0008](adr/0008-variantes-de-desarrollo-y-produccion.md) |
 | Idioma | Código en inglés, documentación en español | [ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md) |
@@ -156,6 +157,12 @@ Decisiones del modelo:
 - **Campos de sincronización** en todas las tablas: identificador generado en el dispositivo (UUID), `updated_at` asignado por el servidor y `deleted` (borrado lógico) para propagar eliminaciones.
 - **En la base local** no existe `user_id` (es de un solo usuario) y cada tabla añade `pending_sync`, que marca las filas con cambios sin subir. Las claves únicas ignoran las filas borradas.
 - **Migraciones locales:** lista ordenada en `src/data/migrations.ts`; la base guarda su versión y al abrir se aplican las que faltan. Una migración publicada no se edita.
+- **En la nube** (`supabase/migrations`) están las mismas tablas, columnas y claves únicas, con estas diferencias a propósito:
+  - Cada tabla añade `user_id`, que por defecto es el usuario de la sesión y se borra en cascada con la cuenta.
+  - Los tipos son los de Postgres: `uuid`, `date`, `boolean` y `double precision`. Las horas siguen siendo texto `HH:MM`.
+  - `updated_at` es obligatorio y lo asigna un trigger ([ADR-0016](adr/0016-cursor-de-sincronizacion-serializado-por-usuario.md)).
+  - Las claves foráneas incluyen `user_id`, para que una fila solo pueda colgar de un hábito de su mismo usuario.
+- **Migraciones de la nube:** ficheros SQL en `supabase/migrations`, que se aplican a cada proyecto con la CLI de Supabase. Tampoco se editan una vez aplicados. Un cambio de esquema lleva las dos migraciones, la local y la de la nube, en el mismo Pull Request. Un test de la CI comprueba que las dos tienen las mismas columnas ([ADR-0015](adr/0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md)).
 
 ## 6. Flujos principales
 
@@ -208,14 +215,16 @@ El planificador usa el dominio, la capa de datos y, de la interfaz, solo el relo
 
 ### Sincronización
 
-1. **Push:** se suben las filas modificadas en el dispositivo desde la última sincronización.
-2. **Pull:** se descargan las filas que el servidor ha modificado desde el último `updated_at` recibido.
+1. **Push:** se suben las filas modificadas en el dispositivo desde la última sincronización. Los hábitos van antes que sus versiones, registros y recordatorios, que dependen de ellos por clave foránea.
+2. **Pull:** se descargan las filas que el servidor ha modificado desde el último `updated_at` recibido. El servidor pone en fila las escrituras de cada usuario antes de asignar `updated_at`, así que ninguna fila se confirma con una marca anterior a otra ya vista ([ADR-0016](adr/0016-cursor-de-sincronizacion-serializado-por-usuario.md)). Las filas de una misma transacción pueden compartir marca: el pull pagina por `(updated_at, id)` y aplicar una fila repetida no cambia nada.
 3. En caso de conflicto, gana la última escritura. Es aceptable porque cada cuenta tiene un solo usuario.
 4. Se lanza al abrir la app, al volver a primer plano, tras cada cambio local y al recuperar la conexión.
 
 ## 7. Seguridad y privacidad
 
-- Cada fila de Supabase lleva `user_id`, y las políticas de **Row Level Security** impiden que un usuario lea o modifique datos de otro.
+- Cada fila de Supabase lleva `user_id`, y las políticas de **Row Level Security** impiden que un usuario lea o modifique datos de otro. Sin sesión (rol `anon`) no hay acceso a ninguna tabla.
+- **La app no borra filas en la nube:** las eliminaciones viajan como `deleted = true`. Los usuarios no tienen permiso de `delete` ni de `truncate`, que además no pasa por Row Level Security. Las filas solo desaparecen al borrarse la cuenta.
+- Los tests pgTAP de `supabase/tests` comprueban estas reglas en cada Pull Request ([ADR-0015](adr/0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md)).
 - La app usa solo la clave pública (`anon`) de Supabase. Ninguna clave privada vive en la app ni en el repositorio.
 - Los secretos y la configuración por entorno van en variables de entorno de EAS, nunca en git (ver `.gitignore`).
 - Eliminar la cuenta (RF-04) borra al usuario y, en cascada, todos sus datos. La App Store lo exige a toda app que permita crear una cuenta ([App Store Review Guidelines 5.1.1(v)](https://developer.apple.com/app-store/review/guidelines/#5.1.1)), y Apple pide además [revocar el token de Sign in with Apple](https://developer.apple.com/support/offering-account-deletion-in-your-app/). Las dos cosas necesitan claves privadas, así que las hace una Edge Function de Supabase, nunca la app.
@@ -233,7 +242,8 @@ El planificador usa el dominio, la capa de datos y, de la interfaz, solo el relo
 
 - Los cambios solo de JavaScript pueden llegar a producción con **EAS Update**, sin pasar por una nueva compilación.
 - Los cambios nativos (dependencias nuevas, permisos) requieren una compilación con EAS Build y una nueva versión en TestFlight.
-- La CI (GitHub Actions) verifica cada Pull Request: formato, lint, tipos y tests (ver [CONTRIBUTING.md](../CONTRIBUTING.md#8-integración-continua)). Compilar y publicar desde la CI queda para más adelante.
+- La CI (GitHub Actions) verifica cada Pull Request: formato, lint, tipos y tests, y el esquema de la nube contra una base local de Supabase (ver [CONTRIBUTING.md](../CONTRIBUTING.md#8-integración-continua)). Compilar y publicar desde la CI queda para más adelante.
+- Las migraciones de la nube se aplican a mano a cada proyecto de Supabase con `supabase db push` (ver [docs/supabase.md](supabase.md)): primero a desarrollo y, cuando la versión de la app que las usa llegue a producción, a producción. Automatizarlo desde la CI queda para más adelante.
 
 ## 9. Riesgos conocidos
 
@@ -244,5 +254,6 @@ El planificador usa el dominio, la capa de datos y, de la interfaz, solo el relo
 | El plan gratuito de Supabase pausa el proyecto tras 7 días sin peticiones | Con el uso diario de la app no ocurre; si ocurre, se reactiva desde el panel sin perder datos |
 | Apple puede rechazar la app en la revisión por obligar a iniciar sesión: pide que, si las funciones no dependen de una cuenta, se pueda usar sin ella ([App Store Review Guidelines 5.1.1(v)](https://developer.apple.com/app-store/review/guidelines/#5.1.1)) | La copia en la nube y el uso en varios dispositivos (RF-05) son funciones de cuenta, lo que justifica pedirla. No afecta al uso personal ni a TestFlight interno. Se revisará antes de enviar la app a la App Store; la alternativa es permitir usarla sin cuenta |
 | Dependencia de EAS para compilar iOS (no hay Mac) | Asumida en [ADR-0002](adr/0002-expo-como-plataforma.md); alternativa: alquilar un Mac en la nube |
+| Dos dispositivos sin conexión crean la misma fila con identificadores distintos (por ejemplo, el registro de un hábito el mismo día) | La clave única del servidor rechaza la segunda al subirla, en lugar de guardar dos. El motor de sincronización debe resolverlo; la candidata es generar identificadores deterministas para las filas con clave natural (registro: hábito y fecha), de modo que los dos dispositivos creen el mismo |
 | Hecho en un dispositivo, recordatorio en otro | El recordatorio del otro dispositivo puede sonar si no ha sincronizado. Aceptable con un solo dispositivo por usuario |
 | Un aviso de pendientes suena aunque todo esté cumplido | Pasa si se cumplió el último hábito sin que la app refrescara las notificaciones (por ejemplo, si fallan los botones en segundo plano o en otro dispositivo). Se refresca tras cada registro y cada botón; con la sincronización, habrá que refrescar también al recibir cambios |
