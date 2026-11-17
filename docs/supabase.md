@@ -187,7 +187,7 @@ eas env:set --environment development --visibility plaintext --name EXPO_PUBLIC_
 eas env:set --environment development --visibility plaintext --name EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID --value ID_CLIENTE_IOS_DEV
 ```
 
-Repite los cuatro con `--environment production` y los valores de producción. `env:set` crea la variable o, si ya existe, cambia su valor, así que puedes repetir un comando para corregirlo. (`env:create` está obsoleto: crea la variable igual, pero avisa). Puedes comprobarlas con `eas env:list --environment development` o en [expo.dev](https://expo.dev), en **Environment variables** del proyecto.
+Repite los cuatro con `--environment production` y los valores de producción. `env:set` crea la variable o, si ya existe, cambia su valor, así que puedes repetir un comando para corregirlo. `env:create` está obsoleto: si lo usaste, comprueba con `eas env:list` qué variables llegaron a crearse. Puedes comprobarlas con `eas env:list --environment development` o en [expo.dev](https://expo.dev), en **Environment variables** del proyecto.
 
 Cada perfil de `eas.json` usa su entorno (`"environment"`), y un test comprueba que coincide con su variante. Así un build de desarrollo nunca recibe los valores de producción.
 
