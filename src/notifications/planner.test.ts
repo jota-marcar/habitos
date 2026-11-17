@@ -3,11 +3,15 @@ import { addHabit } from "@/data/habits-repository";
 import { habit, openMigratedDatabase, version } from "@/data/testing/fixtures";
 import type { TestDatabase } from "@/data/testing/node-database";
 import { localDate } from "@/domain/dates";
+import type { DayHabit } from "@/domain/day";
+import type { PendingDigest } from "@/domain/digests";
 import { localTime, type LocalDateTime } from "@/domain/times";
 
 import type { PlannedNotification } from "./notifier";
 import {
+  REMINDER_PREFIX,
   categoryOf,
+  digestNotification,
   instantOf,
   localDateTimeOf,
   planReminders,
@@ -15,6 +19,7 @@ import {
   signatureOf,
   snoozedNotification,
   syncNotifications,
+  windowOf,
   type ReminderPlan,
 } from "./planner";
 import { fakeNotifier } from "./testing/fake-notifier";
@@ -38,6 +43,17 @@ function addWater() {
     version("water", { target: 2, unit: "L", increment: 0.25 }),
     [reminder("water", "18:00")],
   );
+}
+
+/** The plan at NOW with the reminders only, without the pending digests. */
+async function remindersPlanned(): Promise<ReminderPlan> {
+  const plan = await planReminders(db, NOW);
+  return {
+    ...plan,
+    notifications: plan.notifications.filter((n) =>
+      n.id.startsWith(REMINDER_PREFIX),
+    ),
+  };
 }
 
 beforeEach(async () => {
@@ -68,7 +84,7 @@ describe("planReminders", () => {
       [reminder("meditate", "21:00")],
     );
 
-    const { notifications, categories } = await planReminders(db, NOW);
+    const { notifications, categories } = await remindersPlanned();
 
     expect(notifications[0]).toEqual({
       id: "reminder.meditate@21:00.2026-11-12",
@@ -100,7 +116,7 @@ describe("planReminders", () => {
 
     const {
       notifications: [today, tomorrow],
-    } = await planReminders(db, NOW);
+    } = await remindersPlanned();
 
     expect(today.body).toBe("Llevas 1,25 de 2 L");
     expect(tomorrow.body).toBe("Llevas 0 de 2 L");
@@ -109,7 +125,7 @@ describe("planReminders", () => {
   test("a quantitative habit has a button with its own increment (RF-25)", async () => {
     await addWater();
 
-    const { notifications, categories } = await planReminders(db, NOW);
+    const { notifications, categories } = await remindersPlanned();
 
     expect(notifications[0].category).toBe("reminder_add_water");
     expect(categories).toEqual([
@@ -134,7 +150,7 @@ describe("planReminders", () => {
       value: 1,
     });
 
-    const { notifications, pendingToday } = await planReminders(db, NOW);
+    const { notifications, pendingToday } = await remindersPlanned();
 
     expect(notifications[0].at).toEqual({ date: "2026-11-13", time: "22:00" });
     expect(pendingToday.has("read")).toBe(false);
@@ -148,7 +164,7 @@ describe("planReminders", () => {
       [reminder("push-ups", "18:00")],
     );
 
-    const { notifications, categories } = await planReminders(db, NOW);
+    const { notifications, categories } = await remindersPlanned();
 
     expect(notifications[0].body).toBe("Llevas 0 de 20");
     expect(categories[0].buttons[0].title).toBe("+5");
@@ -161,6 +177,143 @@ describe("planReminders", () => {
 
     expect(today).toBe(NOW.date);
     expect([...pendingToday]).toEqual(["water"]);
+  });
+
+  test("warns of the pending habits at 17:00 and 22:00, among the reminders (RF-37)", async () => {
+    await addWater();
+    await addHabit(
+      db,
+      habit("meditate", { name: "Meditar" }),
+      version("meditate"),
+    );
+
+    const { notifications } = await planReminders(db, NOW);
+
+    expect(notifications.slice(0, 3).map((n) => n.id)).toEqual([
+      "digest.2026-11-12.17:00",
+      "reminder.water@18:00.2026-11-12",
+      "digest.2026-11-12.22:00",
+    ]);
+    expect(notifications[0]).toEqual({
+      id: "digest.2026-11-12.17:00",
+      at: { date: "2026-11-12", time: "17:00" },
+      title: "Te quedan 2 hábitos",
+      body: "Beber agua y Meditar",
+      habitId: null,
+      category: null,
+    });
+  });
+
+  test("does not warn of today's pending habits once all are done (RF-37)", async () => {
+    await addHabit(db, habit("read"), version("read"));
+    await saveEntry(db, {
+      id: "e1",
+      habitId: "read",
+      date: NOW.date,
+      value: 1,
+    });
+
+    const { notifications } = await planReminders(db, NOW);
+
+    expect(notifications[0].id).toBe("digest.2026-11-13.17:00");
+  });
+});
+
+describe("digestNotification", () => {
+  function digest(...names: string[]): PendingDigest {
+    const habits = names.map((name, index): DayHabit => ({
+      habit: habit(`h${index}`, { name }),
+      version: version(`h${index}`),
+      value: 0,
+      done: false,
+    }));
+    return { date: NOW.date, time: localTime("22:00"), habits };
+  }
+
+  test("names the only habit left", () => {
+    const notification = digestNotification(digest("Leer"));
+
+    expect(notification.title).toBe("Te queda 1 hábito");
+    expect(notification.body).toBe("Leer");
+  });
+
+  test("names up to three habits, and counts the rest", () => {
+    expect(digestNotification(digest("Leer", "Correr", "Meditar")).body).toBe(
+      "Leer, Correr y Meditar",
+    );
+    expect(
+      digestNotification(digest("Leer", "Correr", "Meditar", "Agua", "Yoga")),
+    ).toMatchObject({
+      title: "Te quedan 5 hábitos",
+      body: "Leer, Correr, Meditar y 2 más",
+    });
+  });
+
+  test("shortens the long names, without cutting an emoji in half", () => {
+    const notification = digestNotification(
+      digest(" Leer ", "Repasar el vocabulario de inglés 📚", "Correr 🏃"),
+    );
+
+    expect(notification.body).toBe(
+      "Leer, Repasar el vocabulario d… y Correr 🏃",
+    );
+    expect(
+      digestNotification(
+        digest("Leer", "🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃"),
+      ).body,
+    ).toBe("Leer y 🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃🏃…");
+  });
+
+  test('says "e" before a word that sounds like "i"', () => {
+    expect(digestNotification(digest("Leer", "Ir al gimnasio")).body).toBe(
+      "Leer e Ir al gimnasio",
+    );
+    expect(digestNotification(digest("Leer", "hidratarse")).body).toBe(
+      "Leer e hidratarse",
+    );
+    expect(digestNotification(digest("Leer", "Hierro")).body).toBe(
+      "Leer y Hierro",
+    );
+  });
+});
+
+describe("windowOf", () => {
+  function at(id: string, date: string, time: string): PlannedNotification {
+    return {
+      id,
+      at: { date: localDate(date), time: localTime(time) },
+      title: id,
+      body: null,
+      habitId: null,
+      category: null,
+    };
+  }
+
+  test("puts reminders and digests together, soonest first, reminders first at the same minute", () => {
+    const window = windowOf(
+      [at("r1", "2026-11-12", "17:00"), at("r2", "2026-11-13", "08:00")],
+      [
+        at("d1", "2026-11-12", "17:00"),
+        at("d2", "2026-11-12", "22:00"),
+        at("d3", "2026-11-13", "17:00"),
+      ],
+    );
+
+    expect(window.map((n) => n.id)).toEqual(["r1", "d1", "d2", "r2", "d3"]);
+  });
+
+  test("keeps as many as fit in the window (ADR-0005)", () => {
+    const reminders = Array.from({ length: 40 }, (_, i) =>
+      at(`r${i}`, "2026-11-12", "08:00"),
+    );
+    const digests = Array.from({ length: 40 }, (_, i) =>
+      at(`d${i}`, "2026-11-13", "17:00"),
+    );
+
+    const window = windowOf(reminders, digests);
+
+    expect(window).toHaveLength(60);
+    expect(window[59].id).toBe("d19");
   });
 });
 
@@ -240,6 +393,16 @@ describe("syncNotifications", () => {
     await syncNotifications(notifier, plan([planned("a")]));
 
     expect([...scheduled.keys()]).toEqual(["reminder.a"]);
+  });
+
+  test("cancels the pending digests that no longer warn (RF-37)", async () => {
+    const { notifier, scheduled } = fakeNotifier([
+      { id: "digest.2026-11-12.17:00", signature: null },
+    ]);
+
+    await syncNotifications(notifier, plan([]));
+
+    expect(scheduled.size).toBe(0);
   });
 
   test("keeps the snoozed reminders of habits still pending today", async () => {

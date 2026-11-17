@@ -18,7 +18,7 @@ import type {
 // iOS gives back a date trigger as a time interval, so the minute it was scheduled for and
 // the signature travel in the data.
 interface ReminderData {
-  readonly habitId: string;
+  readonly habitId: string | null;
   readonly date: string;
   readonly time: string;
   readonly signature: string;
@@ -33,7 +33,10 @@ function signatureIn(data: Record<string, unknown> | undefined): string | null {
   return textIn(data, "signature");
 }
 
-/** The reminder that was answered, or null if the response is about something else. */
+/**
+ * The reminder that was answered, or null if the response is about something else. A pending
+ * digest has no habit, so tapping it only opens the app on the current day (RF-37).
+ */
 export function reminderResponseOf(
   response: Notifications.NotificationResponse,
 ): ReminderResponse | null {
@@ -49,7 +52,7 @@ export function reminderResponseOf(
     title: content.title ?? "",
     body: content.body,
     habitId,
-    category: content.categoryIdentifier ?? "",
+    category: content.categoryIdentifier ?? null,
   };
   const buttonId =
     response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER
@@ -80,7 +83,7 @@ export const expoNotifier: Notifier = {
         title: notification.title,
         body: notification.body ?? undefined,
         sound: "default",
-        categoryIdentifier: notification.category,
+        categoryIdentifier: notification.category ?? undefined,
         data: { ...data },
       },
       trigger: {

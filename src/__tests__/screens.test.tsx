@@ -955,8 +955,19 @@ describe("reminders (RF-22 to RF-24, RF-36)", () => {
     await createWithReminder();
 
     await waitFor(() => expect(scheduledIds()).toHaveLength(60));
-    expect(scheduledIds()[0]).toMatch(/^reminder\..*\.2026-11-13$/);
+    const reminders = scheduledIds().filter((id) => id.startsWith("reminder."));
+    expect(reminders[0]).toMatch(/^reminder\..*\.2026-11-13$/);
     expect(screen).toHavePathname("/");
+  });
+
+  test("a habit pending today is also in the digests of today (RF-37)", async () => {
+    await createWithReminder();
+
+    await waitFor(() => expect(scheduledIds()).toHaveLength(60));
+    expect(scheduledIds().slice(0, 2)).toEqual([
+      "digest.2026-11-12.17:00",
+      "digest.2026-11-12.22:00",
+    ]);
   });
 
   test("warns when reminders are not allowed, and saves the habit anyway (RF-36)", async () => {

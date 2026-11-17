@@ -9,8 +9,10 @@ import { listHabitVersions, listHabits } from "@/data/habits-repository";
 import { listReminders } from "@/data/reminders-repository";
 import { localDate, localDateOf, type LocalDate } from "@/domain/dates";
 import { habitsForDay, type DayHabit } from "@/domain/day";
+import { upcomingPendingDigests, type PendingDigest } from "@/domain/digests";
 import type { Habit } from "@/domain/habits";
 import {
+  MAX_UPCOMING_REMINDERS,
   SNOOZE_MINUTES,
   upcomingReminders,
   type UpcomingReminder,
@@ -25,8 +27,11 @@ import type {
   PlannedNotification,
 } from "./notifier";
 
-/** Every notification of the window has an identifier that starts like this. */
+/** Every reminder of the window has an identifier that starts like this. */
 export const REMINDER_PREFIX = "reminder.";
+
+/** Every pending digest of the window has an identifier that starts like this (RF-37). */
+export const DIGEST_PREFIX = "digest.";
 
 /** Every snoozed notification has an identifier that starts like this. */
 export const SNOOZE_PREFIX = "snooze.";
@@ -109,6 +114,67 @@ export function notificationOf(
   };
 }
 
+// A digest names a few habits at most, each shortened if it is long, so that the list fits in
+// the lines iOS shows (RF-37).
+const DIGEST_NAMES = 3;
+const DIGEST_NAME_LENGTH = 25;
+
+function shortened(name: string): string {
+  // By characters, not UTF-16 units, so that an emoji is never cut in half.
+  const characters = [...name.trim()];
+  if (characters.length <= DIGEST_NAME_LENGTH) return characters.join("");
+  return `${characters
+    .slice(0, DIGEST_NAME_LENGTH - 1)
+    .join("")
+    .trimEnd()}…`;
+}
+
+/** "y", or "e" before a word that starts with the sound "i", as Spanish asks ("Leer e Ir"). */
+function andBefore(word: string): string {
+  return /^h?[ií](?![aeouáéóú])/i.test(word) ? "e" : "y";
+}
+
+/** "A", "A y B", "A, B y C"; "A, B, C y 2 más" when there are more than fit. */
+function listOf(names: readonly string[]): string {
+  const shown = names.slice(0, DIGEST_NAMES).map(shortened);
+  const rest = names.length - shown.length;
+  const items = rest > 0 ? [...shown, `${rest} más`] : shown;
+  if (items.length === 1) return items[0];
+  const last = items[items.length - 1];
+  return `${items.slice(0, -1).join(", ")} ${andBefore(last)} ${last}`;
+}
+
+/** The notification of a pending digest: how many habits are left, and which (RF-37). */
+export function digestNotification(digest: PendingDigest): PlannedNotification {
+  const { date, time, habits } = digest;
+  const count = habits.length;
+  return {
+    id: `${DIGEST_PREFIX}${date}.${time}`,
+    at: { date, time },
+    title: count === 1 ? "Te queda 1 hábito" : `Te quedan ${count} hábitos`,
+    body: listOf(habits.map((d) => d.habit.name)),
+    habitId: null,
+    category: null,
+  };
+}
+
+/**
+ * The window of notifications (ADR-0005): the reminders and the digests together, soonest
+ * first and as many as fit. At the same minute, reminders go first.
+ */
+export function windowOf(
+  reminders: readonly PlannedNotification[],
+  digests: readonly PlannedNotification[],
+): PlannedNotification[] {
+  const moment = ({ at }: PlannedNotification) => `${at.date} ${at.time}`;
+  // Array.prototype.sort is stable, so reminders stay before digests at the same minute.
+  return [...reminders, ...digests]
+    .sort((a, b) =>
+      moment(a) < moment(b) ? -1 : moment(a) > moment(b) ? 1 : 0,
+    )
+    .slice(0, MAX_UPCOMING_REMINDERS);
+}
+
 /** The notification of a reminder snoozed until `at` (RF-25). */
 export function snoozedNotification(
   original: PlannedNotification,
@@ -129,7 +195,7 @@ export function signatureOf(notification: PlannedNotification): string {
 
 /** What the device has to have scheduled now. */
 export interface ReminderPlan {
-  /** The reminders of the window, soonest first (ADR-0005). */
+  /** The reminders and pending digests of the window, soonest first (ADR-0005, RF-37). */
   readonly notifications: readonly PlannedNotification[];
   /** The categories those reminders use. */
   readonly categories: readonly NotificationCategory[];
@@ -148,10 +214,9 @@ export async function planReminders(
     listEntries(db, now.date, LAST_DATE),
     listReminders(db),
   ]);
-  const upcoming = upcomingReminders(
-    { habits, versions, entries, reminders },
-    now,
-  );
+  const data = { habits, versions, entries, reminders };
+  const upcoming = upcomingReminders(data, now);
+  const digests = upcomingPendingDigests(data, now);
 
   const categories = new Map<string, NotificationCategory>();
   for (const { dayHabit } of upcoming) {
@@ -163,7 +228,10 @@ export async function planReminders(
     .map((dayHabit) => dayHabit.habit.id);
 
   return {
-    notifications: upcoming.map(notificationOf),
+    notifications: windowOf(
+      upcoming.map(notificationOf),
+      digests.map(digestNotification),
+    ),
     categories: [...categories.values()],
     today: now.date,
     pendingToday: new Set(pendingToday),
@@ -181,8 +249,8 @@ function snoozedHabitAndDay(id: string): { habitId: string; date: string } {
  * - Registers the categories that are new or have changed. `knownCategories` remembers those
  *   already registered, by identifier, across calls.
  * - Cancels the snoozed reminders of habits no longer pending, and those of other days.
- * - Cancels the reminders of the window that no longer warn or have changed, and schedules
- *   the missing ones.
+ * - Cancels the reminders and digests of the window that no longer warn or have changed, and
+ *   schedules the missing ones.
  */
 export async function syncNotifications(
   notifier: Notifier,
@@ -210,7 +278,10 @@ export async function syncNotifications(
   const wanted = new Map(plan.notifications.map((n) => [n.id, signatureOf(n)]));
   const kept = new Set<string>();
   for (const notification of scheduled) {
-    if (!notification.id.startsWith(REMINDER_PREFIX)) continue;
+    const { id } = notification;
+    if (!id.startsWith(REMINDER_PREFIX) && !id.startsWith(DIGEST_PREFIX)) {
+      continue;
+    }
     if (wanted.get(notification.id) === notification.signature) {
       kept.add(notification.id);
     } else {
