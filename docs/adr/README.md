@@ -18,6 +18,8 @@ Cada ADR documenta una decisión técnica importante: el contexto, las opciones 
 | [0012](0012-botones-de-los-recordatorios-en-segundo-plano-con-javascript.md) | Botones de los recordatorios en segundo plano con JavaScript | Aceptado |
 | [0013](0013-estetica-oscura-unica-con-acento-violeta.md) | Estética oscura única con acento violeta | Aceptado |
 | [0014](0014-colores-de-habito-como-dato-del-usuario-guardados-como-clave-de-paleta.md) | Colores de hábito como dato del usuario, guardados como clave de paleta | Aceptado |
+| [0015](0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md) | Pruebas del esquema de Supabase con pgTAP en la CI | Propuesto |
+| [0016](0016-cursor-de-sincronizacion-serializado-por-usuario.md) | Cursor de sincronización serializado por usuario | Propuesto |
 
 ## Plantilla
 

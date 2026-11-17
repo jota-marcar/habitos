@@ -160,7 +160,7 @@ gh release create v0.1.0 --generate-notes
 Para que la regla "nunca commit directo en `main`" no dependa solo de la disciplina, se configura en GitHub (Settings → Branches/Rules):
 
 - Exigir Pull Request para hacer merge en `main`.
-- Exigir que pase el check **Verify** de la CI (ver sección 8).
+- Exigir que pasen los checks **Verify** y **Database** de la CI (ver sección 8).
 - Bloquear force push y borrado de `main`.
 - Permitir solo squash merge y borrar ramas automáticamente tras el merge (Settings → General).
 
@@ -209,6 +209,7 @@ GitHub Actions comprueba cada cambio. Los flujos están en `.github/workflows/`.
 | Flujo | Cuándo | Qué ejecuta | ¿Bloquea el merge? |
 |-------|--------|-------------|--------------------|
 | **CI → Verify** | En cada Pull Request hacia `main` y en cada commit de `main` | `npm run verify`: formato, lint, tipos y tests, con cobertura del 100 % en el dominio y en la capa de datos | Sí |
+| **CI → Database** | Igual | El esquema de la nube (`supabase/`) sobre una base local de Supabase: tests pgTAP de Row Level Security y restricciones (`supabase test db`) y alineación con el esquema local (`npm run test:schema`) | Sí |
 | **CI → Audit** | Igual | `npm run audit-deps`: avisos de seguridad | No, solo informa |
 | **Weekly review** | Cada lunes a las 07:00 UTC, o a mano desde la pestaña Actions | `npm run audit-deps` y `npx expo-doctor` | No aplica; si falla, GitHub avisa por correo |
 
@@ -216,6 +217,8 @@ GitHub Actions comprueba cada cambio. Los flujos están en `.github/workflows/`.
 - **`expo-doctor` solo va en la revisión semanal** porque falla cada vez que Expo publica un parche. Se corrige con `npx expo install --fix` en un PR.
 - **Las acciones de terceros se fijan a un commit exacto**, con la versión en un comentario, y los flujos solo tienen permiso de lectura. Para actualizar una acción se cambia el commit en un PR.
 - La versión de Node de la CI es la de `.nvmrc`.
+- **Database solo corre en la CI**: necesita Docker para levantar la base de Supabase, y en el PC no lo hay. Un fallo de los tests del esquema se ve en el PR, no con `npm run verify` ([ADR-0015](docs/adr/0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md)).
+- **La CLI de Supabase de la CI** se instala con `supabase/setup-cli` y una versión exacta (`version` en `ci.yml`). Para actualizarla se cambia esa versión en un PR, después de leer sus notas.
 
 ## 9. Idioma
 

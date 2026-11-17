@@ -32,6 +32,30 @@ jobs:
       - run: npm ci
       - run: npm run verify
 
+  # Cloud schema (supabase/): Row Level Security, constraints and alignment with the local
+  # schema, on a local Supabase database (ADR-0015).
+  database:
+    name: Database
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # v3.2.0
+        with:
+          # Exact version: a new CLI does not run without review.
+          version: 3.1.0
+      # Only Postgres, with the migrations of supabase/migrations applied.
+      - run: supabase db start
+      - name: pgTAP tests
+        run: supabase test db
+      - name: Alignment with the local schema
+        run: npm run test:schema
+
   audit:
     name: Audit
     runs-on: ubuntu-latest

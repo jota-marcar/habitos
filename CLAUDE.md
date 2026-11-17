@@ -46,6 +46,7 @@ npm run verify               # formato, lint, tipos y tests con cobertura: ejec�
 npm run lint                 # ESLint (eslint-config-expo)
 npm run typecheck            # tsc --noEmit
 npm test                     # Jest (jest-expo + React Native Testing Library)
+npm run test:schema          # alineación del esquema de Supabase con el local (solo en la CI: necesita la base de Supabase)
 npm run format               # Prettier sobre todo el código
 npx expo install <paquete>   # añadir dependencias (elige la versión compatible con el SDK); nunca npm install <paquete>
 npx expo-doctor              # diagnosticar dependencias y configuración
@@ -59,6 +60,9 @@ npm run build:dev            # development build para el iPhone en EAS (gasta un
 - Las pantallas viven en `src/app/` (Expo Router: cada fichero es una ruta). Fuera de ahí va todo lo demás, también los tests.
 - `src/domain` son reglas puras: no importa paquetes ni otras capas (lo impone ESLint) y su cobertura de tests debe ser del 100 %. Los tests van junto al código (`x.ts` y `x.test.ts`).
 - `src/data` es el acceso a la base local: SQL directo en repositorios que solo dependen del dominio y de la interfaz `Database` (lo impone ESLint), también con cobertura del 100 %. Sus tests usan el SQLite integrado en Node (`src/data/testing`). Un cambio de esquema es una migración nueva al final de `migrations.ts`; nunca edites una ya publicada ([ADR-0009](docs/adr/0009-sql-directo-y-migraciones-propias-en-la-capa-de-datos-local.md)).
+- `supabase/` es el esquema de la nube ([ADR-0003](docs/adr/0003-supabase-como-backend.md)). Un cambio de esquema es un fichero nuevo `supabase/migrations/<AAAAMMDDhhmmss>_<nombre>.sql`, en el mismo PR que la migración local equivalente; nunca edites uno ya aplicado. Sus tests son pgTAP en `supabase/tests/database/` y, con `supabase/tests/schema-alignment.test.ts`, solo corren en el job `Database` de la CI, porque necesitan Docker ([ADR-0015](docs/adr/0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md)). Tras tocar `supabase/`, espera a la CI antes de dar el cambio por bueno.
+- `updated_at` en la nube lo asigna el trigger `set_updated_at` con un bloqueo por usuario ([ADR-0016](docs/adr/0016-cursor-de-sincronizacion-serializado-por-usuario.md)). Toda tabla sincronizada nueva lleva ese trigger, Row Level Security y sus tests.
+- Nunca ejecutes comandos de la CLI de Supabase contra los proyectos de la nube (`db push`, `link`…): los hace el usuario siguiendo `docs/supabase.md`.
 - Imports con el alias `@/` → `src/` (por ejemplo, `@/domain/habitos`).
 - Las carpetas `ios/` y `android/` se generan; no se crean ni se editan a mano. La configuración nativa común va en `app.json` y lo que cambia entre desarrollo y producción, en `app.config.ts` ([ADR-0008](docs/adr/0008-variantes-de-desarrollo-y-produccion.md)).
 - Nunca mezcles valores de desarrollo y de producción: todo lo que dependa del entorno sale de la variante (`APP_VARIANT`) o de variables de entorno de EAS.
