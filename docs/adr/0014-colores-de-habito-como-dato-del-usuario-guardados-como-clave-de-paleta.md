@@ -1,6 +1,6 @@
 # ADR-0014: Colores de hábito como dato del usuario, guardados como clave de paleta
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-16
 
 ## Contexto
