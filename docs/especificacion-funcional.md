@@ -43,6 +43,10 @@ A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo
 | **Calendario** | `calendar` | Cuadrícula de un mes con la que se elige el día que se quiere ver. |
 | **Cuenta** | `account` | Identidad del usuario en la aplicación, a la que pertenecen sus datos. Se crea al iniciar sesión por primera vez con Apple o Google. |
 | **Sesión** | `session` | Estado en el que el dispositivo tiene una cuenta iniciada y puede usar sus datos. |
+| **Iniciar sesión** | `signIn` | Entrar en la cuenta con Apple o Google desde el dispositivo. |
+| **Cerrar sesión** | `signOut` | Salir de la cuenta en el dispositivo: sus datos se borran de él, pero siguen en la cuenta. |
+| **Cambios pendientes** | `pendingChanges` | Cambios hechos en el dispositivo que aún no se han copiado en la cuenta. |
+| **Ajustes** | `settings` | Pantalla con las opciones de la cuenta, que se abre desde el menú. |
 | **Opciones** | `options` | Acciones sobre un hábito que se abren al mantenerlo pulsado: corregir la cantidad, editar, archivar y eliminar. |
 
 La columna "En el código" es el nombre en inglés con el que cada término aparece en el código y en el modelo de datos ([ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)). Cada término se traduce siempre igual; uno nuevo se añade aquí antes de usarlo en el código. `goal` queda reservado para los objetivos de la [visión a futuro](#6-visión-a-futuro-tres-horizontes), y `Record` se evita porque ya tiene otro significado en el lenguaje de programación.
@@ -74,7 +78,7 @@ La aplicación tiene una sola pantalla principal: la vista de un día (3.4). Tod
 - **RF-31.** Al deslizar hacia abajo desde la fecha, o desde la lista cuando ya está arriba del todo, se despliega el **calendario** desde arriba (RF-18). Se cierra deslizándolo hacia arriba o tocando fuera de él.
 - **RF-32.** Al deslizar hacia arriba desde la franja se despliega el **menú** desde abajo. Se cierra deslizándolo hacia abajo o tocando fuera de él. Tiene dos opciones, cada una con su icono:
   - **Crear**, que en el MVP crea un hábito (RF-06). Cuando haya más horizontes ([sección 6](#6-visión-a-futuro-tres-horizontes)), creará un elemento del horizonte que se esté viendo.
-  - **Ajustes**, con las opciones de la cuenta (RF-03, RF-04). Aparece cuando la aplicación tenga cuenta de usuario (3.2); hasta entonces el menú solo muestra "Crear".
+  - **Ajustes**, con las opciones de la cuenta (RF-03, RF-04).
 - **RF-33.** Deslizar hacia la izquierda o hacia la derecha en la pantalla principal queda reservado para cambiar de horizonte ([sección 6](#6-visión-a-futuro-tres-horizontes)). En el MVP no hace nada.
 
 ### 3.2 Cuenta de usuario

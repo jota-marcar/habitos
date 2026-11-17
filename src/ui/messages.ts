@@ -32,3 +32,7 @@ export const AMOUNT_ERROR_MESSAGES: Readonly<Record<AmountError, string>> = {
   amount_negative: "La cantidad no puede ser negativa.",
   amount_too_precise: "La cantidad admite 2 decimales como máximo.",
 };
+
+/** Signing in needs a connection (RF-01): it is the first thing to check after any failure. */
+export const SIGN_IN_FAILED_MESSAGE =
+  "No se ha podido iniciar sesión. Comprueba que tienes conexión e inténtalo de nuevo.";

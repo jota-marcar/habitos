@@ -6,3 +6,5 @@ node_modules/
 dist/
 coverage/
 package-lock.json
+# Written by the Supabase CLI on linking a project; git ignores it too.
+supabase/.temp/

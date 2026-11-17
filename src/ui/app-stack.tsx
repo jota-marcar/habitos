@@ -1,8 +1,10 @@
 // The navigation of the app (ADR-0010): a Stack that opens on the day, the only main screen,
-// with the forms as modals over it. Its own file so the tests can use it.
+// with the forms as modals over it. Without a session, only the sign-in screen exists (RF-01).
+// Its own file so the tests can use it.
 
 import { Stack } from "expo-router";
 
+import { useSession } from "./session";
 import { useColors } from "./theme";
 
 /**
@@ -13,6 +15,7 @@ export const STACK_SETTINGS = { anchor: "index" };
 
 export function AppStack() {
   const colors = useColors();
+  const signedIn = useSession() !== null;
   return (
     <Stack
       screenOptions={{
@@ -23,15 +26,24 @@ export function AppStack() {
         headerShadowVisible: false,
       }}
     >
-      <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="habits/new"
-        options={{ title: "Nuevo hábito", presentation: "modal" }}
-      />
-      <Stack.Screen
-        name="habits/[id]/edit"
-        options={{ title: "Editar hábito", presentation: "modal" }}
-      />
+      <Stack.Protected guard={signedIn} redirectTo="/sign-in">
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="habits/new"
+          options={{ title: "Nuevo hábito", presentation: "modal" }}
+        />
+        <Stack.Screen
+          name="habits/[id]/edit"
+          options={{ title: "Editar hábito", presentation: "modal" }}
+        />
+        <Stack.Screen
+          name="settings"
+          options={{ title: "Ajustes", presentation: "modal" }}
+        />
+      </Stack.Protected>
+      <Stack.Protected guard={!signedIn}>
+        <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+      </Stack.Protected>
     </Stack>
   );
 }

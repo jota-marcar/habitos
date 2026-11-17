@@ -189,6 +189,11 @@ export default function Today() {
     router.push("/habits/new");
   };
 
+  const openSettings = () => {
+    menu.close();
+    router.push("/settings");
+  };
+
   return (
     <View style={styles.screen}>
       {/* The whole top of the screen pulls the calendar down, not only the text. */}
@@ -288,6 +293,12 @@ export default function Today() {
           fallbackIcon="+"
           label="Crear"
           onPress={create}
+        />
+        <SheetOption
+          icon="gearshape"
+          fallbackIcon="⚙"
+          label="Ajustes"
+          onPress={openSettings}
         />
       </Sheet>
 

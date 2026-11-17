@@ -39,4 +39,21 @@ describe("app.json", () => {
       projectId: "9321856d-8680-432d-ab9c-e35062400d59",
     });
   });
+
+  test("enables Sign in with Apple, which adds its entitlement (ADR-0017)", () => {
+    expect(ios.usesAppleSignIn).toBe(true);
+    expect(expo.plugins).toContain("expo-apple-authentication");
+  });
+
+  test("keeps the keychain without asking for Face ID, which the app does not use", () => {
+    expect(expo.plugins).toContainEqual([
+      "expo-secure-store",
+      { faceIDPermission: false },
+    ]);
+  });
+
+  test("the texts of iOS, like the sign-in buttons, are in Spanish", () => {
+    const infoPlist = ios.infoPlist as Record<string, unknown>;
+    expect(infoPlist.CFBundleDevelopmentRegion).toBe("es");
+  });
 });

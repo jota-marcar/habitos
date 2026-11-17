@@ -47,14 +47,48 @@ export function resolveVariant(value: string | undefined): AppVariant {
   );
 }
 
+const GOOGLE_CLIENT_ID_SUFFIX = ".apps.googleusercontent.com";
+
+/**
+ * The URL scheme that Google Sign-In returns to: the iOS client ID of the environment, reversed
+ * (ADR-0017). The client ID comes from the EAS environment of the build profile, or from
+ * `.env.local` on the PC, so each variant gets the one of its own Google Cloud project.
+ */
+export function resolveGoogleUrlScheme(
+  iosClientId: string | undefined,
+): string {
+  if (iosClientId === undefined || iosClientId === "") {
+    throw new Error(
+      "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID is missing. On the PC, run `eas env:pull --environment development` (see docs/supabase.md).",
+    );
+  }
+  if (!iosClientId.endsWith(GOOGLE_CLIENT_ID_SUFFIX)) {
+    throw new Error(
+      `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID "${iosClientId}" is not a Google iOS client ID: it must end in "${GOOGLE_CLIENT_ID_SUFFIX}".`,
+    );
+  }
+  const id = iosClientId.slice(0, -GOOGLE_CLIENT_ID_SUFFIX.length);
+  return `com.googleusercontent.apps.${id}`;
+}
+
 export default function appConfig({ config }: ConfigContext): ExpoConfig {
   const variant = VARIANTS[resolveVariant(process.env.APP_VARIANT)];
+  const googleUrlScheme = resolveGoogleUrlScheme(
+    process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+  );
 
   return {
     ...config,
     name: variant.name,
     slug: "habitos",
     scheme: variant.scheme,
+    plugins: [
+      ...(config.plugins ?? []),
+      [
+        "@react-native-google-signin/google-signin",
+        { iosUrlScheme: googleUrlScheme },
+      ],
+    ],
     ios: {
       ...config.ios,
       bundleIdentifier: variant.bundleIdentifier,
