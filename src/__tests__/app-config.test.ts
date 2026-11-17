@@ -15,26 +15,37 @@ const staticConfig = {
   },
 };
 
-/** The config of a variant, with the Google client ID of its environment (null: missing). */
+/** Sets an environment variable, or removes it with undefined. */
+function setEnv(name: string, value: string | undefined) {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+}
+
+/**
+ * The config of a variant, with the Google client ID of its environment (null: missing), on the
+ * PC or on an EAS Build server.
+ */
 function configFor(
   variant: string | undefined,
   {
     googleIosClientId = GOOGLE_IOS_CLIENT_ID,
+    easBuild = false,
     config = staticConfig,
   }: {
     googleIosClientId?: string | null;
+    easBuild?: boolean;
     config?: typeof staticConfig & { plugins?: string[] };
   } = {},
 ) {
-  const previous = process.env.APP_VARIANT;
-  const previousClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
-  if (variant === undefined) delete process.env.APP_VARIANT;
-  else process.env.APP_VARIANT = variant;
-  if (googleIosClientId === null) {
-    delete process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
-  } else {
-    process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID = googleIosClientId;
-  }
+  const previous = {
+    APP_VARIANT: process.env.APP_VARIANT,
+    EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID:
+      process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    EAS_BUILD: process.env.EAS_BUILD,
+  };
+  setEnv("APP_VARIANT", variant);
+  setEnv("EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID", googleIosClientId ?? undefined);
+  setEnv("EAS_BUILD", easBuild ? "true" : undefined);
   try {
     return appConfig({
       config,
@@ -43,13 +54,7 @@ function configFor(
       packageJsonPath: null,
     });
   } finally {
-    if (previous === undefined) delete process.env.APP_VARIANT;
-    else process.env.APP_VARIANT = previous;
-    if (previousClientId === undefined) {
-      delete process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
-    } else {
-      process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID = previousClientId;
-    }
+    for (const [name, value] of Object.entries(previous)) setEnv(name, value);
   }
 }
 
@@ -132,27 +137,40 @@ describe("appConfig", () => {
 
 describe("resolveGoogleUrlScheme", () => {
   test("is the iOS client ID reversed", () => {
-    expect(resolveGoogleUrlScheme(GOOGLE_IOS_CLIENT_ID)).toBe(
+    expect(resolveGoogleUrlScheme(GOOGLE_IOS_CLIENT_ID, true)).toBe(
       "com.googleusercontent.apps.1234-abcd",
     );
   });
 
-  test.each([undefined, ""])("a missing client ID %p stops the build", (id) => {
-    expect(() => resolveGoogleUrlScheme(id)).toThrow(
-      "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID is missing",
-    );
-  });
+  test.each([undefined, ""])(
+    "a missing client ID %p stops a build on EAS",
+    (id) => {
+      expect(() => resolveGoogleUrlScheme(id, true)).toThrow(
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID is missing from the EAS environment",
+      );
+    },
+  );
 
-  test("a value that is not a Google iOS client ID stops the build", () => {
-    expect(() => resolveGoogleUrlScheme("1234-abcd")).toThrow(
-      "is not a Google iOS client ID",
-    );
-  });
+  test.each([undefined, ""])(
+    "a missing client ID %p is allowed on the PC, where eas env:pull brings it",
+    (id) => {
+      expect(resolveGoogleUrlScheme(id, false)).toBeNull();
+    },
+  );
+
+  test.each([true, false])(
+    "a value that is not a Google iOS client ID is an error (on EAS: %p)",
+    (onEasBuild) => {
+      expect(() => resolveGoogleUrlScheme("1234-abcd", onEasBuild)).toThrow(
+        "is not a Google iOS client ID",
+      );
+    },
+  );
 });
 
 describe("Google Sign-In", () => {
   test("returns to the URL scheme of the client ID of the environment", () => {
-    expect(configFor("production").plugins).toContainEqual([
+    expect(configFor("production", { easBuild: true }).plugins).toContainEqual([
       "@react-native-google-signin/google-signin",
       { iosUrlScheme: "com.googleusercontent.apps.1234-abcd" },
     ]);
@@ -166,10 +184,21 @@ describe("Google Sign-In", () => {
     expect(config.plugins?.[0]).toBe("expo-router");
   });
 
-  test("without the client ID the config cannot be built", () => {
-    expect(() => configFor("development", { googleIosClientId: null })).toThrow(
-      "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID is missing",
-    );
+  test("without the client ID, a build on EAS stops", () => {
+    expect(() =>
+      configFor("development", { googleIosClientId: null, easBuild: true }),
+    ).toThrow("EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID is missing");
+  });
+
+  // EAS CLI reads the config before every command, also before `eas env:pull`.
+  test("without the client ID, the config can still be read on the PC", () => {
+    const config = configFor("development", {
+      googleIosClientId: null,
+      config: { ...staticConfig, plugins: ["expo-router"] },
+    });
+
+    expect(config.plugins).toEqual(["expo-router"]);
+    expect(config.ios?.bundleIdentifier).toBe("com.jotamarcar.habitos.dev");
   });
 });
 

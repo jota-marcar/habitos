@@ -53,13 +53,19 @@ const GOOGLE_CLIENT_ID_SUFFIX = ".apps.googleusercontent.com";
  * The URL scheme that Google Sign-In returns to: the iOS client ID of the environment, reversed
  * (ADR-0017). The client ID comes from the EAS environment of the build profile, or from
  * `.env.local` on the PC, so each variant gets the one of its own Google Cloud project.
+ *
+ * Only a build needs it: without it the app could not sign in with Google, so it stops there.
+ * On the PC the config is read without it too, because EAS CLI reads it before running any
+ * command, `eas env:pull` included, which is what brings the client ID. Returns null then.
  */
 export function resolveGoogleUrlScheme(
   iosClientId: string | undefined,
-): string {
+  onEasBuild: boolean,
+): string | null {
   if (iosClientId === undefined || iosClientId === "") {
+    if (!onEasBuild) return null;
     throw new Error(
-      "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID is missing. On the PC, run `eas env:pull --environment development` (see docs/supabase.md).",
+      'EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID is missing from the EAS environment of the build profile (see "environment" in eas.json and docs/supabase.md).',
     );
   }
   if (!iosClientId.endsWith(GOOGLE_CLIENT_ID_SUFFIX)) {
@@ -73,8 +79,10 @@ export function resolveGoogleUrlScheme(
 
 export default function appConfig({ config }: ConfigContext): ExpoConfig {
   const variant = VARIANTS[resolveVariant(process.env.APP_VARIANT)];
+  // EAS Build sets EAS_BUILD on its servers.
   const googleUrlScheme = resolveGoogleUrlScheme(
     process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    Boolean(process.env.EAS_BUILD),
   );
 
   return {
@@ -84,10 +92,14 @@ export default function appConfig({ config }: ConfigContext): ExpoConfig {
     scheme: variant.scheme,
     plugins: [
       ...(config.plugins ?? []),
-      [
-        "@react-native-google-signin/google-signin",
-        { iosUrlScheme: googleUrlScheme },
-      ],
+      ...(googleUrlScheme === null
+        ? []
+        : [
+            [
+              "@react-native-google-signin/google-signin",
+              { iosUrlScheme: googleUrlScheme },
+            ] as [string, { iosUrlScheme: string }],
+          ]),
     ],
     ios: {
       ...config.ios,

@@ -27,7 +27,7 @@ npm start
 npm run verify
 ```
 
-`eas env:pull` escribe en `.env.local` (que git ignora) la configuración de Supabase y de Google del entorno de desarrollo. Sin ella, `npm start` se detiene con un error que lo indica. Ver [docs/supabase.md](docs/supabase.md#8-inicio-de-sesión-con-apple-y-google).
+`eas env:pull` escribe en `.env.local` (que git ignora) la configuración de Supabase y de Google del entorno de desarrollo. Sin ella, la app arranca en una pantalla de error que nombra las variables que faltan. Ver [docs/supabase.md](docs/supabase.md#8-inicio-de-sesión-con-apple-y-google).
 
 Para probar en un iPhone hace falta un development build (`npm run build:dev`); `npm start` se conecta a él.
 
