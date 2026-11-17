@@ -63,8 +63,10 @@ Abre el navegador para autorizar la CLI en tu cuenta. El token se guarda en el a
 ## 4. Enlazar el repositorio con el proyecto de desarrollo
 
 ```powershell
-supabase link <ref-de-habitos-dev>
+supabase link REF_DEV
 ```
+
+Sustituye `REF_DEV` por el identificador de `habitos-dev` que apuntaste en el paso 1, tal cual: sin comillas ni `< >`. Por ejemplo, `supabase link abcdefghijklmnopqrst`. En PowerShell, `<` es un operador y da el error "El operador '<' está reservado para uso futuro".
 
 - Si pide la contraseña de la base de datos, usa la de `habitos-dev`.
 - Puede mostrar diferencias entre la configuración de la API del proyecto y `supabase/config.toml`. Son avisos y no cambian nada.
@@ -95,9 +97,11 @@ Pide confirmación: la respuesta por defecto es **No**, así que escribe `y` y p
 Como la app todavía no usa la nube, puedes aplicar ya el esquema inicial a producción:
 
 ```powershell
-supabase db push --remote=<ref-de-habitos> --dry-run
-supabase db push --remote=<ref-de-habitos>
+supabase db push --remote=REF_PROD --dry-run
+supabase db push --remote=REF_PROD
 ```
+
+Sustituye `REF_PROD` por el identificador de `habitos` (producción), igual que antes: sin comillas ni `< >`.
 
 Pedirá la contraseña de la base de datos de `habitos` (la de producción, no la de desarrollo) y la confirmación.
 
