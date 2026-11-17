@@ -61,6 +61,20 @@ describe("migrate", () => {
     expect(await schemaVersion(db)).toBe(2);
   });
 
+  test("gives a color column to the habits of the first schema, which stay without one (ADR-0014)", async () => {
+    await migrate(db, MIGRATIONS.slice(0, 1));
+    await db.run(
+      "INSERT INTO habits (id, name, type, created_on) VALUES ('h', 'Read', 'boolean', '2026-11-01')",
+    );
+
+    await migrate(db);
+
+    expect(await db.all("SELECT id, color FROM habits")).toEqual([
+      { id: "h", color: null },
+    ]);
+    expect(await schemaVersion(db)).toBe(MIGRATIONS.length);
+  });
+
   test("a failed migration changes nothing and keeps the previous version", async () => {
     const first = "CREATE TABLE a (x INTEGER);";
     const broken =

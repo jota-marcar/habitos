@@ -10,8 +10,10 @@ import {
   DEFAULT_SCHEDULED_DAYS,
   changeConfig,
   createHabit,
+  recolorHabit,
   renameHabit,
   type Habit,
+  type HabitColor,
   type HabitError,
   type HabitType,
   type HabitVersion,
@@ -28,6 +30,7 @@ import { formatAmount } from "./format";
 
 export interface HabitFormValues {
   readonly name: string;
+  readonly color: HabitColor | null;
   readonly type: HabitType;
   /** The amounts as typed, so that "1," can be shown while typing "1,5". */
   readonly target: string;
@@ -39,6 +42,7 @@ export interface HabitFormValues {
 
 export const EMPTY_HABIT_FORM: HabitFormValues = {
   name: "",
+  color: null,
   type: "boolean",
   target: "",
   unit: "",
@@ -70,6 +74,7 @@ export function buildHabit(
     {
       name: values.name,
       type: values.type,
+      color: values.color,
       config: {
         scheduledDays: values.scheduledDays,
         // Text that is not a number is rejected like a missing amount.
@@ -109,6 +114,7 @@ export function habitFormOf(
     value === null ? missing : formatAmount(value);
   return {
     name: habit.name,
+    color: habit.color,
     type: habit.type,
     target: amount(version.target, EMPTY_HABIT_FORM.target),
     unit: version.unit ?? EMPTY_HABIT_FORM.unit,
@@ -123,8 +129,8 @@ export type HabitChangesResult =
   | { readonly ok: false; readonly errors: readonly HabitError[] };
 
 /**
- * Builds the changes to a habit from the form (RF-08). The configuration changes from today
- * onwards (RF-09) and the type stays as it was, whatever the form says (RF-06). Only the
+ * Builds the changes to a habit from the form (RF-08). The name and the color change in the
+ * whole history; the configuration, from today onwards (RF-09) and the type stays as it was, whatever the form says (RF-06). Only the
  * reminders whose time was added or removed change.
  */
 export function buildHabitChanges(
@@ -162,7 +168,7 @@ export function buildHabitChanges(
   return {
     ok: true,
     changes: {
-      habit: renamed.value,
+      habit: recolorHabit(renamed.value, values.color),
       // The domain returns the same versions when nothing changed.
       version: configured.value.find((v) => !versions.includes(v)) ?? null,
       addedReminders: times

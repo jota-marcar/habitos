@@ -221,6 +221,36 @@ export function ToggleChip({
   );
 }
 
+/** A round sample of a color, to choose it. Touching the chosen one takes it away. */
+export function ColorSwatch({
+  color,
+  accessibilityLabel,
+  selected,
+  onPress,
+}: {
+  color: string;
+  accessibilityLabel: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  return (
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ checked: selected }}
+      onPress={onPress}
+      // The chosen color is the one with a ring around it.
+      style={[styles.swatch, selected && { borderColor: colors.text }]}
+    >
+      <View style={[styles.swatchColor, { backgroundColor: color }]} />
+    </Pressable>
+  );
+}
+
+const SWATCH_SIZE = 44;
+const SWATCH_COLOR_SIZE = 30;
+
 const styles = StyleSheet.create({
   bold: { fontWeight: "600" },
   pressed: { opacity: 0.6 },
@@ -265,4 +295,18 @@ const styles = StyleSheet.create({
     width: 36,
   },
   chipLabel: { fontSize: fontSize.body - 2, fontWeight: "600" },
+  swatch: {
+    alignItems: "center",
+    borderColor: "transparent",
+    borderRadius: radius.round,
+    borderWidth: 2,
+    height: SWATCH_SIZE,
+    justifyContent: "center",
+    width: SWATCH_SIZE,
+  },
+  swatchColor: {
+    borderRadius: radius.round,
+    height: SWATCH_COLOR_SIZE,
+    width: SWATCH_COLOR_SIZE,
+  },
 });

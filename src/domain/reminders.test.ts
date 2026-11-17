@@ -25,6 +25,7 @@ function habit(id: string, overrides: Partial<Habit> = {}): Habit {
     id,
     name: id,
     type: "boolean",
+    color: null,
     createdOn: CREATED,
     archivedOn: null,
     ...overrides,

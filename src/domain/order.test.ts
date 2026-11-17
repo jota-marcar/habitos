@@ -75,6 +75,7 @@ function dayHabit(id: string, done: boolean): DayHabit {
       id,
       name: id,
       type: "boolean",
+      color: null,
       createdOn: localDate("2026-11-01"),
       archivedOn: null,
     },

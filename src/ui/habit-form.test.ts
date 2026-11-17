@@ -24,6 +24,7 @@ describe("buildHabit", () => {
   test("starts with a boolean habit due every day, with an increment of 1", () => {
     expect(EMPTY_HABIT_FORM).toMatchObject({
       type: "boolean",
+      color: null,
       scheduledDays: EVERY_DAY,
       increment: "1",
       reminderTimes: [],
@@ -34,6 +35,7 @@ describe("buildHabit", () => {
     const values: HabitFormValues = {
       ...EMPTY_HABIT_FORM,
       name: " Meditar ",
+      color: "blue",
       // Amounts typed before choosing the boolean type are ignored.
       target: "3",
       unit: "min",
@@ -48,6 +50,7 @@ describe("buildHabit", () => {
         id: "id-1",
         name: "Meditar",
         type: "boolean",
+        color: "blue",
         createdOn: today,
         archivedOn: null,
       },
@@ -134,6 +137,7 @@ describe("editing a habit (RF-08)", () => {
       id: "water",
       name: "Beber agua",
       type: "quantitative",
+      color: "teal",
       createdOn: created,
       archivedOn: null,
     },
@@ -162,6 +166,7 @@ describe("editing a habit (RF-08)", () => {
   test("fills the form in with the habit, its amounts as text and its times in order", () => {
     expect(waterForm).toEqual({
       name: "Beber agua",
+      color: "teal",
       type: "quantitative",
       target: "2",
       unit: "L",
@@ -220,6 +225,30 @@ describe("editing a habit (RF-08)", () => {
         addedReminders: [],
         removedReminderIds: [],
       },
+    });
+  });
+
+  test("the color changes in the habit, without a new version (ADR-0014)", () => {
+    const recolored = buildHabitChanges(
+      water,
+      { ...waterForm, color: "pink" },
+      sequentialIds(),
+      today,
+    );
+    const plain = buildHabitChanges(
+      water,
+      { ...waterForm, color: null },
+      sequentialIds(),
+      today,
+    );
+
+    expect(recolored).toMatchObject({
+      ok: true,
+      changes: { habit: { ...water.habit, color: "pink" }, version: null },
+    });
+    expect(plain).toMatchObject({
+      ok: true,
+      changes: { habit: { ...water.habit, color: null }, version: null },
     });
   });
 

@@ -61,8 +61,12 @@ const INITIAL_SCHEMA = `
     ON reminders (habit_id, time) WHERE deleted = 0;
 `;
 
+// The color of a habit: the key of a color of the palette, or null (ADR-0014). The keys are
+// not restricted here, so that the palette can change without a migration.
+const HABIT_COLOR = `ALTER TABLE habits ADD COLUMN color TEXT;`;
+
 /** Every migration, in order. The version of the schema is the position, starting at 1. */
-export const MIGRATIONS: readonly string[] = [INITIAL_SCHEMA];
+export const MIGRATIONS: readonly string[] = [INITIAL_SCHEMA, HABIT_COLOR];
 
 /** The version of the schema of `db`: 0 for a new database. */
 export async function schemaVersion(db: Database): Promise<number> {

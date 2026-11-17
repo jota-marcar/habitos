@@ -36,6 +36,7 @@ describe("saveHabit and listHabits", () => {
     const read = habit("read", {
       name: "Leer",
       type: "quantitative",
+      color: "teal",
       archivedOn: localDate("2026-11-20"),
     });
 
@@ -50,6 +51,29 @@ describe("saveHabit and listHabits", () => {
     await saveHabit(db, habit("a", { createdOn: localDate("2026-11-05") }));
 
     expect((await listHabits(db)).map((h) => h.id)).toEqual(["b", "c", "a"]);
+  });
+
+  test("a habit without a color is read back without it", async () => {
+    await saveHabit(db, habit("read"));
+
+    expect((await listHabits(db))[0].color).toBeNull();
+  });
+
+  test("saving an existing habit changes its color, or takes it away (RF-08)", async () => {
+    await saveHabit(db, habit("read", { color: "teal" }));
+
+    await saveHabit(db, habit("read", { color: "pink" }));
+    expect((await listHabits(db))[0].color).toBe("pink");
+
+    await saveHabit(db, habit("read"));
+    expect((await listHabits(db))[0].color).toBeNull();
+  });
+
+  test("a color of a palette this version does not know is read as none (ADR-0014)", async () => {
+    await saveHabit(db, habit("read", { color: "teal" }));
+    await db.run("UPDATE habits SET color = 'magenta' WHERE id = 'read'");
+
+    expect((await listHabits(db))[0].color).toBeNull();
   });
 
   test("saving an existing habit updates its name and its archive date", async () => {

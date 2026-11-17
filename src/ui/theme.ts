@@ -1,6 +1,9 @@
 // Style tokens: every color, spacing and font size of the interface comes from here (ADR-0010).
 // The app is dark only, with a single violet accent (ADR-0013); app.json declares the dark
-// appearance so native pieces (alerts, pickers, keyboard) match.
+// appearance so native pieces (alerts, pickers, keyboard) match. The colors of the habits are
+// not part of the interface: the user gives them to tell habits apart (ADR-0014).
+
+import type { HabitColor } from "@/domain/habits";
 
 export interface Colors {
   readonly background: string;
@@ -13,6 +16,8 @@ export interface Colors {
   readonly danger: string;
   /** Dims the screen behind a sheet. */
   readonly backdrop: string;
+  /** The tone of each color a habit can have: light, to be read on the dark surfaces. */
+  readonly habit: Readonly<Record<HabitColor, string>>;
 }
 
 const COLORS: Colors = {
@@ -25,6 +30,20 @@ const COLORS: Colors = {
   onPrimary: "#0F0F11",
   danger: "#F2555A",
   backdrop: "#000000",
+  habit: {
+    red: "#F87171",
+    orange: "#FB923C",
+    amber: "#FBBF24",
+    lime: "#A3E635",
+    green: "#4ADE80",
+    teal: "#2DD4BF",
+    cyan: "#22D3EE",
+    blue: "#60A5FA",
+    violet: "#A78BFA",
+    fuchsia: "#E879F9",
+    pink: "#F472B6",
+    gray: "#A1A1AA",
+  },
 };
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;

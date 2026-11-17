@@ -11,6 +11,7 @@ function habit(overrides: Partial<Habit> = {}): Habit {
     id: "h1",
     name: "Beber agua",
     type: "quantitative",
+    color: null,
     createdOn: localDate("2026-11-01"),
     archivedOn: null,
     ...overrides,
