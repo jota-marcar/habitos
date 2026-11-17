@@ -23,6 +23,14 @@
       "reason": "Only used by tools on the development machine (@expo/cli, @expo/fingerprint and Jest) on folders of this project; it does not reach the app bundle. The fix only exists in glob 14; Expo requires version 13 and Jest version 10.",
       "acceptedOn": "2026-11-10",
       "reviewBy": "2027-01-28"
+    },
+    {
+      "id": "GHSA-fc5q-39xc-vjpf",
+      "package": "picomatch",
+      "severity": "high",
+      "reason": "Only used by tools on the development machine and the build (Metro, Jest and @expo/cli) to match files of this project with patterns from its own configuration; it does not reach the app bundle. Every published version (up to 4.0.7) is affected and there is no patched version yet.",
+      "acceptedOn": "2026-11-17",
+      "reviewBy": "2027-01-17"
     }
   ]
 }
