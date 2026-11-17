@@ -2,9 +2,9 @@
 // recording them (RF-12 to RF-16) and the options of each one (RF-34). It reads the database
 // when a day is shown and again after each change it makes (ADR-0010).
 //
-// The groups (pending and done) and their order are computed when the day is shown and then
-// kept while it stays on screen, so the list does not move under the finger when a habit is
-// marked (RF-12).
+// The groups (pending and done) and their order are computed when the day is shown, at the
+// time it is shown if it is the current day, and then kept while it stays on screen, so the
+// list does not move under the finger when a habit is marked (RF-12).
 
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -27,11 +27,12 @@ import {
   toggled,
 } from "@/domain/entries";
 import { archiveHabit } from "@/domain/habits";
+import { localTimeOf } from "@/domain/times";
 import { keepGroups, sortDayHabits, type DayGroups } from "@/domain/order";
 import { onReminderRecorded } from "@/notifications/actions";
 import { refreshReminders } from "@/notifications/reminders";
 
-import { msUntilTomorrow, newId, today } from "./clock";
+import { msUntilTomorrow, newId, now, today } from "./clock";
 import { useDatabase } from "./database";
 
 export interface Day {
@@ -91,7 +92,10 @@ export function useDay(): Day {
         shownDate,
       );
       if (sort || order.current === null) {
-        const sorted = sortDayHabits(dayHabits, reminders);
+        // The current day is sorted by what is overdue and what comes next; any other
+        // day, by the first reminders (RF-12).
+        const time = shownDate === today() ? localTimeOf(now()) : null;
+        const sorted = sortDayHabits(dayHabits, reminders, time);
         order.current = {
           pending: sorted.pending.map(habitIdOf),
           done: sorted.done.map(habitIdOf),

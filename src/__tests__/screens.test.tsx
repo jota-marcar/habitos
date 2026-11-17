@@ -351,6 +351,26 @@ describe("day view", () => {
     expect(doneNames()).toEqual(["Pasear"]);
   });
 
+  test("today puts the overdue habits first, then the others by their next reminder (RF-12)", async () => {
+    // The clock of the tests says 10:00.
+    await addHabit(
+      db,
+      habit("water", { name: "Beber agua" }),
+      version("water"),
+      [
+        { id: "water-r1", habitId: "water", time: localTime("08:00") },
+        { id: "water-r2", habitId: "water", time: localTime("12:00") },
+      ],
+    );
+    await addBoolean("read", "Leer", "11:00");
+    await addBoolean("meditate", "Meditar", "09:00");
+    await addBoolean("none", "Sin hora");
+    await renderApp();
+    await screen.findByText("Leer");
+
+    expect(habitNames()).toEqual(["Meditar", "Leer", "Beber agua", "Sin hora"]);
+  });
+
   test("a habit undone while the day is on screen stays in the done group (RF-12)", async () => {
     const appBecomes = spyOnAppState();
     await addBoolean("read", "Leer");
