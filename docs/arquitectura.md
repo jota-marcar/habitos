@@ -169,7 +169,7 @@ Decisiones del modelo:
 1. El día que se ve es estado de la pantalla principal ([ADR-0010](adr/0010-interfaz-por-gestos-hooks-propios-sobre-expo-sqlite-y-estilos-sin-libreria.md)). El calendario es una hoja que baja desde arriba con el mismo componente que el menú, que sale desde abajo.
 2. La lista solo tira del calendario cuando está arriba del todo: su gesto convive con el scroll y se ignora si la lista puede seguir subiendo.
 3. Los meses se colocan uno junto a otro y la fila se desplaza con el dedo. El dominio da las semanas de cada mes, que empiezan en lunes.
-4. Al elegir un día se lee ese día de la base y se calculan sus grupos y su orden. Volver de un formulario conserva el día; volver a la app desde el segundo plano muestra el día actual; a medianoche la pantalla solo cambia de día si se estaba viendo el actual (RF-12).
+4. Al elegir un día se lee ese día de la base y se calculan sus grupos y su orden. El dominio recibe la hora solo si el día es el actual: con ella ordena por lo vencido y lo próximo; sin ella, por el primer recordatorio (RF-12). Volver de un formulario conserva el día; volver a la app desde el segundo plano muestra el día actual; a medianoche la pantalla solo cambia de día si se estaba viendo el actual (RF-12).
 
 ### Opciones de un hábito
 
