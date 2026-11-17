@@ -243,7 +243,7 @@ El planificador usa el dominio, la capa de datos y, de la interfaz, solo el relo
 
 - Cada entorno es una variante de la aplicación con su propio nombre, identificador y scheme, así que las dos conviven en el mismo iPhone sin compartir datos ([ADR-0008](adr/0008-variantes-de-desarrollo-y-produccion.md)).
 - La variante la decide `APP_VARIANT`, que fija cada perfil de `eas.json`. Si falta, es desarrollo; un valor desconocido detiene la compilación.
-- Cada perfil de `eas.json` toma las variables de su entorno de EAS (`"environment"`), que un test obliga a coincidir con su `APP_VARIANT`. Sin el cliente de iOS de Google, la configuración no se puede generar.
+- Cada perfil de `eas.json` toma las variables de su entorno de EAS (`"environment"`), que un test obliga a coincidir con su `APP_VARIANT`. Un build de EAS sin el cliente de iOS de Google se detiene (`EAS_BUILD`). En el PC la configuración se genera igualmente, porque EAS CLI la lee antes de cualquier comando, también de `eas env:pull`, que es el que trae ese valor.
 - Lo que cambia entre variantes está en `app.config.ts`; lo común, en `app.json`.
 
 - Los cambios solo de JavaScript pueden llegar a producción con **EAS Update**, sin pasar por una nueva compilación.

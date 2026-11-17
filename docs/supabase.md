@@ -197,7 +197,7 @@ Para el servidor de desarrollo del PC, descarga las de desarrollo:
 eas env:pull --environment development
 ```
 
-Escribe `.env.local`, que git ignora. Sin él, `npm start` se detiene con un error que lo indica. Repítelo si cambias alguna variable. Después de cualquier comando de `eas`, revisa `git diff app.json`.
+Escribe `.env.local`, que git ignora. Sin él, la app arranca en una pantalla de error que nombra las variables que faltan. Repítelo si cambias alguna variable. Después de cualquier comando de `eas`, revisa `git diff app.json`.
 
 ### 8.5 Probarlo
 
