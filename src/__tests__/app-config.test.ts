@@ -1,4 +1,10 @@
-import appConfig, { resolveVariant } from "../../app.config";
+import appConfig, {
+  resolveGoogleUrlScheme,
+  resolveVariant,
+} from "../../app.config";
+import easJson from "../../eas.json";
+
+const GOOGLE_IOS_CLIENT_ID = "1234-abcd.apps.googleusercontent.com";
 
 const staticConfig = {
   name: "Hábitos",
@@ -9,13 +15,29 @@ const staticConfig = {
   },
 };
 
-function configFor(variant: string | undefined) {
+/** The config of a variant, with the Google client ID of its environment (null: missing). */
+function configFor(
+  variant: string | undefined,
+  {
+    googleIosClientId = GOOGLE_IOS_CLIENT_ID,
+    config = staticConfig,
+  }: {
+    googleIosClientId?: string | null;
+    config?: typeof staticConfig & { plugins?: string[] };
+  } = {},
+) {
   const previous = process.env.APP_VARIANT;
+  const previousClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
   if (variant === undefined) delete process.env.APP_VARIANT;
   else process.env.APP_VARIANT = variant;
+  if (googleIosClientId === null) {
+    delete process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+  } else {
+    process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID = googleIosClientId;
+  }
   try {
     return appConfig({
-      config: staticConfig,
+      config,
       projectRoot: ".",
       staticConfigPath: null,
       packageJsonPath: null,
@@ -23,6 +45,11 @@ function configFor(variant: string | undefined) {
   } finally {
     if (previous === undefined) delete process.env.APP_VARIANT;
     else process.env.APP_VARIANT = previous;
+    if (previousClientId === undefined) {
+      delete process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+    } else {
+      process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID = previousClientId;
+    }
   }
 }
 
@@ -101,4 +128,58 @@ describe("appConfig", () => {
   test("an unknown variant stops the build", () => {
     expect(() => configFor("staging")).toThrow("Unknown APP_VARIANT");
   });
+});
+
+describe("resolveGoogleUrlScheme", () => {
+  test("is the iOS client ID reversed", () => {
+    expect(resolveGoogleUrlScheme(GOOGLE_IOS_CLIENT_ID)).toBe(
+      "com.googleusercontent.apps.1234-abcd",
+    );
+  });
+
+  test.each([undefined, ""])("a missing client ID %p stops the build", (id) => {
+    expect(() => resolveGoogleUrlScheme(id)).toThrow(
+      "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID is missing",
+    );
+  });
+
+  test("a value that is not a Google iOS client ID stops the build", () => {
+    expect(() => resolveGoogleUrlScheme("1234-abcd")).toThrow(
+      "is not a Google iOS client ID",
+    );
+  });
+});
+
+describe("Google Sign-In", () => {
+  test("returns to the URL scheme of the client ID of the environment", () => {
+    expect(configFor("production").plugins).toContainEqual([
+      "@react-native-google-signin/google-signin",
+      { iosUrlScheme: "com.googleusercontent.apps.1234-abcd" },
+    ]);
+  });
+
+  test("keeps the plugins of app.json", () => {
+    const config = configFor("development", {
+      config: { ...staticConfig, plugins: ["expo-router"] },
+    });
+
+    expect(config.plugins?.[0]).toBe("expo-router");
+  });
+
+  test("without the client ID the config cannot be built", () => {
+    expect(() => configFor("development", { googleIosClientId: null })).toThrow(
+      "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID is missing",
+    );
+  });
+});
+
+// Each build profile takes the variables of its own EAS environment (ADR-0017): a profile that
+// took those of the other one would point the app at the Supabase project of the other variant.
+describe("eas.json", () => {
+  test.each(Object.entries(easJson.build))(
+    "the %s profile takes the EAS environment of its variant",
+    (_, profile) => {
+      expect(profile.environment).toBe(profile.env.APP_VARIANT);
+    },
+  );
 });

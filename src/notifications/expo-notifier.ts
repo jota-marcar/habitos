@@ -110,6 +110,15 @@ export const expoNotifier: Notifier = {
   },
 };
 
+/**
+ * Removes every notification of the app: the scheduled ones and those already shown in the
+ * Notification Center. On signing out, none of the account may stay behind (RF-03).
+ */
+export async function removeAllNotifications(): Promise<void> {
+  await Notifications.cancelAllScheduledNotificationsAsync();
+  await Notifications.dismissAllNotificationsAsync();
+}
+
 /** Reminders that arrive with the app open are shown too, like any other. */
 export function showRemindersInForeground(): void {
   Notifications.setNotificationHandler({

@@ -20,6 +20,7 @@ Cada ADR documenta una decisión técnica importante: el contexto, las opciones 
 | [0014](0014-colores-de-habito-como-dato-del-usuario-guardados-como-clave-de-paleta.md) | Colores de hábito como dato del usuario, guardados como clave de paleta | Aceptado |
 | [0015](0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md) | Pruebas del esquema de Supabase con pgTAP en la CI | Propuesto |
 | [0016](0016-cursor-de-sincronizacion-serializado-por-usuario.md) | Cursor de sincronización serializado por usuario | Propuesto |
+| [0017](0017-inicio-de-sesion-nativo-con-apple-y-google-y-sesion-en-el-llavero.md) | Inicio de sesión nativo con Apple y Google y sesión en el llavero | Propuesto |
 
 ## Plantilla
 

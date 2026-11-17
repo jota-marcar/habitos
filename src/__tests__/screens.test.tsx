@@ -15,12 +15,15 @@ import {
   type AlertButton,
   type AppStateStatus,
 } from "react-native";
+import type { Session } from "@supabase/supabase-js";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { createGestureController } from "react-native-gesture-handler/jest-utils";
 
 import Today from "@/app/index";
 import EditHabit from "@/app/habits/[id]/edit";
 import NewHabit from "@/app/habits/new";
+import Settings from "@/app/settings";
+import SignIn from "@/app/sign-in";
 import { listEntries, saveEntry } from "@/data/entries-repository";
 import {
   addHabit,
@@ -28,7 +31,12 @@ import {
   listHabits,
 } from "@/data/habits-repository";
 import { listReminders } from "@/data/reminders-repository";
-import { habit, openMigratedDatabase, version } from "@/data/testing/fixtures";
+import {
+  habit,
+  markSynced,
+  openMigratedDatabase,
+  version,
+} from "@/data/testing/fixtures";
 import { notifyReminderRecorded } from "@/notifications/actions";
 import type { TestDatabase } from "@/data/testing/node-database";
 import { localDate, type Weekday } from "@/domain/dates";
@@ -36,6 +44,7 @@ import { scheduledDaysFrom } from "@/domain/schedule";
 import { localTime } from "@/domain/times";
 import { AppStack, STACK_SETTINGS } from "@/ui/app-stack";
 import { DatabaseContext } from "@/ui/database";
+import { SessionContext } from "@/ui/session";
 
 // Thursday, 12 November 2026: after the day the fixtures are created (2026-11-01).
 const TODAY = localDate("2026-11-12");
@@ -50,7 +59,81 @@ jest.mock("@/ui/clock", () => ({
 let mockIdCounter = 0;
 jest.mock("expo-crypto", () => ({
   randomUUID: () => `id-${++mockIdCounter}`,
+  CryptoDigestAlgorithm: { SHA256: "SHA-256" },
+  digestStringAsync: async (_: string, value: string) => `sha256(${value})`,
 }));
+
+// The Supabase client: signing in and out only reach these two calls.
+const mockAuth = {
+  signInWithIdToken: jest.fn(),
+  signOut: jest.fn(),
+};
+jest.mock("@/auth/supabase", () => ({ supabase: () => ({ auth: mockAuth }) }));
+jest.mock("@/auth/config", () => ({
+  readAuthConfig: () => ({
+    supabaseUrl: "https://project.supabase.co",
+    supabaseKey: "sb_publishable_key",
+    googleWebClientId: "web.apps.googleusercontent.com",
+    googleIosClientId: "ios.apps.googleusercontent.com",
+  }),
+}));
+
+// The native sign-in buttons are replaced by plain buttons.
+const mockAppleSignIn = jest.fn();
+jest.mock("expo-apple-authentication", () => {
+  const { createElement } = jest.requireActual("react");
+  const { Pressable } = jest.requireActual("react-native");
+  return {
+    AppleAuthenticationButton: (props: object) =>
+      createElement(Pressable, props),
+    AppleAuthenticationButtonStyle: { WHITE: 0 },
+    AppleAuthenticationButtonType: { SIGN_IN: 0 },
+    AppleAuthenticationScope: { EMAIL: 1 },
+    signInAsync: (options: unknown) => mockAppleSignIn(options),
+  };
+});
+
+const mockGoogle = {
+  configure: jest.fn(),
+  signIn: jest.fn(),
+  signOut: jest.fn(),
+  hasPreviousSignIn: jest.fn(),
+};
+jest.mock("@react-native-google-signin/google-signin", () => {
+  const { createElement } = jest.requireActual("react");
+  const { Pressable } = jest.requireActual("react-native");
+  const GoogleSigninButton = (props: object) => createElement(Pressable, props);
+  GoogleSigninButton.Size = { Wide: 1 };
+  GoogleSigninButton.Color = { Light: "light" };
+  return {
+    // Read when used: the mock is created after this factory runs.
+    get GoogleSignin() {
+      return mockGoogle;
+    },
+    GoogleSigninButton,
+    isErrorWithCode: () => false,
+    statusCodes: {},
+  };
+});
+
+function session(provider: string, email: string): Session {
+  return {
+    access_token: "access",
+    refresh_token: "refresh",
+    expires_in: 3600,
+    token_type: "bearer",
+    user: {
+      id: "user-1",
+      email,
+      app_metadata: { provider },
+      user_metadata: {},
+      aud: "authenticated",
+      created_at: "2026-11-17T10:00:00Z",
+    },
+  };
+}
+
+let mockSession: Session | null = null;
 
 // The native picker is replaced by a button that picks 08:30.
 jest.mock("@react-native-community/datetimepicker", () => {
@@ -96,6 +179,10 @@ jest.mock("expo-notifications", () => ({
     mockScheduled.delete(identifier);
   },
   setNotificationCategoryAsync: async () => undefined,
+  cancelAllScheduledNotificationsAsync: async () => {
+    mockScheduled.clear();
+  },
+  dismissAllNotificationsAsync: async () => undefined,
 }));
 
 let db: TestDatabase;
@@ -104,6 +191,17 @@ beforeEach(async () => {
   mockToday = TODAY;
   mockNotificationsAllowed = true;
   mockScheduled.clear();
+  mockSession = session("apple", "persona@example.com");
+  for (const mock of [
+    ...Object.values(mockAuth),
+    ...Object.values(mockGoogle),
+    mockAppleSignIn,
+  ]) {
+    mock.mockReset();
+  }
+  mockAuth.signInWithIdToken.mockResolvedValue({ data: {}, error: null });
+  mockAuth.signOut.mockResolvedValue({ error: null });
+  mockGoogle.hasPreviousSignIn.mockReturnValue(false);
   db = await openMigratedDatabase();
 });
 
@@ -116,9 +214,11 @@ async function renderApp(initialUrl = "/") {
   function Layout() {
     return (
       <GestureHandlerRootView style={StyleSheet.absoluteFill}>
-        <DatabaseContext value={db}>
-          <AppStack />
-        </DatabaseContext>
+        <SessionContext value={mockSession}>
+          <DatabaseContext value={db}>
+            <AppStack />
+          </DatabaseContext>
+        </SessionContext>
       </GestureHandlerRootView>
     );
   }
@@ -128,6 +228,8 @@ async function renderApp(initialUrl = "/") {
       index: Today,
       "habits/new": NewHabit,
       "habits/[id]/edit": EditHabit,
+      settings: Settings,
+      "sign-in": SignIn,
     },
     { initialUrl },
   );
@@ -1328,5 +1430,216 @@ describe("calendar (RF-18, RF-31)", () => {
     });
 
     expect(screen.getByText("Martes, 10 nov")).toBeTruthy();
+  });
+});
+
+describe("sign-in", () => {
+  beforeEach(() => {
+    mockSession = null;
+  });
+
+  test("without a session only the sign-in screen is shown (RF-01)", async () => {
+    await renderApp();
+
+    expect(
+      await screen.findByText(
+        "Inicia sesión para guardar tus hábitos en tu cuenta.",
+      ),
+    ).toBeTruthy();
+    expect(screen).toHavePathname("/sign-in");
+    expect(screen.queryByText("Todavía no tienes hábitos.")).toBeNull();
+  });
+
+  test("a link to a screen of the account leads to the sign-in too", async () => {
+    await renderApp("/settings");
+
+    expect(screen).toHavePathname("/sign-in");
+  });
+
+  test("signs in with Apple with a nonce: its hash to Apple, the value to Supabase", async () => {
+    mockAppleSignIn.mockResolvedValue({ identityToken: "apple-token" });
+    await renderApp();
+
+    await fireEvent.press(await screen.findByTestId("sign-in-apple"));
+
+    await waitFor(() => expect(mockAuth.signInWithIdToken).toHaveBeenCalled());
+    const sent = mockAuth.signInWithIdToken.mock.lastCall?.[0];
+    expect(sent).toEqual({
+      provider: "apple",
+      token: "apple-token",
+      nonce: expect.any(String),
+    });
+    expect(mockAppleSignIn).toHaveBeenCalledWith(
+      expect.objectContaining({ nonce: `sha256(${sent.nonce})` }),
+    );
+    expect(screen.queryByText(/No se ha podido iniciar sesión/)).toBeNull();
+  });
+
+  test("signs in with Google, without nonce (ADR-0017)", async () => {
+    mockGoogle.signIn.mockResolvedValue({
+      type: "success",
+      data: { idToken: "google-token" },
+    });
+    await renderApp();
+
+    await fireEvent.press(await screen.findByTestId("sign-in-google"));
+
+    await waitFor(() =>
+      expect(mockAuth.signInWithIdToken).toHaveBeenCalledWith({
+        provider: "google",
+        token: "google-token",
+        nonce: undefined,
+      }),
+    );
+    expect(mockGoogle.configure).toHaveBeenCalledWith({
+      webClientId: "web.apps.googleusercontent.com",
+      iosClientId: "ios.apps.googleusercontent.com",
+    });
+  });
+
+  test("a cancelled sign-in says nothing; a failed one asks to check the connection", async () => {
+    mockAppleSignIn.mockRejectedValue({ code: "ERR_REQUEST_CANCELED" });
+    mockGoogle.signIn.mockResolvedValue({ type: "cancelled", data: null });
+    await renderApp();
+
+    await fireEvent.press(await screen.findByTestId("sign-in-apple"));
+    await waitFor(() => expect(screen.queryByTestId("signing-in")).toBeNull());
+    await fireEvent.press(screen.getByTestId("sign-in-google"));
+    await waitFor(() => expect(screen.queryByTestId("signing-in")).toBeNull());
+    expect(screen.queryByText(/No se ha podido iniciar sesión/)).toBeNull();
+    expect(mockAuth.signInWithIdToken).not.toHaveBeenCalled();
+
+    mockAppleSignIn.mockResolvedValue({ identityToken: "apple-token" });
+    mockAuth.signInWithIdToken.mockResolvedValue({
+      data: {},
+      error: { message: "Network request failed" },
+    });
+    await fireEvent.press(screen.getByTestId("sign-in-apple"));
+
+    expect(
+      await screen.findByText(
+        "No se ha podido iniciar sesión. Comprueba que tienes conexión e inténtalo de nuevo.",
+      ),
+    ).toBeTruthy();
+  });
+
+  test("an error of Apple or Google is a failed sign-in too", async () => {
+    mockGoogle.signIn.mockRejectedValue(new Error("No connection."));
+    await renderApp();
+
+    await fireEvent.press(await screen.findByTestId("sign-in-google"));
+
+    expect(
+      await screen.findByText(/No se ha podido iniciar sesión/),
+    ).toBeTruthy();
+  });
+});
+
+describe("settings", () => {
+  /** Presses a button of the last native alert, as iOS would. */
+  async function pressAlertButton(alert: jest.SpyInstance, label: string) {
+    const buttons = alert.mock.lastCall?.[2] as AlertButton[];
+    await act(async () => {
+      await buttons.find((b) => b.text === label)?.onPress?.();
+    });
+  }
+
+  async function markEverythingSynced() {
+    for (const table of ["habits", "habit_versions", "entries", "reminders"]) {
+      await markSynced(db, table);
+    }
+  }
+
+  test("the menu opens them, with the account of the session (RF-32)", async () => {
+    await renderApp();
+    await screen.findByText("Todavía no tienes hábitos.");
+    await openMenu();
+
+    await fireEvent.press(screen.getByLabelText("Ajustes"));
+
+    expect(screen).toHavePathname("/settings");
+    expect(await screen.findByText("Sesión iniciada con Apple")).toBeTruthy();
+    expect(screen.getByText("persona@example.com")).toBeTruthy();
+  });
+
+  test("signing out removes the data and the notifications of the device (RF-03)", async () => {
+    const alert = jest.spyOn(Alert, "alert");
+    await addBoolean("walk", "Pasear", "08:30");
+    await markEverythingSynced();
+    mockScheduled.set("reminder", {});
+    await renderApp("/settings");
+
+    await fireEvent.press(await screen.findByLabelText("Cerrar sesión"));
+    await waitFor(() =>
+      expect(alert).toHaveBeenCalledWith(
+        "Cerrar sesión",
+        "Tus datos se borrarán de este iPhone, pero seguirán en tu cuenta.",
+        expect.any(Array),
+      ),
+    );
+
+    await pressAlertButton(alert, "Cancelar");
+    expect(await listHabits(db)).toHaveLength(1);
+    expect(mockAuth.signOut).not.toHaveBeenCalled();
+
+    await pressAlertButton(alert, "Cerrar sesión");
+
+    await waitFor(() =>
+      expect(mockAuth.signOut).toHaveBeenCalledWith({ scope: "local" }),
+    );
+    expect(await listHabits(db)).toEqual([]);
+    expect(await listReminders(db)).toEqual([]);
+    expect(mockScheduled.size).toBe(0);
+    // Google was not used: there is nothing to forget.
+    expect(mockGoogle.signOut).not.toHaveBeenCalled();
+  });
+
+  test("warns that the changes not uploaded yet will be lost (RF-03)", async () => {
+    const alert = jest.spyOn(Alert, "alert");
+    await addBoolean("walk", "Pasear");
+    await renderApp("/settings");
+
+    await fireEvent.press(await screen.findByLabelText("Cerrar sesión"));
+
+    await waitFor(() =>
+      expect(alert).toHaveBeenCalledWith(
+        "Cerrar sesión",
+        expect.stringContaining("Si cierras la sesión ahora, se perderán."),
+        expect.any(Array),
+      ),
+    );
+  });
+
+  test("with Google, signing out also forgets the Google account on the device", async () => {
+    const alert = jest.spyOn(Alert, "alert");
+    mockSession = session("google", "persona@gmail.com");
+    mockGoogle.hasPreviousSignIn.mockReturnValue(true);
+    await renderApp("/settings");
+    expect(await screen.findByText("Sesión iniciada con Google")).toBeTruthy();
+
+    await fireEvent.press(screen.getByLabelText("Cerrar sesión"));
+    await waitFor(() => expect(alert).toHaveBeenCalled());
+    await pressAlertButton(alert, "Cerrar sesión");
+
+    await waitFor(() => expect(mockAuth.signOut).toHaveBeenCalled());
+    expect(mockGoogle.signOut).toHaveBeenCalled();
+  });
+
+  test("if signing out fails, it says so and the session stays open", async () => {
+    const alert = jest.spyOn(Alert, "alert");
+    mockAuth.signOut.mockRejectedValue(new Error("Keychain failure."));
+    await renderApp("/settings");
+
+    await fireEvent.press(await screen.findByLabelText("Cerrar sesión"));
+    await waitFor(() => expect(alert).toHaveBeenCalled());
+    await pressAlertButton(alert, "Cerrar sesión");
+
+    await waitFor(() =>
+      expect(alert).toHaveBeenLastCalledWith(
+        "Cerrar sesión",
+        "No se ha podido cerrar la sesión. Inténtalo de nuevo.",
+      ),
+    );
+    expect(screen).toHavePathname("/settings");
   });
 });

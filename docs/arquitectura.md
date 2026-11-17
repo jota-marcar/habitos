@@ -60,7 +60,7 @@ flowchart LR
 | Iconos | SF Symbols con `expo-symbols`, con un sustituto sencillo donde no hay | [ADR-0011](adr/0011-sf-symbols-con-expo-symbols-para-los-iconos.md) |
 | Base de datos local | SQLite (`expo-sqlite`), con SQL directo y migraciones propias | [ADR-0004](adr/0004-offline-first-con-sincronizacion.md), [ADR-0009](adr/0009-sql-directo-y-migraciones-propias-en-la-capa-de-datos-local.md) |
 | Backend y autenticación | Supabase (Postgres, Auth) | [ADR-0003](adr/0003-supabase-como-backend.md) |
-| Inicio de sesión | Sign in with Apple y Google nativos, con el token enviado a Supabase | [ADR-0003](adr/0003-supabase-como-backend.md) |
+| Inicio de sesión | Sign in with Apple (`expo-apple-authentication`) y Google (`@react-native-google-signin/google-signin`) nativos, con el token enviado a Supabase; la sesión, en el llavero de iOS (`expo-secure-store`) | [ADR-0003](adr/0003-supabase-como-backend.md), [ADR-0017](adr/0017-inicio-de-sesion-nativo-con-apple-y-google-y-sesion-en-el-llavero.md) |
 | Recordatorios | Notificaciones locales (`expo-notifications`) y tarea en segundo plano (`expo-background-task`) | [ADR-0005](adr/0005-recordatorios-locales-en-ventana-deslizante.md) |
 | Compilación y publicación | EAS Build, EAS Submit y TestFlight | [ADR-0002](adr/0002-expo-como-plataforma.md) |
 | Tests | Jest y React Native Testing Library | Estándar de Expo |
@@ -207,11 +207,15 @@ El planificador usa el dominio, la capa de datos y, de la interfaz, solo el relo
 
 ### Inicio y cierre de sesión
 
-1. Sin sesión, la app solo muestra la pantalla de inicio de sesión (RF-01). El inicio de sesión nativo de Apple o Google devuelve un token, que se envía a Supabase con `signInWithIdToken`.
-2. Las filas locales no llevan `user_id`: el dispositivo solo tiene los datos de una cuenta a la vez. Al subirlas, Supabase les asigna el usuario de la sesión.
-3. **Primer inicio de sesión (RF-38):** la primera sincronización sube todo lo que hay en la base local y baja lo que ya tenía la cuenta. Como los identificadores son UUID generados en cada dispositivo, no chocan, y el resultado es la unión de los dos.
-4. **Cerrar sesión (RF-03):** si quedan filas sin subir, la interfaz avisa antes. Después se vacía la base local y se cancelan todas las notificaciones programadas.
-5. **Eliminar la cuenta (RF-04):** la app llama a una Edge Function de Supabase, que borra al usuario y revoca su token de Sign in with Apple (ver "Seguridad y privacidad"). Después la app vacía la base local, cancela las notificaciones y revoca el acceso de Google si entró con Google.
+1. Sin sesión, la app solo muestra la pantalla de inicio de sesión (RF-01): las rutas protegidas de Expo Router (`Stack.Protected`) dejan fuera las demás, también si se llega a ellas por un enlace. El inicio de sesión nativo de Apple o Google devuelve un token, que se envía a Supabase con `signInWithIdToken` ([ADR-0017](adr/0017-inicio-de-sesion-nativo-con-apple-y-google-y-sesion-en-el-llavero.md)):
+   - **Apple:** con nonce. La app pasa a Apple el hash SHA-256 de un valor aleatorio y a Supabase el valor, para que un token interceptado no sirva.
+   - **Google:** sin nonce, porque la versión gratuita de la librería no lo admite ("Skip nonce check" en Supabase).
+   - Una cancelación no muestra nada. Cualquier otro fallo pide comprobar la conexión e intentarlo de nuevo.
+2. **La sesión (RF-02)** la guarda el cliente de Supabase en el llavero de iOS, troceada en fragmentos de menos de 2 KB y legible tras el primer desbloqueo, también en segundo plano. El cliente renueva el token solo con la app en primer plano. Al abrir la app no se muestra nada hasta leer la sesión, para que la pantalla de inicio de sesión no aparezca un instante.
+3. Las filas locales no llevan `user_id`: el dispositivo solo tiene los datos de una cuenta a la vez. Al subirlas, Supabase les asigna el usuario de la sesión.
+4. **Primer inicio de sesión (RF-38):** la primera sincronización sube todo lo que hay en la base local y baja lo que ya tenía la cuenta. Como los identificadores son UUID generados en cada dispositivo, no chocan, y el resultado es la unión de los dos.
+5. **Cerrar sesión (RF-03),** desde **Ajustes** en el menú: si quedan filas con `pending_sync = 1` (salvo las creadas y eliminadas sin llegar a subirse), la interfaz avisa de que se perderán. Después se vacía la base local, se cancelan las notificaciones programadas y se retiran las ya mostradas, se olvida la cuenta de Google del dispositivo y se cierra la sesión de Supabase **solo en este dispositivo** (`scope: "local"`; por defecto la cerraría en todos). Los datos se borran antes de cerrar la sesión: si algo falla a medias, la sesión sigue abierta y se puede reintentar.
+6. **Eliminar la cuenta (RF-04):** la app vuelve a pedir el inicio de sesión con Apple para obtener un código de autorización nuevo y llama a una Edge Function de Supabase, que borra al usuario y revoca su token de Sign in with Apple (ver "Seguridad y privacidad"). Después la app vacía la base local, cancela las notificaciones y revoca el acceso de Google si entró con Google.
 
 ### Sincronización
 
@@ -225,8 +229,9 @@ El planificador usa el dominio, la capa de datos y, de la interfaz, solo el relo
 - Cada fila de Supabase lleva `user_id`, y las políticas de **Row Level Security** impiden que un usuario lea o modifique datos de otro. Sin sesión (rol `anon`) no hay acceso a ninguna tabla.
 - **La app no borra filas en la nube:** las eliminaciones viajan como `deleted = true`. Los usuarios no tienen permiso de `delete` ni de `truncate`, que además no pasa por Row Level Security. Las filas solo desaparecen al borrarse la cuenta.
 - Los tests pgTAP de `supabase/tests` comprueban estas reglas en cada Pull Request ([ADR-0015](adr/0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md)).
-- La app usa solo la clave pública (`anon`) de Supabase. Ninguna clave privada vive en la app ni en el repositorio.
-- Los secretos y la configuración por entorno van en variables de entorno de EAS, nunca en git (ver `.gitignore`).
+- La app usa solo la clave pública (*publishable key*) de Supabase. Ninguna clave privada vive en la app ni en el repositorio.
+- La sesión vive en el llavero de iOS, no en un fichero de la app, así que no entra en las copias sin cifrar ([ADR-0017](adr/0017-inicio-de-sesion-nativo-con-apple-y-google-y-sesion-en-el-llavero.md)). El llavero sobrevive a desinstalar la app: al reinstalarla, la sesión sigue abierta.
+- Los secretos y la configuración por entorno van en variables de entorno de EAS, nunca en git (ver `.gitignore`). La URL de Supabase, su clave pública y los clientes de Google llegan como `EXPO_PUBLIC_*` del entorno de EAS de cada perfil; en el PC, `eas env:pull` las deja en `.env.local` (ver [docs/supabase.md](supabase.md#8-inicio-de-sesión-con-apple-y-google)).
 - Eliminar la cuenta (RF-04) borra al usuario y, en cascada, todos sus datos. La App Store lo exige a toda app que permita crear una cuenta ([App Store Review Guidelines 5.1.1(v)](https://developer.apple.com/app-store/review/guidelines/#5.1.1)), y Apple pide además [revocar el token de Sign in with Apple](https://developer.apple.com/support/offering-account-deletion-in-your-app/). Las dos cosas necesitan claves privadas, así que las hace una Edge Function de Supabase, nunca la app.
 
 ## 8. Entornos y publicación
@@ -238,6 +243,7 @@ El planificador usa el dominio, la capa de datos y, de la interfaz, solo el relo
 
 - Cada entorno es una variante de la aplicación con su propio nombre, identificador y scheme, así que las dos conviven en el mismo iPhone sin compartir datos ([ADR-0008](adr/0008-variantes-de-desarrollo-y-produccion.md)).
 - La variante la decide `APP_VARIANT`, que fija cada perfil de `eas.json`. Si falta, es desarrollo; un valor desconocido detiene la compilación.
+- Cada perfil de `eas.json` toma las variables de su entorno de EAS (`"environment"`), que un test obliga a coincidir con su `APP_VARIANT`. Sin el cliente de iOS de Google, la configuración no se puede generar.
 - Lo que cambia entre variantes está en `app.config.ts`; lo común, en `app.json`.
 
 - Los cambios solo de JavaScript pueden llegar a producción con **EAS Update**, sin pasar por una nueva compilación.
@@ -253,6 +259,8 @@ El planificador usa el dominio, la capa de datos y, de la interfaz, solo el relo
 | Si la app no se abre en varios días, la ventana de recordatorios se agota | Tarea en segundo plano que la rellena; aviso en la app si los permisos están desactivados |
 | El plan gratuito de Supabase pausa el proyecto tras 7 días sin peticiones | Con el uso diario de la app no ocurre; si ocurre, se reactiva desde el panel sin perder datos |
 | Apple puede rechazar la app en la revisión por obligar a iniciar sesión: pide que, si las funciones no dependen de una cuenta, se pueda usar sin ella ([App Store Review Guidelines 5.1.1(v)](https://developer.apple.com/app-store/review/guidelines/#5.1.1)) | La copia en la nube y el uso en varios dispositivos (RF-05) son funciones de cuenta, lo que justifica pedirla. No afecta al uso personal ni a TestFlight interno. Se revisará antes de enviar la app a la App Store; la alternativa es permitir usarla sin cuenta |
+| Con el inicio de sesión obligatorio, una configuración incorrecta de Apple, Google o Supabase deja la app inutilizable | Probar el inicio de sesión en el iPhone en cuanto haya un build con él, antes de seguir con la sincronización. Los pasos están en [docs/supabase.md](supabase.md#8-inicio-de-sesión-con-apple-y-google) |
+| El token de Google se acepta sin nonce: uno interceptado podría reutilizarse durante su hora de validez | Riesgo bajo en una app personal con Row Level Security; si la app se abre a más usuarios, se reconsiderará la versión de pago de la librería ([ADR-0017](adr/0017-inicio-de-sesion-nativo-con-apple-y-google-y-sesion-en-el-llavero.md)) |
 | Dependencia de EAS para compilar iOS (no hay Mac) | Asumida en [ADR-0002](adr/0002-expo-como-plataforma.md); alternativa: alquilar un Mac en la nube |
 | Dos dispositivos sin conexión crean la misma fila con identificadores distintos (por ejemplo, el registro de un hábito el mismo día) | La clave única del servidor rechaza la segunda al subirla, en lugar de guardar dos. El motor de sincronización debe resolverlo; la candidata es generar identificadores deterministas para las filas con clave natural (registro: hábito y fecha), de modo que los dos dispositivos creen el mismo |
 | Hecho en un dispositivo, recordatorio en otro | El recordatorio del otro dispositivo puede sonar si no ha sincronizado. Aceptable con un solo dispositivo por usuario |

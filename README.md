@@ -6,12 +6,13 @@ Proyecto de aprendizaje: se desarrolla con Claude Code e irá incorporando agent
 
 ## Estado
 
-La aplicación funciona en local, sin cuenta: los datos se guardan solo en el dispositivo.
+Para usar la aplicación hay que iniciar sesión con Apple o Google. Los datos todavía se guardan solo en el dispositivo: falta la sincronización con la cuenta.
 
 - Ya se puede crear, editar, archivar y eliminar hábitos (con su color), ver los de cada día ordenados por lo vencido y el próximo recordatorio, marcarlos o registrar la cantidad, y recorrer los días con el calendario.
 - Los recordatorios son notificaciones locales con el progreso del hábito, y tocarlas abre la aplicación. Además, a las 17:00 y a las 22:00 un aviso nombra los hábitos del día que siguen pendientes.
 - Queda por probar en el iPhone que los botones de los recordatorios funcionan con la app en segundo plano y cerrada, y que los avisos de pendientes llegan bien. Se probará en un testeo general al terminar el MVP.
-- Falta la cuenta (inicio de sesión obligatorio con Apple o Google) y la sincronización entre dispositivos.
+- Ya se puede iniciar y cerrar sesión. Queda probarlo en el iPhone en cuanto haya un development build con los cambios nativos.
+- Faltan la sincronización entre dispositivos y eliminar la cuenta.
 
 La aplicación tiene dos variantes, desarrollo y producción, que se compilan con EAS. La CI comprueba el formato, el lint, los tipos y los tests en cada Pull Request.
 
@@ -21,9 +22,12 @@ Requisitos: Node.js 24.15 o posterior (ver `.nvmrc`) y npm.
 
 ```bash
 npm install
+eas env:pull --environment development
 npm start
 npm run verify
 ```
+
+`eas env:pull` escribe en `.env.local` (que git ignora) la configuración de Supabase y de Google del entorno de desarrollo. Sin ella, `npm start` se detiene con un error que lo indica. Ver [docs/supabase.md](docs/supabase.md#8-inicio-de-sesión-con-apple-y-google).
 
 Para probar en un iPhone hace falta un development build (`npm run build:dev`); `npm start` se conecta a él.
 

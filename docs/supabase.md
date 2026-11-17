@@ -1,6 +1,6 @@
 # Supabase: puesta en marcha y migraciones
 
-Guía de los pasos que se hacen fuera del repositorio: crear los proyectos de Supabase, enlazarlos con la CLI y aplicarles el esquema. Lo técnico está en [arquitectura.md](arquitectura.md) y en los ADR [0003](adr/0003-supabase-como-backend.md), [0015](adr/0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md) y [0016](adr/0016-cursor-de-sincronizacion-serializado-por-usuario.md).
+Guía de los pasos que se hacen fuera del repositorio: crear los proyectos de Supabase, enlazarlos con la CLI, aplicarles el esquema y configurar el inicio de sesión con Apple y Google. Lo técnico está en [arquitectura.md](arquitectura.md) y en los ADR [0003](adr/0003-supabase-como-backend.md), [0015](adr/0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md) y [0016](adr/0016-cursor-de-sincronizacion-serializado-por-usuario.md).
 
 ## Qué hay en el repositorio
 
@@ -119,14 +119,102 @@ En el panel de cada proyecto:
 
 En el repositorio de GitHub, **Settings → Rules** (o **Branches**, según cómo esté configurada la protección de `main`), edita la regla de `main` y añade **Database** a los checks obligatorios, junto a **Verify**. El check solo aparece en la lista después de que la CI lo haya ejecutado al menos una vez, en el PR que lo introduce.
 
+## 8. Inicio de sesión con Apple y Google
+
+La app inicia sesión de forma nativa con Apple o Google y envía el token a Supabase ([ADR-0017](adr/0017-inicio-de-sesion-nativo-con-apple-y-google-y-sesion-en-el-llavero.md)). Para que funcione hay que configurar los dos entornos por separado. **Haz cada paso dos veces, una por entorno, sin mezclar nunca los valores:**
+
+| Entorno | Bundle ID | Proyecto de Google Cloud | Proyecto de Supabase | Entorno de EAS |
+|---------|-----------|--------------------------|----------------------|----------------|
+| Desarrollo | `com.jotamarcar.habitos.dev` | `habitos-dev` | `habitos-dev` | `development` |
+| Producción | `com.jotamarcar.habitos` | `habitos` | `habitos` | `production` |
+
+Apunta los valores que vayas obteniendo en tu gestor de contraseñas o en una nota aparte, con el entorno al lado. Ninguno es secreto salvo el *client secret* de Google, pero no van en el repositorio.
+
+### 8.1 Apple Developer: Sign in with Apple en cada App ID
+
+1. Entra en [developer.apple.com/account](https://developer.apple.com/account) → **Certificates, Identifiers & Profiles** → **Identifiers**.
+2. Abre el App ID `com.jotamarcar.habitos.dev`. Si no existe aún, se creará en el primer build que lo necesite: vuelve a este paso después.
+3. En **Capabilities**, marca **Sign In with Apple**. Si pregunta, deja **Enable as a primary App ID**. No hace falta configurar la URL de notificaciones del servidor.
+4. Pulsa **Save**. Si avisa de que los perfiles de aprovisionamiento quedan invalidados, acepta: EAS los regenera en el siguiente build.
+5. Repite con `com.jotamarcar.habitos`.
+
+EAS también puede activar esta capacidad al compilar, porque la app la declara (`usesAppleSignIn` en `app.json`). Hacerlo a mano no estorba y evita sorpresas.
+
+No hace falta crear un *Services ID* ni una clave `.p8`: solo los usa el inicio de sesión web. La clave hará falta más adelante, para eliminar la cuenta (RF-04).
+
+### 8.2 Google Cloud: un proyecto por entorno
+
+1. Entra en [console.cloud.google.com](https://console.cloud.google.com) y crea un proyecto llamado **`habitos-dev`**.
+2. Ve a **APIs y servicios → Pantalla de consentimiento de OAuth** (puede aparecer como **Google Auth Platform**) y pulsa **Comenzar**:
+   - **Nombre de la aplicación:** `Hábitos Dev`. **Correo de asistencia:** el tuyo.
+   - **Público:** **Externo**.
+   - **Información de contacto:** tu correo. Acepta la política y pulsa **Crear**.
+3. En **Público** (o **Usuarios de prueba**), añade tu cuenta de Google como usuario de prueba. Mientras la app esté "en pruebas", solo esas cuentas pueden iniciar sesión.
+4. En **Clientes**, pulsa **Crear cliente**:
+   - **Tipo:** **Aplicación web**. **Nombre:** `Supabase`. Sin orígenes ni URI de redirección.
+   - Apunta el **ID de cliente** (`….apps.googleusercontent.com`) y el **secreto del cliente**.
+5. Vuelve a **Crear cliente**:
+   - **Tipo:** **iOS**. **Nombre:** `Hábitos Dev iOS`. **ID del paquete:** `com.jotamarcar.habitos.dev`.
+   - Apunta su **ID de cliente**.
+6. Repite todo con un proyecto **`habitos`**, la app `Hábitos` y el ID del paquete `com.jotamarcar.habitos`.
+
+Para producción, cuando la app vaya a usarla alguien más, pulsa **Publicar aplicación** en **Público**. Con los permisos que pide (correo y perfil básico) Google no exige verificación.
+
+### 8.3 Supabase: activar los proveedores
+
+En el panel de cada proyecto de Supabase, en **Authentication → Sign In / Providers**:
+
+1. **Apple:** actívalo.
+   - **Client IDs:** el bundle ID de su entorno, y solo ese (`com.jotamarcar.habitos.dev` en `habitos-dev`).
+   - Deja vacío **Secret Key (for OAuth)**: solo hace falta para el inicio de sesión web.
+   - **Save**.
+2. **Google:** actívalo.
+   - **Client IDs:** el ID del cliente **web** y el del cliente **iOS** de su entorno, separados por una coma y en ese orden, sin espacios.
+   - **Client Secret (for OAuth):** el secreto del cliente web de su entorno.
+   - Activa **Skip nonce check**. La librería gratuita de Google no puede enviar nonce; el motivo está en el ADR-0017.
+   - **Save**.
+
+Después, en **Project Settings → API Keys**, apunta la **Publishable key** (`sb_publishable_…`). No uses la *secret key* ni la `service_role`. La **URL del proyecto** es `https://<ref>.supabase.co`, con el identificador que apuntaste en el paso 1.
+
+### 8.4 EAS: las variables de cada entorno
+
+La app recibe cuatro valores por entorno, como variables de EAS. Son públicos (van dentro de la app), así que su visibilidad es **plaintext**. En PowerShell, desde la carpeta del repositorio, crea las de desarrollo sustituyendo cada valor:
+
+```powershell
+eas env:create --environment development --visibility plaintext --name EXPO_PUBLIC_SUPABASE_URL --value https://REF_DEV.supabase.co
+eas env:create --environment development --visibility plaintext --name EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY --value CLAVE_PUBLICA_DEV
+eas env:create --environment development --visibility plaintext --name EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID --value ID_CLIENTE_WEB_DEV
+eas env:create --environment development --visibility plaintext --name EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID --value ID_CLIENTE_IOS_DEV
+```
+
+Repite los cuatro con `--environment production` y los valores de producción. Puedes comprobarlas con `eas env:list --environment development` o en [expo.dev](https://expo.dev), en **Environment variables** del proyecto.
+
+Cada perfil de `eas.json` usa su entorno (`"environment"`), y un test comprueba que coincide con su variante. Así un build de desarrollo nunca recibe los valores de producción.
+
+Para el servidor de desarrollo del PC, descarga las de desarrollo:
+
+```powershell
+eas env:pull --environment development
+```
+
+Escribe `.env.local`, que git ignora. Sin él, `npm start` se detiene con un error que lo indica. Repítelo si cambias alguna variable. Después de cualquier comando de `eas`, revisa `git diff app.json`.
+
+### 8.5 Probarlo
+
+El inicio de sesión necesita un development build nuevo, porque añade código nativo (`npm run build:dev`). Con el build instalado y `npm start` en marcha:
+
+1. La app abre en la pantalla de inicio de sesión.
+2. **Iniciar sesión con Apple** y **Iniciar sesión con Google** entran en la app.
+3. En **Authentication → Users** del proyecto de desarrollo aparece tu usuario, con el proveedor usado.
+4. **Ajustes → Cerrar sesión** vuelve a la pantalla de inicio de sesión. Los hábitos del dispositivo se borran: hasta que exista la sincronización, no están en la cuenta.
+
 ## Qué no hay que hacer
 
-- No subas a git las contraseñas de las bases de datos, ni la `service_role` o claves secretas del proyecto. La app solo usará la clave pública, y llegará por variables de entorno de EAS (en el PR del inicio de sesión).
+- No subas a git las contraseñas de las bases de datos, ni la `service_role` o claves secretas del proyecto. La app solo usa la clave pública (*publishable key*), que llega por las variables de entorno de EAS (sección 8).
 - No edites una migración ya aplicada a un proyecto: el cambio va en una migración nueva.
 - No cambies el esquema desde el panel de Supabase (Table Editor o SQL Editor). Lo que no está en `supabase/migrations` se pierde al recrear un proyecto y no lo prueba la CI.
 
 ## Pendiente para los siguientes PR
 
-- **Inicio de sesión:** activar los proveedores Apple y Google en **Authentication → Sign In / Providers** de cada proyecto y pasar a EAS la URL y la clave pública de cada uno.
 - **Eliminar la cuenta:** desplegar la Edge Function con `supabase functions deploy`.
 - **Automatizar `db push` desde la CI**, si aplicar las migraciones a mano empieza a repetirse.
