@@ -41,6 +41,8 @@ A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo
 | **Color** | `color` | Color que el usuario da a un hábito, de entre los de una paleta, para agruparlo con otros o distinguirlo de ellos. |
 | **Archivar** | `archive` | Retirar un hábito de uso sin borrar su historial. |
 | **Calendario** | `calendar` | Cuadrícula de un mes con la que se elige el día que se quiere ver. |
+| **Cuenta** | `account` | Identidad del usuario en la aplicación, a la que pertenecen sus datos. Se crea al iniciar sesión por primera vez con Apple o Google. |
+| **Sesión** | `session` | Estado en el que el dispositivo tiene una cuenta iniciada y puede usar sus datos. |
 | **Opciones** | `options` | Acciones sobre un hábito que se abren al mantenerlo pulsado: corregir la cantidad, editar, archivar y eliminar. |
 
 La columna "En el código" es el nombre en inglés con el que cada término aparece en el código y en el modelo de datos ([ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)). Cada término se traduce siempre igual; uno nuevo se añade aquí antes de usarlo en el código. `goal` queda reservado para los objetivos de la [visión a futuro](#6-visión-a-futuro-tres-horizontes), y `Record` se evita porque ya tiene otro significado en el lenguaje de programación.
@@ -77,11 +79,15 @@ La aplicación tiene una sola pantalla principal: la vista de un día (3.4). Tod
 
 ### 3.2 Cuenta de usuario
 
-- **RF-01.** El usuario inicia sesión con su cuenta de Apple o de Google. No hay registro con email y contraseña.
+- **RF-01.** Para usar la aplicación hay que iniciar sesión con la cuenta de Apple o de Google. No hay registro con email y contraseña. Sin sesión, la aplicación solo muestra la pantalla de inicio de sesión.
+  - Iniciar sesión necesita conexión. Una vez iniciada, la aplicación funciona sin ella (RF-28).
 - **RF-02.** La sesión se mantiene abierta hasta que el usuario la cierra.
-- **RF-03.** El usuario puede cerrar sesión.
-- **RF-04.** El usuario puede eliminar su cuenta. Esto borra de forma permanente todos sus datos, tras una confirmación explícita.
+- **RF-03.** El usuario puede cerrar sesión. Al cerrarla, sus datos se borran del dispositivo pero siguen en su cuenta. Así, en el mismo teléfono puede iniciarse otra cuenta sin que se mezclen los datos.
+  - Si quedan cambios que aún no se han copiado en la cuenta (por ejemplo, por falta de conexión), se avisa de que se perderán antes de cerrar la sesión.
+- **RF-04.** El usuario puede eliminar su cuenta, tras una confirmación explícita. Se borran de forma permanente todos sus datos, en la cuenta y en el dispositivo, y la aplicación deja de estar conectada a su cuenta de Apple o de Google. La cuenta de Apple o de Google no se elimina.
+  - Necesita conexión.
 - **RF-05.** Si el usuario inicia sesión en otro dispositivo, encuentra todos sus hábitos e historial.
+- **RF-38.** Si al iniciar sesión hay en el dispositivo hábitos creados antes de que existiera la cuenta, pasan a la cuenta del usuario. Si la cuenta ya tenía hábitos de otro dispositivo, se juntan: el usuario encuentra los de los dos.
 
 ### 3.3 Gestión de hábitos
 
@@ -203,7 +209,7 @@ Funcionalidades descartadas por ahora, en orden aproximado de interés:
 
 ## 5. Preguntas abiertas
 
-Puntos a decidir antes de implementar la parte correspondiente. Ahora mismo no queda ninguno: el último, un aviso al final del día con los hábitos pendientes, se resolvió con los avisos de pendientes (RF-37).
+Puntos a decidir antes de implementar la parte correspondiente. Ahora mismo no queda ninguno: los últimos, si la cuenta es obligatoria y qué pasa con los datos del dispositivo al iniciar y cerrar sesión, se resolvieron en RF-01, RF-03 y RF-38.
 
 ## 6. Visión a futuro: tres horizontes
 

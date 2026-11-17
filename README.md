@@ -9,9 +9,9 @@ Proyecto de aprendizaje: se desarrolla con Claude Code e irá incorporando agent
 La aplicación funciona en local, sin cuenta: los datos se guardan solo en el dispositivo.
 
 - Ya se puede crear, editar, archivar y eliminar hábitos (con su color), ver los de cada día ordenados por lo vencido y el próximo recordatorio, marcarlos o registrar la cantidad, y recorrer los días con el calendario.
-- Los recordatorios son notificaciones locales con el progreso del hábito, y tocarlas abre la aplicación.
-- Queda por probar en el iPhone que los botones de los recordatorios funcionan con la app en segundo plano y cerrada.
-- Falta la cuenta (inicio de sesión con Apple o Google) y la sincronización entre dispositivos.
+- Los recordatorios son notificaciones locales con el progreso del hábito, y tocarlas abre la aplicación. Además, a las 17:00 y a las 22:00 un aviso nombra los hábitos del día que siguen pendientes.
+- Queda por probar en el iPhone que los botones de los recordatorios funcionan con la app en segundo plano y cerrada, y que los avisos de pendientes llegan bien. Se probará en un testeo general al terminar el MVP.
+- Falta la cuenta (inicio de sesión obligatorio con Apple o Google) y la sincronización entre dispositivos.
 
 La aplicación tiene dos variantes, desarrollo y producción, que se compilan con EAS. La CI comprueba el formato, el lint, los tipos y los tests en cada Pull Request.
 

@@ -198,6 +198,14 @@ El planificador usa el dominio, la capa de datos y, de la interfaz, solo el relo
 4. "Posponer" programa una notificación nueva (`snooze.<hábito>.<fecha>.<hora>`) para una hora después, con el mismo contenido. Si esa hora cae en el día siguiente, no programa nada. Las pospuestas no forman parte de la ventana de 60: usan el margen que deja hasta las 64 de iOS. Al refrescar, se cancelan las de hábitos ya cumplidos, archivados o eliminados, y las de otros días.
 5. Tocar el recordatorio fuera de sus botones solo abre la app, que muestra el día actual (RF-26).
 
+### Inicio y cierre de sesión
+
+1. Sin sesión, la app solo muestra la pantalla de inicio de sesión (RF-01). El inicio de sesión nativo de Apple o Google devuelve un token, que se envía a Supabase con `signInWithIdToken`.
+2. Las filas locales no llevan `user_id`: el dispositivo solo tiene los datos de una cuenta a la vez. Al subirlas, Supabase les asigna el usuario de la sesión.
+3. **Primer inicio de sesión (RF-38):** la primera sincronización sube todo lo que hay en la base local y baja lo que ya tenía la cuenta. Como los identificadores son UUID generados en cada dispositivo, no chocan, y el resultado es la unión de los dos.
+4. **Cerrar sesión (RF-03):** si quedan filas sin subir, la interfaz avisa antes. Después se vacía la base local y se cancelan todas las notificaciones programadas.
+5. **Eliminar la cuenta (RF-04):** la app llama a una Edge Function de Supabase, que borra al usuario y revoca su token de Sign in with Apple (ver "Seguridad y privacidad"). Después la app vacía la base local, cancela las notificaciones y revoca el acceso de Google si entró con Google.
+
 ### Sincronización
 
 1. **Push:** se suben las filas modificadas en el dispositivo desde la última sincronización.
@@ -210,7 +218,7 @@ El planificador usa el dominio, la capa de datos y, de la interfaz, solo el relo
 - Cada fila de Supabase lleva `user_id`, y las políticas de **Row Level Security** impiden que un usuario lea o modifique datos de otro.
 - La app usa solo la clave pública (`anon`) de Supabase. Ninguna clave privada vive en la app ni en el repositorio.
 - Los secretos y la configuración por entorno van en variables de entorno de EAS, nunca en git (ver `.gitignore`).
-- Eliminar la cuenta (RF-04) borra al usuario y, en cascada, todos sus datos.
+- Eliminar la cuenta (RF-04) borra al usuario y, en cascada, todos sus datos. La App Store lo exige a toda app que permita crear una cuenta ([App Store Review Guidelines 5.1.1(v)](https://developer.apple.com/app-store/review/guidelines/#5.1.1)), y Apple pide además [revocar el token de Sign in with Apple](https://developer.apple.com/support/offering-account-deletion-in-your-app/). Las dos cosas necesitan claves privadas, así que las hace una Edge Function de Supabase, nunca la app.
 
 ## 8. Entornos y publicación
 
@@ -234,6 +242,7 @@ El planificador usa el dominio, la capa de datos y, de la interfaz, solo el relo
 | iOS solo mantiene 64 notificaciones locales pendientes por app | Ventana deslizante de recordatorios, que se recalcula en cada apertura y cambio ([ADR-0005](adr/0005-recordatorios-locales-en-ventana-deslizante.md)) |
 | Si la app no se abre en varios días, la ventana de recordatorios se agota | Tarea en segundo plano que la rellena; aviso en la app si los permisos están desactivados |
 | El plan gratuito de Supabase pausa el proyecto tras 7 días sin peticiones | Con el uso diario de la app no ocurre; si ocurre, se reactiva desde el panel sin perder datos |
+| Apple puede rechazar la app en la revisión por obligar a iniciar sesión: pide que, si las funciones no dependen de una cuenta, se pueda usar sin ella ([App Store Review Guidelines 5.1.1(v)](https://developer.apple.com/app-store/review/guidelines/#5.1.1)) | La copia en la nube y el uso en varios dispositivos (RF-05) son funciones de cuenta, lo que justifica pedirla. No afecta al uso personal ni a TestFlight interno. Se revisará antes de enviar la app a la App Store; la alternativa es permitir usarla sin cuenta |
 | Dependencia de EAS para compilar iOS (no hay Mac) | Asumida en [ADR-0002](adr/0002-expo-como-plataforma.md); alternativa: alquilar un Mac en la nube |
 | Hecho en un dispositivo, recordatorio en otro | El recordatorio del otro dispositivo puede sonar si no ha sincronizado. Aceptable con un solo dispositivo por usuario |
 | Un aviso de pendientes suena aunque todo esté cumplido | Pasa si se cumplió el último hábito sin que la app refrescara las notificaciones (por ejemplo, si fallan los botones en segundo plano o en otro dispositivo). Se refresca tras cada registro y cada botón; con la sincronización, habrá que refrescar también al recibir cambios |
