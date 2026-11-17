@@ -240,7 +240,7 @@ export function Sheet({
             styles.container,
             atBottom
               ? { bottom: 0, paddingBottom: insets.bottom + spacing.sm }
-              : // The first line of a top sheet sits where the date of the screen is.
+              : // A top sheet starts just above the date of the screen, which it covers.
                 { top: 0, paddingTop: insets.top + topGap - spacing.sm },
             sheetStyle,
           ]}

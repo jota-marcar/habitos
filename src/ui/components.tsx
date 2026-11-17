@@ -107,19 +107,35 @@ export function Section({
   );
 }
 
-/** A text field with a label, to place inside a Section. */
+/**
+ * A text field to place inside a Section: its label on the left and what is typed on the
+ * right. With `labelHidden` the field takes the whole row and is typed from the left, for
+ * free text with spaces: iOS does not draw the space at the end of a right-aligned field
+ * until another character follows it.
+ */
 export function Field({
   label,
+  labelHidden = false,
   ...props
-}: { label: string } & Omit<TextInputProps, "style" | "accessibilityLabel">) {
+}: {
+  label: string;
+  /** The label is only read by screen readers: the placeholder says what the field is. */
+  labelHidden?: boolean;
+} & Omit<TextInputProps, "style" | "accessibilityLabel">) {
   const colors = useColors();
   return (
     <View style={styles.field}>
-      <Text style={[styles.fieldLabel, { color: colors.text }]}>{label}</Text>
+      {labelHidden ? null : (
+        <Text style={[styles.fieldLabel, { color: colors.text }]}>{label}</Text>
+      )}
       <TextInput
         accessibilityLabel={label}
         placeholderTextColor={colors.textSecondary}
-        style={[styles.fieldInput, { color: colors.text }]}
+        style={[
+          styles.fieldInput,
+          !labelHidden && styles.fieldInputRight,
+          { color: colors.text },
+        ]}
         {...props}
       />
     </View>
@@ -229,7 +245,8 @@ const styles = StyleSheet.create({
   error: { fontSize: fontSize.caption, paddingHorizontal: spacing.md },
   field: { alignItems: "center", flexDirection: "row", gap: spacing.md },
   fieldLabel: { fontSize: fontSize.body },
-  fieldInput: { flex: 1, fontSize: fontSize.body, textAlign: "right" },
+  fieldInput: { flex: 1, fontSize: fontSize.body },
+  fieldInputRight: { textAlign: "right" },
   segments: { flexDirection: "row", gap: spacing.sm },
   segment: {
     alignItems: "center",

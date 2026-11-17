@@ -172,7 +172,8 @@ export function HabitFormScreen({
       <Section title="Hábito" error={messages.name}>
         <Field
           label="Nombre"
-          placeholder="Meditar"
+          labelHidden
+          placeholder="Nombre"
           value={values.name}
           onChangeText={(name) => update({ name })}
           autoFocus={!editing}
