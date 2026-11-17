@@ -3,16 +3,17 @@
 
 import type { LocalDateTime } from "@/domain/times";
 
-/** A reminder notification that has to warn at a minute of a local day. */
+/** A notification that has to warn at a minute of a local day: a reminder or a digest. */
 export interface PlannedNotification {
-  /** Stable while it is the same reminder on the same day. */
+  /** Stable while it is the same reminder, or the same digest, on the same day. */
   readonly id: string;
   readonly at: LocalDateTime;
   readonly title: string;
   readonly body: string | null;
-  readonly habitId: string;
-  /** The category, which gives the notification its buttons (RF-25). */
-  readonly category: string;
+  /** The habit of a reminder, or null for a pending digest, which names several (RF-37). */
+  readonly habitId: string | null;
+  /** The category, which gives the notification its buttons (RF-25), or null for none. */
+  readonly category: string | null;
 }
 
 /** A notification already scheduled on the device. */

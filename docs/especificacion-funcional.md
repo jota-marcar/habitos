@@ -37,6 +37,7 @@ A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo
 | **Día** | `day` | Periodo de 00:00 a 23:59 en la hora local del dispositivo. |
 | **Recordatorio** | `Reminder` | Aviso a una hora concreta para que el usuario no olvide un hábito. |
 | **Posponer** | `snooze` | Aplazar un recordatorio para recibirlo de nuevo más tarde. |
+| **Aviso de pendientes** | `PendingDigest` | Aviso a una hora fija del día que nombra los hábitos de ese día que siguen sin cumplir. |
 | **Color** | `color` | Color que el usuario da a un hábito, de entre los de una paleta, para agruparlo con otros o distinguirlo de ellos. |
 | **Archivar** | `archive` | Retirar un hábito de uso sin borrar su historial. |
 | **Calendario** | `calendar` | Cuadrícula de un mes con la que se elige el día que se quiere ver. |
@@ -168,6 +169,11 @@ Es la pantalla principal de la aplicación (ver 3.1).
   - **Ambos:** posponerlo 1 hora. El tiempo es el mismo para todos los hábitos. Un recordatorio no sale del día de su hábito: si al posponerlo caería en el día siguiente, no se vuelve a enviar.
 - **RF-26.** Al tocar el recordatorio (fuera de sus botones), se abre la aplicación en el día actual.
 - **RF-27.** Los recordatorios funcionan sin conexión.
+- **RF-37.** Además de los recordatorios de cada hábito, la aplicación envía cada día dos avisos de pendientes, a las 17:00 y a las 22:00. Así el usuario no se olvida de registrar lo que ya ha hecho, y se le recuerda lo que aún no ha hecho, también los hábitos que no tienen recordatorios.
+  - Un aviso solo se envía si a esa hora quedan hábitos del día sin cumplir. Cuentan todos los pendientes, también los cuantitativos a medias y los que aún tienen un recordatorio más tarde.
+  - El aviso dice cuántos hábitos quedan y los nombra en el orden de la vista del día (RF-12). Si son muchos o tienen nombres largos, la lista se recorta (por ejemplo, "Leer, Beber agua, Correr y 2 más").
+  - Al tocarlo se abre la aplicación en el día actual, como un recordatorio (RF-26). No tiene botones, porque reúne varios hábitos.
+  - Las horas son fijas. Se podrán cambiar, y desactivar los avisos, cuando existan los ajustes (RF-32).
 - **RF-35.** La aplicación pide permiso para enviar recordatorios la primera vez que se abre. Si el usuario lo deniega, no se le vuelve a pedir al abrirla.
 - **RF-36.** Si los recordatorios no están permitidos, al guardar un hábito con recordatorios (al crearlo o al editarlo) se avisa al usuario con un diálogo del sistema, que explica que no los recibirá y ofrece abrir los ajustes del teléfono para activarlos. El hábito se guarda igualmente, con sus recordatorios, y estos empiezan a funcionar en cuanto se da el permiso, sin tener que volver a editarlo.
 
@@ -197,9 +203,7 @@ Funcionalidades descartadas por ahora, en orden aproximado de interés:
 
 ## 5. Preguntas abiertas
 
-Puntos a decidir antes de implementar la parte correspondiente:
-
-- **Resumen del día:** ¿un aviso al final del día con los hábitos pendientes?
+Puntos a decidir antes de implementar la parte correspondiente. Ahora mismo no queda ninguno: el último, un aviso al final del día con los hábitos pendientes, se resolvió con los avisos de pendientes (RF-37).
 
 ## 6. Visión a futuro: tres horizontes
 
