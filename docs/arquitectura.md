@@ -214,7 +214,7 @@ El planificador usa el dominio, la capa de datos y, de la interfaz, solo el relo
 2. **La sesión (RF-02)** la guarda el cliente de Supabase en el llavero de iOS, troceada en fragmentos de menos de 2 KB y legible tras el primer desbloqueo, también en segundo plano. El cliente renueva el token solo con la app en primer plano. Al abrir la app no se muestra nada hasta leer la sesión, para que la pantalla de inicio de sesión no aparezca un instante.
 3. Las filas locales no llevan `user_id`: el dispositivo solo tiene los datos de una cuenta a la vez. Al subirlas, Supabase les asigna el usuario de la sesión.
 4. **Primer inicio de sesión (RF-38):** la primera sincronización sube todo lo que hay en la base local y baja lo que ya tenía la cuenta. Como los identificadores son UUID generados en cada dispositivo, no chocan, y el resultado es la unión de los dos.
-5. **Cerrar sesión (RF-03),** desde **Ajustes** en el menú: si quedan filas con `pending_sync = 1` (salvo las creadas y eliminadas sin llegar a subirse), la interfaz avisa de que se perderán. Después se vacía la base local, se cancelan las notificaciones programadas y se retiran las ya mostradas, se olvida la cuenta de Google del dispositivo y se cierra la sesión de Supabase **solo en este dispositivo** (`scope: "local"`; por defecto la cerraría en todos). Los datos se borran antes de cerrar la sesión: si algo falla a medias, la sesión sigue abierta y se puede reintentar.
+5. **Cerrar sesión (RF-03),** desde **Ajustes** en el menú: primero se intenta sincronizar durante 5 segundos como mucho. Si aun así quedan filas con `pending_sync = 1` (salvo las creadas y eliminadas sin llegar a subirse), la interfaz avisa de que se perderán. Mientras se cierra la sesión, la sincronización espera: una bajada que terminara después de vaciar la base devolvería los datos. Después se vacía la base local, se cancelan las notificaciones programadas y se retiran las ya mostradas, se olvida la cuenta de Google del dispositivo y se cierra la sesión de Supabase **solo en este dispositivo** (`scope: "local"`; por defecto la cerraría en todos). Los datos se borran antes de cerrar la sesión: si algo falla a medias, la sesión sigue abierta y se puede reintentar.
 6. **Eliminar la cuenta (RF-04):** la app vuelve a pedir el inicio de sesión con Apple para obtener un código de autorización nuevo y llama a una Edge Function de Supabase, que borra al usuario y revoca su token de Sign in with Apple (ver "Seguridad y privacidad"). Después la app vacía la base local, cancela las notificaciones y revoca el acceso de Google si entró con Google.
 
 ### Sincronización
@@ -231,7 +231,14 @@ Cada sincronización (`src/sync/synchronize.ts`) hace primero el pull y después
    - Una fila que ha cambiado mientras subía sigue pendiente.
 4. **Sin transacciones largas:** cada paso se puede repetir sin daño, y el cursor solo avanza cuando la página entera está en el dispositivo. Una sincronización que falla a medias la completa la siguiente.
 5. **Conflictos:** gana el último cambio en llegar a la cuenta. Es aceptable porque cada cuenta tiene un solo usuario.
-6. **Cuándo se lanza:** al abrir la app, al volver a primer plano, tras cada cambio local y al recuperar la conexión.
+6. **Cuándo se lanza** (`src/sync/app-sync.ts` y `src/sync/scheduler.ts`):
+   - al abrir la app o iniciar sesión y al volver a primer plano;
+   - 2 segundos después de un cambio local, para subir juntos los toques seguidos;
+   - en cuanto un botón de un recordatorio apunta algo;
+   - en la tarea en segundo plano, antes de refrescar los recordatorios.
+
+   Nunca hay dos a la vez: las peticiones que llegan mientras una se ejecuta se juntan en una ejecución más. No hay detector de conexión, que necesitaría un módulo nativo. Una sincronización que falla, por ejemplo sin conexión, se reintenta a los 30 s, 1 min, 2 min y después cada 5 min mientras la app está abierta, y volver a la app la lanza de nuevo.
+7. **Después de una bajada que cambia algo,** se refrescan los recordatorios y la pantalla vuelve a leer el día sin reordenarlo, como tras un botón de un recordatorio.
 
 El motor depende de la interfaz `Remote`, no de Supabase. En los tests, la implementa una cuenta en memoria. En la app, `supabase-remote.ts`, que se prueba de punta a punta en la CI contra un Supabase local con dos dispositivos.
 

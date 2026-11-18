@@ -5,6 +5,7 @@ import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { signOut } from "@/auth/sign-out";
 import { hasPendingChanges } from "@/data/account-data";
+import { syncNow } from "@/sync/app-sync";
 import { Section } from "@/ui/components";
 import { useDatabase } from "@/ui/database";
 import { useSession } from "@/ui/session";
@@ -17,6 +18,9 @@ const PROVIDER_NAMES: Readonly<Record<string, string>> = {
 };
 
 const SIGN_OUT_ERROR = "No se ha podido cerrar la sesión. Inténtalo de nuevo.";
+
+// How long signing out waits for the last changes to be uploaded before warning about them.
+const SYNC_BEFORE_SIGN_OUT_MS = 5_000;
 
 export default function Settings() {
   const colors = useColors();
@@ -31,7 +35,14 @@ export default function Settings() {
 
   const confirmSignOut = async () => {
     if (busy) return;
-    const pending = await hasPendingChanges(db);
+    setBusy(true);
+    let pending: boolean;
+    try {
+      await uploadLastChanges();
+      pending = await hasPendingChanges(db);
+    } finally {
+      setBusy(false);
+    }
     Alert.alert(
       "Cerrar sesión",
       pending
@@ -46,6 +57,18 @@ export default function Settings() {
         },
       ],
     );
+  };
+
+  // The changes not uploaded yet are tried first, for a while: they would be lost.
+  const uploadLastChanges = async () => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      syncNow(db),
+      new Promise((resolve) => {
+        timer = setTimeout(resolve, SYNC_BEFORE_SIGN_OUT_MS);
+      }),
+    ]);
+    clearTimeout(timer);
   };
 
   // Once the session is closed, the navigation goes to the sign-in screen by itself.

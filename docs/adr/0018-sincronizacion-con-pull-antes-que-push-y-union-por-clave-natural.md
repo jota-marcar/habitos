@@ -57,6 +57,11 @@
 - **Push:** sube las filas pendientes, también las borradas, y guarda el `updated_at` que devuelve el servidor. Solo desmarca `pending_sync` si la fila no ha cambiado mientras subía, con una comparación de todas sus columnas en la misma sentencia.
 - **Sin transacciones largas:** las sentencias son idempotentes y el cursor solo avanza cuando toda la página está en el dispositivo.
 - **Dueño de los datos (`sync_account`):** la primera sincronización apunta la cuenta de la sesión (RF-38). Si después sincroniza otra cuenta, los datos del dispositivo se borran antes, para no mezclarlos.
+- **Cuándo se lanza:**
+  - al abrir la app, al volver a ella, poco después de cada cambio local y en la tarea en segundo plano;
+  - nunca dos a la vez;
+  - sin detector de conexión, que es un módulo nativo y gastaría un build: una sincronización fallida se reintenta con esperas crecientes (30 s, 1, 2 y 5 min) mientras la app está abierta;
+  - se suspende mientras se cierra la sesión.
 - **Pruebas:** el motor se prueba con una cuenta en memoria que reproduce lo que importa del esquema (marcas compartidas por subida, claves foráneas y claves únicas). El adaptador de Supabase se prueba de punta a punta en la CI, con dos dispositivos contra un Supabase local ([ADR-0015](0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md)).
 
 ## Consecuencias
@@ -70,4 +75,4 @@
 - **Al cambiar de cuenta se pierden los cambios que la anterior no llegó a subir.** Solo ocurre si su sesión terminó sin cerrarla.
 - **Las tablas `sync_cursors` y `sync_account` solo existen en el dispositivo** y se vacían al cerrar sesión, junto con los datos.
 - **No cambia el esquema de la nube.**
-- **Quedan para la integración en la app:** cuándo se lanza la sincronización, cómo se reintenta y cómo se refrescan la pantalla y los recordatorios tras una bajada.
+- **Tras recuperar la conexión, la subida puede tardar hasta 5 minutos** si la app sigue abierta y no se toca nada más. Volver a ella o hacer un cambio la lanza en el momento. Si algún día se añade un build con otros cambios nativos, un detector de conexión (`expo-network`) lo eliminaría.

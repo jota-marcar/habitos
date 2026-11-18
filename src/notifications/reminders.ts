@@ -4,6 +4,7 @@
 import * as Notifications from "expo-notifications";
 
 import type { Database } from "@/data/database";
+import { syncNow } from "@/sync/app-sync";
 import { newId, now } from "@/ui/clock";
 
 import { answerReminder, notifyReminderRecorded } from "./actions";
@@ -69,7 +70,11 @@ export function listenToReminders(openDatabase: () => Promise<Database>) {
       newId,
     );
     await refreshReminders(db);
-    if (recorded) notifyReminderRecorded();
+    if (recorded) {
+      notifyReminderRecorded();
+      // At once: iOS may suspend the app soon after answering in the background.
+      void syncNow(db);
+    }
   };
 
   const safely = (response: Notifications.NotificationResponse) =>

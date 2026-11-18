@@ -6,17 +6,18 @@ Proyecto de aprendizaje: se desarrolla con Claude Code e irá incorporando agent
 
 ## Estado
 
-Para usar la aplicación hay que iniciar sesión con Apple o Google. Los datos todavía se guardan solo en el dispositivo: falta la sincronización con la cuenta.
+Para usar la aplicación hay que iniciar sesión con Apple o Google. Los datos se guardan en el dispositivo y se sincronizan con la cuenta: la aplicación funciona sin conexión y sube los cambios cuando vuelve a tenerla.
 
 - Ya se puede crear, editar, archivar y eliminar hábitos (con su color), ver los de cada día ordenados por lo vencido y el próximo recordatorio, marcarlos o registrar la cantidad, y recorrer los días con el calendario.
 - Los recordatorios son notificaciones locales con el progreso del hábito, y tocarlas abre la aplicación. Además, a las 17:00 y a las 22:00 un aviso nombra los hábitos del día que siguen pendientes.
 - Probado en el iPhone: los botones de los recordatorios y los avisos de pendientes funcionan.
 - Ya se puede iniciar y cerrar sesión. En el iPhone, el inicio de sesión con Google funciona y el de Apple falla; se corregirá tras el testeo general.
-- Faltan la sincronización entre dispositivos y eliminar la cuenta.
+- Los datos se sincronizan con la cuenta al abrir la aplicación, al volver a ella, poco después de cada cambio y, sin conexión, en reintentos cada vez más espaciados. Al iniciar sesión por primera vez, los hábitos del dispositivo se juntan con los de la cuenta. Falta probarlo en el iPhone.
+- Falta eliminar la cuenta.
 
-Para cerrar el MVP, el orden es: sincronización, eliminar la cuenta, un único development build, un testeo general en el iPhone y la publicación en producción. Lo que falle en el testeo se apunta y se corrige al final, uno por uno, sin interrumpir las pruebas.
+Para cerrar el MVP, el orden es: eliminar la cuenta, un único development build, un testeo general en el iPhone y la publicación en producción. Lo que falle en el testeo se apunta y se corrige al final, uno por uno, sin interrumpir las pruebas.
 
-La aplicación tiene dos variantes, desarrollo y producción, que se compilan con EAS. La CI comprueba el formato, el lint, los tipos y los tests en cada Pull Request.
+La aplicación tiene dos variantes, desarrollo y producción, que se compilan con EAS. La CI comprueba el formato, el lint, los tipos y los tests en cada Pull Request, y la sincronización de punta a punta contra un Supabase local.
 
 ## Desarrollo
 
