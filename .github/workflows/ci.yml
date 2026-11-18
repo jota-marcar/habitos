@@ -34,7 +34,7 @@ jobs:
 
   # Cloud schema (supabase/): Row Level Security, constraints and alignment with the local
   # schema, on a local Supabase database (ADR-0015). Also the synchronization from end to end,
-  # against its API (ADR-0018).
+  # against its API (ADR-0018), and the Edge Functions, served by its Edge Runtime (ADR-0019).
   database:
     name: Database
     runs-on: ubuntu-latest
@@ -51,21 +51,22 @@ jobs:
           # Exact version: a new CLI does not run without review.
           version: 3.1.0
       # Postgres, with the migrations of supabase/migrations applied, and the services the app
-      # talks to: the API (Kong and PostgREST) and Auth (GoTrue). The rest are left out.
+      # talks to: the API (Kong and PostgREST), Auth (GoTrue) and the Edge Runtime, which serves
+      # supabase/functions. The rest are left out.
       - run: >-
           supabase start
-          --exclude studio,imgproxy,storage-api,realtime,edge-runtime,logflare,vector,postgres-meta,supavisor
-      # The address and the public key of the local API, for the tests of the synchronization.
-      # They are the fixed values of every local Supabase, not secrets.
+          --exclude studio,imgproxy,storage-api,realtime,logflare,vector,postgres-meta,supavisor
+      # The address and the keys of the local API, for the tests of the synchronization and of
+      # the Edge Functions. They are the fixed values of every local Supabase, not secrets.
       - name: Local API settings
         run: >-
           supabase status -o env
-          | grep -E '^(API_URL|ANON_KEY|PUBLISHABLE_KEY)='
+          | grep -E '^(API_URL|ANON_KEY|PUBLISHABLE_KEY|SERVICE_ROLE_KEY|SECRET_KEY)='
           | sed -E 's/^([A-Z_]+)="(.*)"$/\1=\2/'
           >> "$GITHUB_ENV"
       - name: pgTAP tests
         run: supabase test db
-      - name: Alignment with the local schema and synchronization
+      - name: Alignment with the local schema, synchronization and Edge Functions
         run: npm run test:schema
 
   audit:

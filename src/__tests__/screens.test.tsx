@@ -15,7 +15,7 @@ import {
   type AlertButton,
   type AppStateStatus,
 } from "react-native";
-import type { Session } from "@supabase/supabase-js";
+import { FunctionsHttpError, type Session } from "@supabase/supabase-js";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { createGestureController } from "react-native-gesture-handler/jest-utils";
 
@@ -63,12 +63,16 @@ jest.mock("expo-crypto", () => ({
   digestStringAsync: async (_: string, value: string) => `sha256(${value})`,
 }));
 
-// The Supabase client: signing in and out only reach these two calls.
+// The Supabase client: signing in and out only reach these two calls, and deleting the account
+// the Edge Function.
 const mockAuth = {
   signInWithIdToken: jest.fn(),
   signOut: jest.fn(),
 };
-jest.mock("@/auth/supabase", () => ({ supabase: () => ({ auth: mockAuth }) }));
+const mockFunctions = { invoke: jest.fn() };
+jest.mock("@/auth/supabase", () => ({
+  supabase: () => ({ auth: mockAuth, functions: mockFunctions }),
+}));
 // The synchronization: the screens only ask for it and listen to what it changes.
 const mockSync = {
   syncNow: jest.fn(async (_db: unknown) => {}),
@@ -113,6 +117,7 @@ const mockGoogle = {
   configure: jest.fn(),
   signIn: jest.fn(),
   signOut: jest.fn(),
+  revokeAccess: jest.fn(),
   hasPreviousSignIn: jest.fn(),
 };
 jest.mock("@react-native-google-signin/google-signin", () => {
@@ -132,7 +137,11 @@ jest.mock("@react-native-google-signin/google-signin", () => {
   };
 });
 
-function session(provider: string, email: string): Session {
+function session(
+  provider: string,
+  email: string,
+  providers: string[] = [provider],
+): Session {
   return {
     access_token: "access",
     refresh_token: "refresh",
@@ -141,7 +150,7 @@ function session(provider: string, email: string): Session {
     user: {
       id: "user-1",
       email,
-      app_metadata: { provider },
+      app_metadata: { provider, providers },
       user_metadata: {},
       aud: "authenticated",
       created_at: "2026-11-17T10:00:00Z",
@@ -211,12 +220,17 @@ beforeEach(async () => {
   for (const mock of [
     ...Object.values(mockAuth),
     ...Object.values(mockGoogle),
+    mockFunctions.invoke,
     mockAppleSignIn,
   ]) {
     mock.mockReset();
   }
   mockAuth.signInWithIdToken.mockResolvedValue({ data: {}, error: null });
   mockAuth.signOut.mockResolvedValue({ error: null });
+  mockFunctions.invoke.mockResolvedValue({
+    data: { deleted: true },
+    error: null,
+  });
   mockGoogle.hasPreviousSignIn.mockReturnValue(false);
   mockSync.syncNow.mockReset().mockResolvedValue(undefined);
   mockSync.syncSoon.mockReset();
@@ -1697,5 +1711,212 @@ describe("settings", () => {
       ),
     );
     expect(screen).toHavePathname("/settings");
+  });
+
+  describe("deleting the account (RF-04)", () => {
+    const WARNING =
+      "Se borrarán para siempre todos tus hábitos y su historial, en tu cuenta y en este iPhone. No se puede deshacer.";
+    const ERROR =
+      "No se ha podido eliminar la cuenta. Comprueba la conexión e inténtalo de nuevo.";
+
+    async function confirmDeletion(alert: jest.SpyInstance) {
+      await fireEvent.press(await screen.findByLabelText("Eliminar cuenta"));
+      await pressAlertButton(alert, "Eliminar cuenta");
+    }
+
+    test("with Google, deletes the account and then everything on the device", async () => {
+      const alert = jest.spyOn(Alert, "alert");
+      mockSession = session("google", "persona@gmail.com");
+      mockGoogle.hasPreviousSignIn.mockReturnValue(true);
+      await addBoolean("walk", "Pasear", "08:30");
+      mockScheduled.set("reminder", {});
+      await renderApp("/settings");
+
+      await fireEvent.press(await screen.findByLabelText("Eliminar cuenta"));
+      expect(alert).toHaveBeenCalledWith(
+        "Eliminar cuenta",
+        WARNING,
+        expect.any(Array),
+      );
+      await pressAlertButton(alert, "Cancelar");
+      expect(mockFunctions.invoke).not.toHaveBeenCalled();
+
+      await confirmDeletion(alert);
+
+      await waitFor(() =>
+        expect(mockAuth.signOut).toHaveBeenCalledWith({ scope: "local" }),
+      );
+      expect(mockFunctions.invoke).toHaveBeenCalledWith("delete-account", {
+        body: { appleAuthorizationCode: undefined },
+      });
+      expect(mockAppleSignIn).not.toHaveBeenCalled();
+      expect(await listHabits(db)).toEqual([]);
+      expect(await listReminders(db)).toEqual([]);
+      expect(mockScheduled.size).toBe(0);
+      expect(mockGoogle.revokeAccess).toHaveBeenCalled();
+    });
+
+    test("with Apple, asks Apple for a new authorization, which the function revokes", async () => {
+      const alert = jest.spyOn(Alert, "alert");
+      mockAppleSignIn.mockResolvedValue({ authorizationCode: "code" });
+      await renderApp("/settings");
+
+      await fireEvent.press(await screen.findByLabelText("Eliminar cuenta"));
+      expect(alert).toHaveBeenCalledWith(
+        "Eliminar cuenta",
+        `${WARNING} Para terminar, confírmalo con Apple.`,
+        expect.any(Array),
+      );
+      await pressAlertButton(alert, "Eliminar cuenta");
+
+      await waitFor(() => expect(mockAuth.signOut).toHaveBeenCalled());
+      expect(mockAppleSignIn).toHaveBeenCalledWith({ requestedScopes: [] });
+      expect(mockFunctions.invoke).toHaveBeenCalledWith("delete-account", {
+        body: { appleAuthorizationCode: "code" },
+      });
+      // Google was not used: there is nothing to disconnect.
+      expect(mockGoogle.revokeAccess).not.toHaveBeenCalled();
+    });
+
+    test("an account of Google linked to Apple asks Apple too", async () => {
+      const alert = jest.spyOn(Alert, "alert");
+      mockSession = session("google", "persona@gmail.com", ["google", "apple"]);
+      mockAppleSignIn.mockResolvedValue({ authorizationCode: "code" });
+      await renderApp("/settings");
+
+      await confirmDeletion(alert);
+
+      await waitFor(() =>
+        expect(mockFunctions.invoke).toHaveBeenCalledWith("delete-account", {
+          body: { appleAuthorizationCode: "code" },
+        }),
+      );
+    });
+
+    test("if the sign-in with Apple is cancelled, nothing changes", async () => {
+      const alert = jest.spyOn(Alert, "alert");
+      mockAppleSignIn.mockRejectedValue({ code: "ERR_REQUEST_CANCELED" });
+      await addBoolean("walk", "Pasear");
+      await renderApp("/settings");
+
+      await confirmDeletion(alert);
+
+      await waitFor(() => expect(mockAppleSignIn).toHaveBeenCalled());
+      expect(mockFunctions.invoke).not.toHaveBeenCalled();
+      expect(alert).toHaveBeenCalledTimes(1);
+      expect(await listHabits(db)).toHaveLength(1);
+    });
+
+    test.each([
+      ["Apple fails", { appleFails: true, error: null }],
+      [
+        "the function cannot be reached",
+        { appleFails: false, error: new Error("Offline.") },
+      ],
+      [
+        "the function answers with an error",
+        {
+          appleFails: false,
+          error: new FunctionsHttpError({
+            json: async () => ({ error: "apple_unavailable" }),
+          }),
+        },
+      ],
+      [
+        "the answer of the function cannot be read",
+        {
+          appleFails: false,
+          error: new FunctionsHttpError({
+            json: async () => {
+              throw new Error("Not JSON.");
+            },
+          }),
+        },
+      ],
+    ])(
+      "if %s, it says so and nothing changes",
+      async (_case, { appleFails, error }) => {
+        const alert = jest.spyOn(Alert, "alert");
+        if (appleFails)
+          mockAppleSignIn.mockRejectedValue(new Error("Failure."));
+        else mockAppleSignIn.mockResolvedValue({ authorizationCode: "code" });
+        mockFunctions.invoke.mockResolvedValue({ data: null, error });
+        await addBoolean("walk", "Pasear");
+        await renderApp("/settings");
+
+        await confirmDeletion(alert);
+
+        await waitFor(() =>
+          expect(alert).toHaveBeenLastCalledWith("Eliminar cuenta", ERROR),
+        );
+        expect(await listHabits(db)).toHaveLength(1);
+        expect(mockAuth.signOut).not.toHaveBeenCalled();
+        expect(screen).toHavePathname("/settings");
+      },
+    );
+
+    test("if Apple gives no authorization code, it says so", async () => {
+      const alert = jest.spyOn(Alert, "alert");
+      mockAppleSignIn.mockResolvedValue({ authorizationCode: null });
+      await renderApp("/settings");
+
+      await confirmDeletion(alert);
+
+      await waitFor(() =>
+        expect(alert).toHaveBeenLastCalledWith("Eliminar cuenta", ERROR),
+      );
+      expect(mockFunctions.invoke).not.toHaveBeenCalled();
+    });
+
+    test("with another Apple ID than the account's, it says so", async () => {
+      const alert = jest.spyOn(Alert, "alert");
+      mockAppleSignIn.mockResolvedValue({ authorizationCode: "code" });
+      mockFunctions.invoke.mockResolvedValue({
+        data: null,
+        error: new FunctionsHttpError({
+          json: async () => ({ error: "apple_account_mismatch" }),
+        }),
+      });
+      await renderApp("/settings");
+
+      await confirmDeletion(alert);
+
+      await waitFor(() =>
+        expect(alert).toHaveBeenLastCalledWith(
+          "Eliminar cuenta",
+          "Lo has confirmado con un Apple ID distinto del de tu cuenta. Inténtalo de nuevo con el mismo.",
+        ),
+      );
+      expect(mockAuth.signOut).not.toHaveBeenCalled();
+    });
+
+    test("once the account is deleted, the device forgets it even if a step fails", async () => {
+      const alert = jest.spyOn(Alert, "alert");
+      mockSession = session("google", "persona@gmail.com");
+      mockGoogle.hasPreviousSignIn.mockReturnValue(true);
+      mockGoogle.revokeAccess.mockRejectedValue(new Error("Offline."));
+      await addBoolean("walk", "Pasear");
+      await renderApp("/settings");
+
+      await confirmDeletion(alert);
+
+      await waitFor(() =>
+        expect(mockAuth.signOut).toHaveBeenCalledWith({ scope: "local" }),
+      );
+      expect(await listHabits(db)).toEqual([]);
+    });
+
+    test("if signing out fails at the end, it says so", async () => {
+      const alert = jest.spyOn(Alert, "alert");
+      mockSession = session("google", "persona@gmail.com");
+      mockAuth.signOut.mockRejectedValue(new Error("Keychain failure."));
+      await renderApp("/settings");
+
+      await confirmDeletion(alert);
+
+      await waitFor(() =>
+        expect(alert).toHaveBeenLastCalledWith("Eliminar cuenta", ERROR),
+      );
+    });
   });
 });

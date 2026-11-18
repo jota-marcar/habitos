@@ -82,7 +82,7 @@ src/
   notifications/  Planificador de recordatorios y gestión de acciones
   auth/           Inicio y cierre de sesión, eliminación de cuenta
   ui/             Componentes visuales reutilizables, tokens de estilo y hooks de datos de las pantallas
-supabase/         Migraciones SQL y políticas de seguridad del backend
+supabase/         Migraciones SQL, políticas de seguridad y Edge Functions del backend
 ```
 
 Regla de dependencias: `app` y `ui` pueden usar todo; `domain` no depende de nada. Así las reglas más delicadas (qué hábitos tocan un día, cuándo está cumplido, qué recordatorios hay que programar) son funciones puras que se prueban con tests unitarios rápidos. ESLint impone esta regla en `src/domain`.
@@ -91,7 +91,7 @@ Convenciones del dominio:
 
 - **No consulta el reloj ni genera identificadores.** "Hoy" y los UUID se le pasan como datos, así que el mismo dato de entrada da siempre el mismo resultado.
 - **Las reglas que pueden rechazar una operación devuelven códigos de error** (por ejemplo, `name_empty`), no textos. La interfaz decide el mensaje.
-- **Los tests van junto al código** (`dates.ts` y `dates.test.ts`) y la cobertura del dominio, de la capa de datos y de la sincronización (salvo su adaptador de Supabase, que se prueba en la CI) debe ser del 100 %: `npm run verify` falla si baja.
+- **Los tests van junto al código** (`dates.ts` y `dates.test.ts`) y la cobertura del dominio, de la capa de datos, de la sincronización (salvo su adaptador de Supabase) y de las Edge Functions (salvo su punto de entrada, `index.ts`) debe ser del 100 %: `npm run verify` falla si baja. Lo que queda fuera se prueba de punta a punta en la CI.
 - **La capa de datos** (`src/data`) solo depende del dominio, y sus repositorios usan una interfaz mínima de base de datos en lugar de `expo-sqlite`. Así los tests ejecutan el SQL real con el SQLite integrado en Node ([ADR-0009](adr/0009-sql-directo-y-migraciones-propias-en-la-capa-de-datos-local.md)). ESLint impone también esta dependencia.
 
 Las pantallas están en `src/app/` porque es la ubicación de la plantilla de Expo; dentro solo van rutas, y los tests van fuera (en `src/__tests__/` o junto al código que prueban, fuera de `src/app/`). Los imports usan el alias `@/` → `src/`.
@@ -215,7 +215,11 @@ El planificador usa el dominio, la capa de datos y, de la interfaz, solo el relo
 3. Las filas locales no llevan `user_id`: el dispositivo solo tiene los datos de una cuenta a la vez. Al subirlas, Supabase les asigna el usuario de la sesión.
 4. **Primer inicio de sesión (RF-38):** la primera sincronización sube todo lo que hay en la base local y baja lo que ya tenía la cuenta. Como los identificadores son UUID generados en cada dispositivo, no chocan, y el resultado es la unión de los dos.
 5. **Cerrar sesión (RF-03),** desde **Ajustes** en el menú: primero se intenta sincronizar durante 5 segundos como mucho. Si aun así quedan filas con `pending_sync = 1` (salvo las creadas y eliminadas sin llegar a subirse), la interfaz avisa de que se perderán. Mientras se cierra la sesión, la sincronización espera: una bajada que terminara después de vaciar la base devolvería los datos. Después se vacía la base local, se cancelan las notificaciones programadas y se retiran las ya mostradas, se olvida la cuenta de Google del dispositivo y se cierra la sesión de Supabase **solo en este dispositivo** (`scope: "local"`; por defecto la cerraría en todos). Los datos se borran antes de cerrar la sesión: si algo falla a medias, la sesión sigue abierta y se puede reintentar.
-6. **Eliminar la cuenta (RF-04):** la app vuelve a pedir el inicio de sesión con Apple para obtener un código de autorización nuevo y llama a una Edge Function de Supabase, que borra al usuario y revoca su token de Sign in with Apple (ver "Seguridad y privacidad"). Después la app vacía la base local, cancela las notificaciones y revoca el acceso de Google si entró con Google.
+6. **Eliminar la cuenta (RF-04),** desde **Ajustes**, tras una alerta de confirmación ([ADR-0019](adr/0019-eliminacion-de-la-cuenta-con-una-edge-function-que-revoca-sign-in-with-apple-antes-de-borrar-al-usuario.md)):
+   1. Si la cuenta usa Apple, la app vuelve a pedir el inicio de sesión con Apple, sin pedir datos, para obtener un código de autorización nuevo.
+   2. La sincronización espera y la app llama a la Edge Function `delete-account` con el token de la sesión y, si lo hay, el código.
+   3. La función comprueba al usuario con Auth. Si tiene identidad de Apple, cambia el código por un token, comprueba que es del mismo Apple ID y lo revoca. Después borra al usuario, y la cascada borra sus datos. En este orden, un fallo siempre se puede reintentar.
+   4. Solo si la función confirma el borrado, la app vacía la base local, cancela y retira las notificaciones, revoca el acceso de Google si se entró con Google en el dispositivo y cierra la sesión local. Lo intenta todo aunque falle un paso: la cuenta ya no existe.
 
 ### Sincronización
 
@@ -250,7 +254,7 @@ El motor depende de la interfaz `Remote`, no de Supabase. En los tests, la imple
 - La app usa solo la clave pública (*publishable key*) de Supabase. Ninguna clave privada vive en la app ni en el repositorio.
 - La sesión vive en el llavero de iOS, no en un fichero de la app, así que no entra en las copias sin cifrar ([ADR-0017](adr/0017-inicio-de-sesion-nativo-con-apple-y-google-y-sesion-en-el-llavero.md)). El llavero sobrevive a desinstalar la app: al reinstalarla, la sesión sigue abierta.
 - Los secretos y la configuración por entorno van en variables de entorno de EAS, nunca en git (ver `.gitignore`). La URL de Supabase, su clave pública y los clientes de Google llegan como `EXPO_PUBLIC_*` del entorno de EAS de cada perfil; en el PC, `eas env:pull` las deja en `.env.local` (ver [docs/supabase.md](supabase.md#8-inicio-de-sesión-con-apple-y-google)).
-- Eliminar la cuenta (RF-04) borra al usuario y, en cascada, todos sus datos. La App Store lo exige a toda app que permita crear una cuenta ([App Store Review Guidelines 5.1.1(v)](https://developer.apple.com/app-store/review/guidelines/#5.1.1)), y Apple pide además [revocar el token de Sign in with Apple](https://developer.apple.com/support/offering-account-deletion-in-your-app/). Las dos cosas necesitan claves privadas, así que las hace una Edge Function de Supabase, nunca la app.
+- Eliminar la cuenta (RF-04) borra al usuario y, en cascada, todos sus datos. La App Store lo exige a toda app que permita crear una cuenta ([App Store Review Guidelines 5.1.1(v)](https://developer.apple.com/app-store/review/guidelines/#5.1.1)), y Apple pide además [revocar el token de Sign in with Apple](https://developer.apple.com/support/offering-account-deletion-in-your-app/). Las dos cosas necesitan claves privadas, así que las hace una Edge Function de Supabase, nunca la app. La clave `.p8` de Apple es un secreto de cada proyecto de Supabase ([ADR-0019](adr/0019-eliminacion-de-la-cuenta-con-una-edge-function-que-revoca-sign-in-with-apple-antes-de-borrar-al-usuario.md)).
 
 ## 8. Entornos y publicación
 

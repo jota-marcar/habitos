@@ -1,6 +1,6 @@
 # Supabase: puesta en marcha y migraciones
 
-Guía de los pasos que se hacen fuera del repositorio: crear los proyectos de Supabase, enlazarlos con la CLI, aplicarles el esquema y configurar el inicio de sesión con Apple y Google. Lo técnico está en [arquitectura.md](arquitectura.md) y en los ADR [0003](adr/0003-supabase-como-backend.md), [0015](adr/0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md) y [0016](adr/0016-cursor-de-sincronizacion-serializado-por-usuario.md).
+Guía de los pasos que se hacen fuera del repositorio: crear los proyectos de Supabase, enlazarlos con la CLI, aplicarles el esquema, configurar el inicio de sesión con Apple y Google y desplegar la eliminación de la cuenta. Lo técnico está en [arquitectura.md](arquitectura.md) y en los ADR [0003](adr/0003-supabase-como-backend.md), [0015](adr/0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md), [0016](adr/0016-cursor-de-sincronizacion-serializado-por-usuario.md) y [0019](adr/0019-eliminacion-de-la-cuenta-con-una-edge-function-que-revoca-sign-in-with-apple-antes-de-borrar-al-usuario.md).
 
 ## Qué hay en el repositorio
 
@@ -10,6 +10,9 @@ Guía de los pasos que se hacen fuera del repositorio: crear los proyectos de Su
 | `supabase/migrations/` | El esquema de la nube, como migraciones SQL que se aplican en orden |
 | `supabase/tests/database/` | Tests pgTAP de Row Level Security y restricciones. Corren en la CI |
 | `supabase/tests/schema-alignment.test.ts` | Comprueba que la nube y el dispositivo tienen las mismas columnas. Corre en la CI |
+| `supabase/tests/sync.test.ts` | La sincronización de punta a punta, con dos dispositivos. Corre en la CI |
+| `supabase/functions/delete-account/` | La Edge Function que elimina la cuenta (sección 9) |
+| `supabase/tests/delete-account.test.ts` | Esa función de punta a punta, servida por el Supabase local. Corre en la CI |
 
 Hay dos proyectos de Supabase, uno por entorno ([ADR-0008](adr/0008-variantes-de-desarrollo-y-produccion.md)). Nunca se mezclan sus datos ni sus claves.
 
@@ -140,7 +143,7 @@ Apunta los valores que vayas obteniendo en tu gestor de contraseñas o en una no
 
 EAS también puede activar esta capacidad al compilar, porque la app la declara (`usesAppleSignIn` en `app.json`). Hacerlo a mano no estorba y evita sorpresas.
 
-No hace falta crear un *Services ID* ni una clave `.p8`: solo los usa el inicio de sesión web. La clave hará falta más adelante, para eliminar la cuenta (RF-04).
+No hace falta crear un *Services ID*: solo lo usa el inicio de sesión web. La clave `.p8` no la necesita el inicio de sesión, sino eliminar la cuenta (sección 9).
 
 ### 8.2 Google Cloud: un proyecto por entorno
 
@@ -206,15 +209,77 @@ El inicio de sesión necesita un development build nuevo, porque añade código 
 1. La app abre en la pantalla de inicio de sesión.
 2. **Iniciar sesión con Apple** y **Iniciar sesión con Google** entran en la app.
 3. En **Authentication → Users** del proyecto de desarrollo aparece tu usuario, con el proveedor usado.
-4. **Ajustes → Cerrar sesión** vuelve a la pantalla de inicio de sesión. Los hábitos del dispositivo se borran: hasta que exista la sincronización, no están en la cuenta.
+4. **Ajustes → Cerrar sesión** vuelve a la pantalla de inicio de sesión. Los hábitos se borran del dispositivo, pero siguen en la cuenta.
+
+## 9. Eliminar la cuenta: la Edge Function `delete-account`
+
+Eliminar la cuenta (RF-04) lo hace la Edge Function `delete-account` ([ADR-0019](adr/0019-eliminacion-de-la-cuenta-con-una-edge-function-que-revoca-sign-in-with-apple-antes-de-borrar-al-usuario.md)). Revoca el acceso de Sign in with Apple y borra al usuario. Para revocar necesita una clave privada de Apple, propia de cada entorno. **Haz cada paso dos veces, una por entorno, sin mezclar nunca los valores.**
+
+### 9.1 Apple Developer: una clave de Sign in with Apple por entorno
+
+1. En [developer.apple.com/account](https://developer.apple.com/account) → **Certificates, Identifiers & Profiles** → **Keys**, pulsa **+**.
+2. **Key Name:** `Hábitos Dev Sign in with Apple`. Marca **Sign in with Apple** y pulsa **Configure**.
+3. **Primary App ID:** `com.jotamarcar.habitos.dev`. **Save** y **Continue**.
+4. **Register** y después **Download**. El fichero `AuthKey_XXXXXXXXXX.p8` **solo se puede descargar una vez**: guárdalo en tu gestor de contraseñas.
+5. Apunta el **Key ID** (los 10 caracteres del nombre del fichero) y tu **Team ID** (arriba a la derecha, o en **Membership details**).
+6. Repite con `Hábitos Sign in with Apple` y el App ID `com.jotamarcar.habitos`.
+
+### 9.2 Supabase: los secretos de la función
+
+La función lee cuatro secretos de su proyecto. En PowerShell, desde la carpeta del repositorio (enlazado con **desarrollo**, sección 4), sustituye la ruta, `TEAM_ID` y `KEY_ID_DEV`:
+
+```powershell
+$key = (Get-Content -Raw "RUTA\AuthKey_KEY_ID_DEV.p8") -replace "\r?\n", "\n"
+```
+
+```powershell
+supabase secrets set APPLE_TEAM_ID=TEAM_ID APPLE_KEY_ID=KEY_ID_DEV APPLE_CLIENT_ID=com.jotamarcar.habitos.dev "APPLE_PRIVATE_KEY=$key"
+```
+
+El primer comando deja la clave en una sola línea, con los saltos escritos como `\n`; la función la entiende así. Para producción, con su clave y su Key ID:
+
+```powershell
+$key = (Get-Content -Raw "RUTA\AuthKey_KEY_ID_PROD.p8") -replace "\r?\n", "\n"
+```
+
+```powershell
+supabase secrets set --remote=REF_PROD APPLE_TEAM_ID=TEAM_ID APPLE_KEY_ID=KEY_ID_PROD APPLE_CLIENT_ID=com.jotamarcar.habitos "APPLE_PRIVATE_KEY=$key"
+```
+
+Comprueba los nombres con `supabase secrets list` (y `--remote=REF_PROD`): muestra un resumen del valor, nunca el valor. Después, borra el `.p8` de la carpeta de descargas: ya está en tu gestor de contraseñas y en Supabase.
+
+### 9.3 Desplegar la función
+
+```powershell
+supabase functions deploy delete-account --use-api
+```
+
+`--use-api` empaqueta la función en los servidores de Supabase, sin Docker. Toma `verify_jwt = false` de `supabase/config.toml`: la función comprueba ella misma al usuario. Para producción, cuando la versión de la app que la usa vaya a llegar a TestFlight:
+
+```powershell
+supabase functions deploy delete-account --use-api --remote=REF_PROD
+```
+
+Repite el despliegue cada vez que cambie algo en `supabase/functions/delete-account/`.
+
+### 9.4 Probarlo
+
+No necesita un build nuevo. Con el development build instalado y `npm start` en marcha:
+
+1. Entra con **Google** y crea algún hábito.
+2. **Ajustes → Eliminar cuenta → Eliminar cuenta.** La app vuelve a la pantalla de inicio de sesión.
+3. En **Authentication → Users** de `habitos-dev`, el usuario ya no está, y en **Table Editor** no quedan filas suyas.
+4. En [myaccount.google.com/connections](https://myaccount.google.com/connections), Hábitos Dev ya no aparece.
+5. Con **Apple**, cuando su inicio de sesión funcione: la app pide confirmar con Apple antes de borrar. Después, en **Ajustes del iPhone → [tu nombre] → Iniciar sesión con Apple**, Hábitos Dev ya no aparece.
+
+Si algo falla, el registro de la función está en **Edge Functions → delete-account → Logs** del panel de Supabase.
 
 ## Qué no hay que hacer
 
-- No subas a git las contraseñas de las bases de datos, ni la `service_role` o claves secretas del proyecto. La app solo usa la clave pública (*publishable key*), que llega por las variables de entorno de EAS (sección 8).
+- No subas a git las contraseñas de las bases de datos, ni la `service_role` o claves secretas del proyecto, ni las claves `.p8` de Apple. La app solo usa la clave pública (*publishable key*), que llega por las variables de entorno de EAS (sección 8).
 - No edites una migración ya aplicada a un proyecto: el cambio va en una migración nueva.
 - No cambies el esquema desde el panel de Supabase (Table Editor o SQL Editor). Lo que no está en `supabase/migrations` se pierde al recrear un proyecto y no lo prueba la CI.
 
 ## Pendiente para los siguientes PR
 
-- **Eliminar la cuenta:** desplegar la Edge Function con `supabase functions deploy`.
 - **Automatizar `db push` desde la CI**, si aplicar las migraciones a mano empieza a repetirse.
