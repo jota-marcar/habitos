@@ -1,8 +1,15 @@
-// The settings, with the options of the account (RF-32): for now, signing out (RF-03).
+// The settings, with the options of the account (RF-32): signing out (RF-03) and deleting the
+// account (RF-04).
 
+import type { User } from "@supabase/supabase-js";
 import { useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import {
+  deleteAccount,
+  usesApple,
+  type DeleteAccountOutcome,
+} from "@/auth/delete-account";
 import { signOut } from "@/auth/sign-out";
 import { hasPendingChanges } from "@/data/account-data";
 import { syncNow } from "@/sync/app-sync";
@@ -18,6 +25,14 @@ const PROVIDER_NAMES: Readonly<Record<string, string>> = {
 };
 
 const SIGN_OUT_ERROR = "No se ha podido cerrar la sesión. Inténtalo de nuevo.";
+
+const DELETE_ACCOUNT_WARNING =
+  "Se borrarán para siempre todos tus hábitos y su historial, en tu cuenta y en este iPhone. No se puede deshacer.";
+const DELETE_ACCOUNT_APPLE_STEP = "Para terminar, confírmalo con Apple.";
+const DELETE_ACCOUNT_ERROR =
+  "No se ha podido eliminar la cuenta. Comprueba la conexión e inténtalo de nuevo.";
+const DELETE_ACCOUNT_APPLE_MISMATCH =
+  "Lo has confirmado con un Apple ID distinto del de tu cuenta. Inténtalo de nuevo con el mismo.";
 
 // How long signing out waits for the last changes to be uploaded before warning about them.
 const SYNC_BEFORE_SIGN_OUT_MS = 5_000;
@@ -82,6 +97,46 @@ export default function Settings() {
     }
   };
 
+  const confirmDeleteAccount = () => {
+    if (busy || session === null) return;
+    const user = session.user;
+    Alert.alert(
+      "Eliminar cuenta",
+      usesApple(user)
+        ? `${DELETE_ACCOUNT_WARNING} ${DELETE_ACCOUNT_APPLE_STEP}`
+        : DELETE_ACCOUNT_WARNING,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar cuenta",
+          style: "destructive",
+          onPress: () => void runDeleteAccount(user),
+        },
+      ],
+    );
+  };
+
+  // Once the account is deleted, the session is closed and the navigation goes to the sign-in
+  // screen by itself.
+  const runDeleteAccount = async (user: User) => {
+    setBusy(true);
+    let outcome: DeleteAccountOutcome;
+    try {
+      outcome = await deleteAccount(db, user);
+    } catch {
+      outcome = "failed";
+    }
+    if (outcome === "deleted") return;
+    setBusy(false);
+    if (outcome === "cancelled") return;
+    Alert.alert(
+      "Eliminar cuenta",
+      outcome === "apple_mismatch"
+        ? DELETE_ACCOUNT_APPLE_MISMATCH
+        : DELETE_ACCOUNT_ERROR,
+    );
+  };
+
   return (
     <ScrollView
       style={{ backgroundColor: colors.background }}
@@ -108,6 +163,13 @@ export default function Settings() {
           label="Cerrar sesión"
           destructive
           onPress={() => void confirmSignOut()}
+        />
+        <SheetOption
+          icon="trash"
+          fallbackIcon="×"
+          label="Eliminar cuenta"
+          destructive
+          onPress={confirmDeleteAccount}
         />
       </Section>
     </ScrollView>

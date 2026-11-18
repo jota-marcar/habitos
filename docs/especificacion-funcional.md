@@ -45,6 +45,7 @@ A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo
 | **Sesión** | `session` | Estado en el que el dispositivo tiene una cuenta iniciada y puede usar sus datos. |
 | **Iniciar sesión** | `signIn` | Entrar en la cuenta con Apple o Google desde el dispositivo. |
 | **Cerrar sesión** | `signOut` | Salir de la cuenta en el dispositivo: sus datos se borran de él, pero siguen en la cuenta. |
+| **Eliminar la cuenta** | `deleteAccount` | Borrar para siempre la cuenta y todos sus datos, en la cuenta y en el dispositivo, y desconectar la aplicación de Apple o de Google. |
 | **Cambios pendientes** | `pendingChanges` | Cambios hechos en el dispositivo que aún no se han copiado en la cuenta. |
 | **Ajustes** | `settings` | Pantalla con las opciones de la cuenta, que se abre desde el menú. |
 | **Opciones** | `options` | Acciones sobre un hábito que se abren al mantenerlo pulsado: corregir la cantidad, editar, archivar y eliminar. |

@@ -74,6 +74,26 @@ export async function signInWithApple(): Promise<SignInOutcome> {
   }
 }
 
+/**
+ * A fresh authorization code of Sign in with Apple, for deleting the account (RF-04,
+ * ADR-0019): the Edge Function exchanges it for a token and revokes it. Codes last five
+ * minutes and serve once, so one is asked for every time. No data are requested.
+ */
+export async function authorizeWithApple(): Promise<
+  { authorizationCode: string } | "cancelled" | "failed"
+> {
+  try {
+    const credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [],
+    });
+    if (credential.authorizationCode === null) return "failed";
+    return { authorizationCode: credential.authorizationCode };
+  } catch (error) {
+    if (hasCode(error, "ERR_REQUEST_CANCELED")) return "cancelled";
+    return "failed";
+  }
+}
+
 let googleConfigured = false;
 
 function configureGoogle(): void {
@@ -113,4 +133,15 @@ export async function signOutOfGoogle(): Promise<void> {
   } catch {
     // The session of the app is closed anyway: at worst, Google offers the same account again.
   }
+}
+
+/**
+ * Disconnects the app from the Google account signed in on the device (RF-04), and forgets
+ * it. Without one, there is nothing to disconnect.
+ */
+export async function revokeGoogleAccess(): Promise<void> {
+  if (!GoogleSignin.hasPreviousSignIn()) return;
+  configureGoogle();
+  await GoogleSignin.revokeAccess();
+  await GoogleSignin.signOut();
 }
