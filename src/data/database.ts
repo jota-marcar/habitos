@@ -4,12 +4,18 @@
 
 export type SqlValue = string | number | null;
 
+/** What a statement that returns no rows did. */
+export interface RunResult {
+  /** How many rows it inserted, updated or deleted. */
+  readonly changes: number;
+}
+
 export interface Database {
   /** Runs one or more statements without parameters. For schema changes. */
   execute(sql: string): Promise<void>;
 
   /** Runs one statement that returns no rows. */
-  run(sql: string, params?: readonly SqlValue[]): Promise<void>;
+  run(sql: string, params?: readonly SqlValue[]): Promise<RunResult>;
 
   /** Returns every row of a query. */
   all<Row>(sql: string, params?: readonly SqlValue[]): Promise<Row[]>;

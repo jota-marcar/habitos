@@ -60,8 +60,11 @@ export function syncState(
 }
 
 /** Marks every row of `table` as uploaded, as the synchronization will do. */
-export function markSynced(db: TestDatabase, table: string): Promise<void> {
-  return db.run(
+export async function markSynced(
+  db: TestDatabase,
+  table: string,
+): Promise<void> {
+  await db.run(
     `UPDATE ${table} SET pending_sync = 0, updated_at = '2026-11-11T10:00:00Z'`,
   );
 }

@@ -6,7 +6,7 @@ declare module "node:sqlite" {
   type Value = string | number | bigint | Uint8Array | null;
 
   interface Statement {
-    run(...params: Value[]): unknown;
+    run(...params: Value[]): { changes: number | bigint };
     all(...params: Value[]): Record<string, Value>[];
   }
 

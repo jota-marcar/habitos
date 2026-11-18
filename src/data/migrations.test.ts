@@ -33,6 +33,8 @@ describe("migrate", () => {
       "habit_versions",
       "habits",
       "reminders",
+      "sync_account",
+      "sync_cursors",
     ]);
     expect(await schemaVersion(db)).toBe(MIGRATIONS.length);
   });
@@ -144,6 +146,6 @@ describe("schema", () => {
     await expect(insert("r2")).rejects.toThrow();
 
     await db.run("UPDATE reminders SET deleted = 1 WHERE id = 'r1'");
-    await expect(insert("r2")).resolves.toBeUndefined();
+    await expect(insert("r2")).resolves.toEqual({ changes: 1 });
   });
 });

@@ -33,10 +33,16 @@ export async function hasPendingChanges(db: Database): Promise<boolean> {
   return false;
 }
 
+/**
+ * The state of the synchronization (ADR-0018). It goes with the data: the next account starts
+ * from the beginning, and its data are not taken for those of the previous one.
+ */
+const SYNC_STATE_TABLES = ["sync_cursors", "sync_account"] as const;
+
 /** Removes every row of the account from the device. The account keeps them in the cloud. */
 export async function deleteAccountData(db: Database): Promise<void> {
   await db.transaction(async () => {
-    for (const table of ACCOUNT_TABLES) {
+    for (const table of [...ACCOUNT_TABLES, ...SYNC_STATE_TABLES]) {
       await db.run(`DELETE FROM ${table}`);
     }
   });

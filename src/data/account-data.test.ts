@@ -132,6 +132,10 @@ describe("deleteAccountData", () => {
     await addFullHabit("read");
     await markSynced(db, "habits");
     await deleteHabit(db, "read");
+    await db.run(
+      "INSERT INTO sync_cursors VALUES ('habits', '2026-11-11T10:00:00Z', 'water')",
+    );
+    await db.run("INSERT INTO sync_account VALUES (1, 'user-1')");
 
     await deleteAccountData(db);
 
@@ -141,7 +145,7 @@ describe("deleteAccountData", () => {
         WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`,
     );
     expect(tables.map((table) => table.name).sort()).toEqual(
-      [...TABLES].sort(),
+      [...TABLES, "sync_account", "sync_cursors"].sort(),
     );
     for (const { name } of tables) {
       const count = await db.first<{ rows: number }>(

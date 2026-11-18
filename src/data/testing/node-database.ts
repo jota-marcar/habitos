@@ -22,7 +22,8 @@ export function openTestDatabase(): TestDatabase {
       db.exec(sql);
     },
     async run(sql, params = []) {
-      db.prepare(sql).run(...params);
+      const { changes } = db.prepare(sql).run(...params);
+      return { changes: Number(changes) };
     },
     async all<Row>(sql: string, params?: readonly SqlValue[]) {
       return all<Row>(sql, params);

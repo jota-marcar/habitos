@@ -24,7 +24,7 @@ describe("fromExpoSQLite", () => {
     const db = fromExpoSQLite(expo as unknown as ExpoSQLiteDatabase);
 
     await db.execute("CREATE TABLE t (id TEXT)");
-    await db.run("INSERT INTO t VALUES (?)", ["a"]);
+    const result = await db.run("INSERT INTO t VALUES (?)", ["a"]);
     const all = await db.all("SELECT id FROM t WHERE id = ?", ["a"]);
     const first = await db.first("SELECT id FROM t");
 
@@ -37,6 +37,7 @@ describe("fromExpoSQLite", () => {
       ["a"],
     );
     expect(expo.getFirstAsync).toHaveBeenCalledWith("SELECT id FROM t", []);
+    expect(result).toEqual({ changes: 1 });
     expect(all).toEqual([{ id: "a" }]);
     expect(first).toEqual({ id: "a" });
   });
