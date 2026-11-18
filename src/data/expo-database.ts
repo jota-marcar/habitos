@@ -25,7 +25,8 @@ export function fromExpoSQLite(db: ExpoSQLiteDatabase): Database {
       await db.execAsync(sql);
     },
     async run(sql, values) {
-      await db.runAsync(sql, params(values));
+      const { changes } = await db.runAsync(sql, params(values));
+      return { changes };
     },
     all(sql, values) {
       return db.getAllAsync(sql, params(values));

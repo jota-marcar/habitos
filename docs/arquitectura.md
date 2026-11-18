@@ -91,7 +91,7 @@ Convenciones del dominio:
 
 - **No consulta el reloj ni genera identificadores.** "Hoy" y los UUID se le pasan como datos, así que el mismo dato de entrada da siempre el mismo resultado.
 - **Las reglas que pueden rechazar una operación devuelven códigos de error** (por ejemplo, `name_empty`), no textos. La interfaz decide el mensaje.
-- **Los tests van junto al código** (`dates.ts` y `dates.test.ts`) y la cobertura del dominio y de la capa de datos debe ser del 100 %: `npm run verify` falla si baja.
+- **Los tests van junto al código** (`dates.ts` y `dates.test.ts`) y la cobertura del dominio, de la capa de datos y de la sincronización (salvo su adaptador de Supabase, que se prueba en la CI) debe ser del 100 %: `npm run verify` falla si baja.
 - **La capa de datos** (`src/data`) solo depende del dominio, y sus repositorios usan una interfaz mínima de base de datos en lugar de `expo-sqlite`. Así los tests ejecutan el SQL real con el SQLite integrado en Node ([ADR-0009](adr/0009-sql-directo-y-migraciones-propias-en-la-capa-de-datos-local.md)). ESLint impone también esta dependencia.
 
 Las pantallas están en `src/app/` porque es la ubicación de la plantilla de Expo; dentro solo van rutas, y los tests van fuera (en `src/__tests__/` o junto al código que prueban, fuera de `src/app/`). Los imports usan el alias `@/` → `src/`.
@@ -155,7 +155,7 @@ Decisiones del modelo:
 - **Qué recordatorios se programan:** a partir de ahora y por cercanía, los de cada hábito en sus días programados, salvo que el hábito esté cumplido ese día o archivado. Como mucho 60 ([ADR-0005](adr/0005-recordatorios-locales-en-ventana-deslizante.md)). Cada aviso lleva el progreso del hábito ese día para poder mostrarlo.
 - **Avisos de pendientes:** dos al día a horas fijas (17:00 y 22:00), los días en que queda algún hábito sin cumplir (RF-37). No se guardan en la base: se calculan, como los recordatorios. Comparten la ventana de 60 con ellos (ver "Programar los recordatorios").
 - **Campos de sincronización** en todas las tablas: identificador generado en el dispositivo (UUID), `updated_at` asignado por el servidor y `deleted` (borrado lógico) para propagar eliminaciones.
-- **En la base local** no existe `user_id` (es de un solo usuario) y cada tabla añade `pending_sync`, que marca las filas con cambios sin subir. Las claves únicas ignoran las filas borradas.
+- **En la base local** no existe `user_id` (es de un solo usuario) y cada tabla añade `pending_sync`, que marca las filas con cambios sin subir. Las claves únicas ignoran las filas borradas. Dos tablas solo existen en el dispositivo y guardan el estado de la sincronización: `sync_cursors`, hasta dónde ha bajado cada tabla, y `sync_account`, de qué cuenta son los datos ([ADR-0018](adr/0018-sincronizacion-con-pull-antes-que-push-y-union-por-clave-natural.md)).
 - **Migraciones locales:** lista ordenada en `src/data/migrations.ts`; la base guarda su versión y al abrir se aplican las que faltan. Una migración publicada no se edita.
 - **En la nube** (`supabase/migrations`) están las mismas tablas, columnas y claves únicas, con estas diferencias a propósito:
   - Cada tabla añade `user_id`, que por defecto es el usuario de la sesión y se borra en cascada con la cuenta.
@@ -219,10 +219,21 @@ El planificador usa el dominio, la capa de datos y, de la interfaz, solo el relo
 
 ### Sincronización
 
-1. **Push:** se suben las filas modificadas en el dispositivo desde la última sincronización. Los hábitos van antes que sus versiones, registros y recordatorios, que dependen de ellos por clave foránea.
-2. **Pull:** se descargan las filas que el servidor ha modificado desde el último `updated_at` recibido. El servidor pone en fila las escrituras de cada usuario antes de asignar `updated_at`, así que ninguna fila se confirma con una marca anterior a otra ya vista ([ADR-0016](adr/0016-cursor-de-sincronizacion-serializado-por-usuario.md)). Las filas de una misma transacción pueden compartir marca: el pull pagina por `(updated_at, id)` y aplicar una fila repetida no cambia nada.
-3. En caso de conflicto, gana la última escritura. Es aceptable porque cada cuenta tiene un solo usuario.
-4. Se lanza al abrir la app, al volver a primer plano, tras cada cambio local y al recuperar la conexión.
+Cada sincronización (`src/sync/synchronize.ts`) hace primero el pull y después el push, tabla a tabla y con los hábitos antes que sus versiones, registros y recordatorios, que dependen de ellos por clave foránea ([ADR-0018](adr/0018-sincronizacion-con-pull-antes-que-push-y-union-por-clave-natural.md)):
+
+1. **Dueño de los datos:** la primera sincronización apunta en `sync_account` la cuenta de la sesión, y lo que había en el dispositivo pasa a ser de ella (RF-38). Si sincroniza otra cuenta, porque una sesión terminó sin cerrarla, los datos del dispositivo se borran antes de seguir.
+2. **Pull:**
+   - Se descargan las filas que el servidor ha modificado desde el cursor de cada tabla (`sync_cursors`), por páginas en orden de `(updated_at, id)`. El servidor pone en fila las escrituras de cada usuario antes de asignar `updated_at`, así que ninguna fila se confirma con una marca anterior a otra ya vista ([ADR-0016](adr/0016-cursor-de-sincronizacion-serializado-por-usuario.md)). Las filas de una misma transacción pueden compartir marca, por eso el cursor incluye el `id`.
+   - Aplicar una fila no toca las que tienen cambios sin subir: esos cambios ganan y suben a continuación.
+   - Si una fila de la cuenta tiene la misma clave natural que una local pendiente (el mismo hábito y día, por ejemplo), la local toma el `id` de la cuenta y conserva sus valores.
+3. **Push:**
+   - Se suben las filas con `pending_sync = 1`, también las borradas, y se guarda el `updated_at` que asigna el servidor.
+   - Una fila que ha cambiado mientras subía sigue pendiente.
+4. **Sin transacciones largas:** cada paso se puede repetir sin daño, y el cursor solo avanza cuando la página entera está en el dispositivo. Una sincronización que falla a medias la completa la siguiente.
+5. **Conflictos:** gana el último cambio en llegar a la cuenta. Es aceptable porque cada cuenta tiene un solo usuario.
+6. **Cuándo se lanza:** al abrir la app, al volver a primer plano, tras cada cambio local y al recuperar la conexión.
+
+El motor depende de la interfaz `Remote`, no de Supabase. En los tests, la implementa una cuenta en memoria. En la app, `supabase-remote.ts`, que se prueba de punta a punta en la CI contra un Supabase local con dos dispositivos.
 
 ## 7. Seguridad y privacidad
 

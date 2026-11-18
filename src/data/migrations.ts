@@ -65,8 +65,28 @@ const INITIAL_SCHEMA = `
 // not restricted here, so that the palette can change without a migration.
 const HABIT_COLOR = `ALTER TABLE habits ADD COLUMN color TEXT;`;
 
+// The state of the synchronization, only on the device (ADR-0018):
+// - sync_cursors: for each table, the last row downloaded, in order of (updated_at, id).
+// - sync_account: the account the data on the device belong to, once it has synchronized.
+const SYNC_STATE = `
+  CREATE TABLE sync_cursors (
+    table_name TEXT PRIMARY KEY NOT NULL,
+    updated_at TEXT NOT NULL,
+    id TEXT NOT NULL
+  ) STRICT;
+
+  CREATE TABLE sync_account (
+    id INTEGER PRIMARY KEY NOT NULL CHECK (id = 1),
+    user_id TEXT NOT NULL
+  ) STRICT;
+`;
+
 /** Every migration, in order. The version of the schema is the position, starting at 1. */
-export const MIGRATIONS: readonly string[] = [INITIAL_SCHEMA, HABIT_COLOR];
+export const MIGRATIONS: readonly string[] = [
+  INITIAL_SCHEMA,
+  HABIT_COLOR,
+  SYNC_STATE,
+];
 
 /** The version of the schema of `db`: 0 for a new database. */
 export async function schemaVersion(db: Database): Promise<number> {

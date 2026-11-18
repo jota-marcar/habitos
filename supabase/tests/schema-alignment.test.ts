@@ -12,6 +12,9 @@ const DATABASE_URL =
   process.env.SUPABASE_DB_URL ??
   "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 
+/** Tables that exist on the device only, on purpose: the state of the synchronization. */
+const TABLES_ONLY_ON_DEVICE = ["sync_account", "sync_cursors"];
+
 /** Columns that exist on one side only, on purpose. */
 const ONLY_ON_DEVICE = ["pending_sync"];
 const ONLY_IN_CLOUD = ["user_id"];
@@ -34,6 +37,7 @@ async function deviceSchema(): Promise<Schema> {
     );
     const schema: Schema = {};
     for (const { name } of tables) {
+      if (TABLES_ONLY_ON_DEVICE.includes(name)) continue;
       const columns = await db.all<{ name: string; notnull: number }>(
         `PRAGMA table_info(${name})`,
       );
