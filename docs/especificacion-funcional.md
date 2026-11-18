@@ -183,7 +183,7 @@ Es la pantalla principal de la aplicación (ver 3.1).
   - Un aviso solo se envía si a esa hora quedan hábitos del día sin cumplir. Cuentan todos los pendientes, también los cuantitativos a medias y los que aún tienen un recordatorio más tarde.
   - El aviso dice cuántos hábitos quedan y los nombra en el orden de la vista del día (RF-12). Si son muchos o tienen nombres largos, la lista se recorta (por ejemplo, "Leer, Beber agua, Correr y 2 más").
   - Al tocarlo se abre la aplicación en el día actual, como un recordatorio (RF-26). No tiene botones, porque reúne varios hábitos.
-  - Las horas son fijas. Se podrán cambiar, y desactivar los avisos, cuando existan los ajustes (RF-32).
+  - Las horas son fijas y los avisos no se pueden desactivar (ver sección 4).
 - **RF-35.** La aplicación pide permiso para enviar recordatorios la primera vez que se abre. Si el usuario lo deniega, no se le vuelve a pedir al abrirla.
 - **RF-36.** Si los recordatorios no están permitidos, al guardar un hábito con recordatorios (al crearlo o al editarlo) se avisa al usuario con un diálogo del sistema, que explica que no los recibirá y ofrece abrir los ajustes del teléfono para activarlos. El hábito se guarda igualmente, con sus recordatorios, y estos empiezan a funcionar en cuanto se da el permiso, sin tener que volver a editarlo.
 
@@ -210,6 +210,7 @@ Funcionalidades descartadas por ahora, en orden aproximado de interés:
 10. Un listado de todos los hábitos, independiente del día. Solo haría falta si aparecen acciones que no encajan en las opciones de un hábito (RF-34), como reactivar archivados o reordenar.
 11. Pasar al día anterior o al siguiente sin abrir el calendario.
 12. Accesibilidad con lector de pantalla (VoiceOver): acciones equivalentes a los gestos para quien no puede verlos.
+13. Cambiar las horas de los avisos de pendientes (RF-37) o desactivarlos, desde los ajustes (RF-32).
 
 ## 5. Preguntas abiertas
 
