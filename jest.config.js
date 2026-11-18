@@ -4,8 +4,8 @@ module.exports = {
   // Loads the web implementation of Reanimated and Worklets, as Reanimated's testing guide
   // describes. Without it, the Reanimated mock of expo-router/testing-library fails to load.
   resolver: "react-native-reanimated/jest/resolver",
-  // The tests of supabase/ need the local Supabase database: they only run in the CI, with
-  // `npm run test:schema` (ADR-0015).
+  // The tests of supabase/ need the local Supabase: they only run in the CI, with their own
+  // configuration (`npm run test:schema`, jest.supabase.config.js, ADR-0015).
   testPathIgnorePatterns: ["/node_modules/", "<rootDir>/supabase/"],
   // Coverage is only measured, and required in full, for the domain (pure rules where
   // every branch is a business rule), the data layer (where a wrong query loses data) and

@@ -115,8 +115,8 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  phone.db.close();
-  tablet.db.close();
+  phone?.db.close();
+  tablet?.db.close();
 });
 
 test("the data of a device reach another device of the account (RF-05, RF-38)", async () => {
