@@ -10,9 +10,11 @@ Para usar la aplicación hay que iniciar sesión con Apple o Google. Los datos t
 
 - Ya se puede crear, editar, archivar y eliminar hábitos (con su color), ver los de cada día ordenados por lo vencido y el próximo recordatorio, marcarlos o registrar la cantidad, y recorrer los días con el calendario.
 - Los recordatorios son notificaciones locales con el progreso del hábito, y tocarlas abre la aplicación. Además, a las 17:00 y a las 22:00 un aviso nombra los hábitos del día que siguen pendientes.
-- Queda por probar en el iPhone que los botones de los recordatorios funcionan con la app en segundo plano y cerrada, y que los avisos de pendientes llegan bien. Se probará en un testeo general al terminar el MVP.
-- Ya se puede iniciar y cerrar sesión. Queda probarlo en el iPhone en cuanto haya un development build con los cambios nativos.
+- Probado en el iPhone: los botones de los recordatorios y los avisos de pendientes funcionan.
+- Ya se puede iniciar y cerrar sesión. En el iPhone, el inicio de sesión con Google funciona y el de Apple falla; se corregirá tras el testeo general.
 - Faltan la sincronización entre dispositivos y eliminar la cuenta.
+
+Para cerrar el MVP, el orden es: sincronización, eliminar la cuenta, un único development build, un testeo general en el iPhone y la publicación en producción. Lo que falle en el testeo se apunta y se corrige al final, uno por uno, sin interrumpir las pruebas.
 
 La aplicación tiene dos variantes, desarrollo y producción, que se compilan con EAS. La CI comprueba el formato, el lint, los tipos y los tests en cada Pull Request.
 
