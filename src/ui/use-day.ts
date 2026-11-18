@@ -31,6 +31,7 @@ import { localTimeOf } from "@/domain/times";
 import { keepGroups, sortDayHabits, type DayGroups } from "@/domain/order";
 import { onReminderRecorded } from "@/notifications/actions";
 import { refreshReminders } from "@/notifications/reminders";
+import { onSyncedChanges, syncSoon } from "@/sync/app-sync";
 
 import { msUntilTomorrow, newId, now, today } from "./clock";
 import { useDatabase } from "./database";
@@ -171,6 +172,12 @@ export function useDay(): Day {
     [load],
   );
 
+  // So may a synchronization, with what changed on another device (RF-05).
+  useEffect(
+    () => onSyncedChanges(() => void load(shown.current, false)),
+    [load],
+  );
+
   // Makes a change after the ones before it and reads the day again, without sorting it.
   const change = useCallback(
     (make: () => Promise<void>): Promise<void> => {
@@ -179,6 +186,7 @@ export function useDay(): Day {
         // Marking a habit done cancels its pending reminders of the day (RF-24); archiving
         // or deleting it, all of them.
         void refreshReminders(db);
+        syncSoon(db);
         await load(date, false);
       });
       // A failed write is reported to the caller but does not block the next ones.

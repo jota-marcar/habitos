@@ -16,6 +16,7 @@ import {
 import { isScheduledOn } from "@/domain/schedule";
 import { localTime, localTimeOf, type LocalTime } from "@/domain/times";
 import { refreshReminders } from "@/notifications/reminders";
+import { syncSoon } from "@/sync/app-sync";
 
 import {
   Button,
@@ -133,6 +134,7 @@ export function HabitFormScreen({
       if (rejected.length > 0) return;
       if (values.reminderTimes.length > 0) await warnIfRemindersNotAllowed();
       void refreshReminders(db);
+      syncSoon(db);
       router.back();
     } finally {
       setSaving(false);

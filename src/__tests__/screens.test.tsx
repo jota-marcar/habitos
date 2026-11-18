@@ -69,6 +69,22 @@ const mockAuth = {
   signOut: jest.fn(),
 };
 jest.mock("@/auth/supabase", () => ({ supabase: () => ({ auth: mockAuth }) }));
+// The synchronization: the screens only ask for it and listen to what it changes.
+const mockSync = {
+  syncNow: jest.fn(async (_db: unknown) => {}),
+  syncSoon: jest.fn(),
+  listeners: new Set<() => void>(),
+};
+jest.mock("@/sync/app-sync", () => ({
+  syncNow: (db: unknown) => mockSync.syncNow(db),
+  syncSoon: (db: unknown) => mockSync.syncSoon(db),
+  suspendSync: async () => {},
+  resumeSync: () => {},
+  onSyncedChanges: (listener: () => void) => {
+    mockSync.listeners.add(listener);
+    return () => mockSync.listeners.delete(listener);
+  },
+}));
 jest.mock("@/auth/config", () => ({
   readAuthConfig: () => ({
     supabaseUrl: "https://project.supabase.co",
@@ -202,6 +218,8 @@ beforeEach(async () => {
   mockAuth.signInWithIdToken.mockResolvedValue({ data: {}, error: null });
   mockAuth.signOut.mockResolvedValue({ error: null });
   mockGoogle.hasPreviousSignIn.mockReturnValue(false);
+  mockSync.syncNow.mockReset().mockResolvedValue(undefined);
+  mockSync.syncSoon.mockReset();
   db = await openMigratedDatabase();
 });
 
@@ -1114,6 +1132,26 @@ describe("reminders (RF-22 to RF-24, RF-36)", () => {
     expect(await screen.findByRole("checkbox", { checked: true })).toBeTruthy();
   });
 
+  test("shows at once what a synchronization brings from another device (RF-05)", async () => {
+    await addBoolean("walk", "Pasear");
+    await renderApp();
+    expect(await screen.findByTestId("habit-walk")).not.toBeChecked();
+
+    await saveEntry(db, { id: "e1", habitId: "walk", date: TODAY, value: 1 });
+    await act(async () => mockSync.listeners.forEach((listener) => listener()));
+
+    expect(await screen.findByRole("checkbox", { checked: true })).toBeTruthy();
+  });
+
+  test("a change is uploaded to the account in a moment (RF-28)", async () => {
+    await addBoolean("walk", "Pasear");
+    await renderApp();
+
+    await fireEvent.press(await screen.findByTestId("habit-walk"));
+
+    await waitFor(() => expect(mockSync.syncSoon).toHaveBeenCalledWith(db));
+  });
+
   test("marking a habit done cancels its reminder of today (RF-24)", async () => {
     await addBoolean("walk", "Pasear", "21:00");
     await renderApp();
@@ -1592,6 +1630,24 @@ describe("settings", () => {
     expect(mockScheduled.size).toBe(0);
     // Google was not used: there is nothing to forget.
     expect(mockGoogle.signOut).not.toHaveBeenCalled();
+  });
+
+  test("signing out uploads the last changes first, and then there is nothing to lose (RF-03)", async () => {
+    const alert = jest.spyOn(Alert, "alert");
+    await addBoolean("walk", "Pasear");
+    mockSync.syncNow.mockImplementation(markEverythingSynced);
+    await renderApp("/settings");
+
+    await fireEvent.press(await screen.findByLabelText("Cerrar sesión"));
+
+    await waitFor(() =>
+      expect(alert).toHaveBeenCalledWith(
+        "Cerrar sesión",
+        "Tus datos se borrarán de este iPhone, pero seguirán en tu cuenta.",
+        expect.any(Array),
+      ),
+    );
+    expect(mockSync.syncNow).toHaveBeenCalledWith(db);
   });
 
   test("warns that the changes not uploaded yet will be lost (RF-03)", async () => {
