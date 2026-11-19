@@ -141,24 +141,29 @@ export function HabitFormScreen({
     }
   };
 
+  // Touching an amount selects it, so that what is typed replaces it: a target of 2 becomes
+  // 3, not 23.
   const amounts = quantitative ? (
     <>
       <Field
         label="Meta"
         placeholder="2"
         keyboardType="decimal-pad"
+        selectTextOnFocus
         value={values.target}
         onChangeText={(target) => update({ target })}
       />
       <Field
         label="Unidad"
         placeholder="L"
+        selectTextOnFocus
         value={values.unit}
         onChangeText={(unit) => update({ unit })}
       />
       <Field
         label="Incremento"
         keyboardType="decimal-pad"
+        selectTextOnFocus
         value={values.increment}
         onChangeText={(increment) => update({ increment })}
       />

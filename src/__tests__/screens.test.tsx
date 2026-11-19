@@ -677,6 +677,20 @@ describe("new habit", () => {
     ]);
   });
 
+  test("touching an amount selects it, so that typing replaces it", async () => {
+    await renderApp("/habits/new");
+    await fireEvent.press(screen.getByText("Cantidad"));
+
+    for (const label of ["Meta", "Unidad", "Incremento"]) {
+      expect(screen.getByLabelText(label)).toHaveProp(
+        "selectTextOnFocus",
+        true,
+      );
+    }
+    // The name is not: touching it is usually to correct it.
+    expect(screen.getByLabelText("Nombre")).not.toHaveProp("selectTextOnFocus");
+  });
+
   test("shows the errors next to their fields and saves nothing", async () => {
     await renderApp("/habits/new");
 
