@@ -11,6 +11,7 @@ import {
 import {
   Alert,
   AppState,
+  ScrollView,
   StyleSheet,
   type AlertButton,
   type AppStateStatus,
@@ -675,6 +676,31 @@ describe("new habit", () => {
     expect(await listHabitVersions(db)).toEqual([
       expect.objectContaining({ target: 2, unit: "L", increment: 0.25 }),
     ]);
+  });
+
+  test("opening the reminder picker scrolls the form down to show it whole", async () => {
+    // The ScrollView of the tests is a class whose methods are mocks.
+    const { prototype } = ScrollView as unknown as {
+      prototype: { scrollToEnd: () => void };
+    };
+    const scrollToEnd = jest.spyOn(prototype, "scrollToEnd");
+    await renderApp("/habits/new");
+    const form = screen.getByTestId("habit-form");
+
+    // Typing does not move the form.
+    await fireEvent(form, "contentSizeChange", 390, 900);
+    expect(scrollToEnd).not.toHaveBeenCalled();
+
+    // The form scrolls once it has grown to hold the picker.
+    await fireEvent.press(screen.getByText("Añadir recordatorio"));
+    expect(scrollToEnd).not.toHaveBeenCalled();
+    await fireEvent(form, "contentSizeChange", 390, 1200);
+    expect(scrollToEnd).toHaveBeenCalledTimes(1);
+    expect(scrollToEnd).toHaveBeenCalledWith({ animated: true });
+
+    // Only then: other changes leave the form where the user puts it.
+    await fireEvent(form, "contentSizeChange", 390, 1300);
+    expect(scrollToEnd).toHaveBeenCalledTimes(1);
   });
 
   test("touching an amount selects it, so that typing replaces it", async () => {
