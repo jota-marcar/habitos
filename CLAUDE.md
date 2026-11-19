@@ -52,6 +52,7 @@ npx expo install <paquete>   # añadir dependencias (elige la versión compatibl
 npx expo-doctor              # diagnosticar dependencias y configuración
 npm run audit-deps           # avisos de seguridad frente a los aceptados (necesita red)
 npm run build:dev            # development build para el iPhone en EAS (gasta un build: solo si el usuario lo pide)
+npm run build:prod           # build de producción, enviado a TestFlight (desde main al día; gasta un build: solo si el usuario lo pide)
 ```
 
 - Tras añadir o actualizar dependencias, ejecuta `npm run audit-deps` y sigue la sección "Dependencias y seguridad" de `CONTRIBUTING.md`. Nunca aceptes un aviso de seguridad ni apruebes un script de instalación sin plantearlo antes al usuario.

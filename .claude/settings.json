@@ -52,7 +52,8 @@
       "Bash(npm uninstall *)",
       "Bash(npx expo install *)",
       "Bash(eas build *)",
-      "Bash(npm run build:dev *)"
+      "Bash(npm run build:dev *)",
+      "Bash(npm run build:prod *)"
     ],
     "deny": ["Read(./.env)", "Read(./.env.*)"]
   },

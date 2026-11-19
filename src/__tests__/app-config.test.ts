@@ -211,4 +211,11 @@ describe("eas.json", () => {
       expect(profile.environment).toBe(profile.env.APP_VARIANT);
     },
   );
+
+  // Only the production build goes to App Store Connect, to the app created there by hand
+  // (docs/testflight.md): its Apple ID is a number.
+  test("only the production profile is sent to App Store Connect", () => {
+    expect(Object.keys(easJson.submit)).toEqual(["production"]);
+    expect(easJson.submit.production.ios.ascAppId).toMatch(/^\d+$/);
+  });
 });
