@@ -43,6 +43,7 @@ Los comandos completos están en [CLAUDE.md](CLAUDE.md#desarrollo).
 - [Decisiones de arquitectura (ADR)](docs/adr/): por qué se construye así.
 - [Supabase](docs/supabase.md): puesta en marcha de los proyectos de la nube y cómo aplicarles las migraciones.
 - [Build de producción y TestFlight](docs/testflight.md): cómo se compila la variante de producción y se publica en TestFlight.
+- [Incidencias del testeo](docs/incidencias-del-testeo.md): lo encontrado al probar la aplicación y su estado.
 - [Ecosistema de IA](docs/ecosistema-ia.md): cómo está configurado Claude Code para trabajar en el proyecto.
 
 ## Cómo se trabaja
