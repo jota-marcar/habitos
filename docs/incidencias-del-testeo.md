@@ -17,9 +17,10 @@ Una incidencia que cambia el comportamiento descrito en la [especificación func
 ## INC-02. Los campos de cantidad no sobrescriben lo escrito
 
 - **Encontrada:** 2026-11-19, en producción (TestFlight).
-- **Estado:** pendiente.
+- **Estado:** resuelta.
 - **Qué pasa:** al tocar Meta, Unidad o Incremento en el formulario del hábito, el cursor queda al final del texto. Si la meta es 2 y se escribe 3, queda 23.
 - **Qué se espera:** al tocar el campo se selecciona su contenido, de modo que lo que se escriba lo sustituya.
+- **Cómo se resuelve:** los tres campos seleccionan todo su contenido al recibir el foco (`selectTextOnFocus`), tanto al crear como al editar un hábito. El nombre no: tocarlo suele ser para corregirlo.
 
 ## INC-03. El selector de hora del recordatorio se abre fuera de la vista
 
