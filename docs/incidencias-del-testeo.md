@@ -25,6 +25,7 @@ Una incidencia que cambia el comportamiento descrito en la [especificación func
 ## INC-03. El selector de hora del recordatorio se abre fuera de la vista
 
 - **Encontrada:** 2026-11-19, en producción (TestFlight).
-- **Estado:** pendiente.
+- **Estado:** resuelta.
 - **Qué pasa:** al pulsar "Añadir recordatorio", el selector de horas y minutos se despliega hacia abajo y queda en parte fuera de la pantalla: hay que desplazarse a mano para verlo y confirmar.
 - **Qué se espera:** el formulario se desplaza solo hasta que el selector y sus botones se ven enteros.
+- **Cómo se resuelve:** al abrir el selector se cierra el teclado, si estaba abierto (lo taparía), y en cuanto el formulario crece para hacerle sitio se desplaza con animación hasta el final, donde quedan el selector y sus botones. Los recordatorios son la última sección del formulario, así que el final es justo lo que hay que mostrar. Solo se desplaza esa vez: el resto de cambios deja el formulario donde lo ponga el usuario.

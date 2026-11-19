@@ -3,8 +3,16 @@
 
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Stack, useRouter } from "expo-router";
-import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useRef, useState } from "react";
+import {
+  Keyboard,
+  Pressable,
+  ScrollView,
+  type ScrollViewInstance,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import type { Weekday } from "@/domain/dates";
 import {
@@ -96,6 +104,9 @@ export function HabitFormScreen({
   const [pickedTime, setPickedTime] = useState<LocalTime | null>(null);
   const [reminderError, setReminderError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const scroll = useRef<ScrollViewInstance>(null);
+  // Set when the reminder picker opens, until the form has grown to hold it.
+  const revealPicker = useRef(false);
 
   const messages = messagesByField(errors);
   const quantitative = values.type === "quantitative";
@@ -120,6 +131,20 @@ export function HabitFormScreen({
     update({ reminderTimes: result.value });
     setPickedTime(null);
     setReminderError(null);
+  };
+
+  // The picker opens at the bottom of the form, below the screen: the form scrolls down to show
+  // it whole, with its buttons. The keyboard, if open, would hide it.
+  const openPicker = () => {
+    Keyboard.dismiss();
+    revealPicker.current = true;
+    setPickedTime(DEFAULT_REMINDER_TIME);
+  };
+
+  const revealOpenedPicker = () => {
+    if (!revealPicker.current) return;
+    revealPicker.current = false;
+    scroll.current?.scrollToEnd({ animated: true });
   };
 
   const removeReminder = (time: LocalTime) =>
@@ -172,6 +197,9 @@ export function HabitFormScreen({
 
   return (
     <ScrollView
+      ref={scroll}
+      testID="habit-form"
+      onContentSizeChange={revealOpenedPicker}
       automaticallyAdjustKeyboardInsets
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={styles.content}
@@ -276,7 +304,7 @@ export function HabitFormScreen({
           <Button
             label="Añadir recordatorio"
             variant="secondary"
-            onPress={() => setPickedTime(DEFAULT_REMINDER_TIME)}
+            onPress={openPicker}
           />
         ) : (
           <>
