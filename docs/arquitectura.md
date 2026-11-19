@@ -269,7 +269,7 @@ El motor depende de la interfaz `Remote`, no de Supabase. En los tests, la imple
 - Lo que cambia entre variantes está en `app.config.ts`; lo común, en `app.json`.
 
 - Los cambios solo de JavaScript pueden llegar a producción con **EAS Update**, sin pasar por una nueva compilación.
-- Los cambios nativos (dependencias nuevas, permisos) requieren una compilación con EAS Build y una nueva versión en TestFlight.
+- Los cambios nativos (dependencias nuevas, permisos) requieren una compilación con EAS Build y una nueva versión en TestFlight. El build de producción se lanza con `npm run build:prod` desde `main` y se envía solo a TestFlight (ver [docs/testflight.md](testflight.md)).
 - La CI (GitHub Actions) verifica cada Pull Request: formato, lint, tipos y tests, y el esquema de la nube contra una base local de Supabase (ver [CONTRIBUTING.md](../CONTRIBUTING.md#8-integración-continua)). Compilar y publicar desde la CI queda para más adelante.
 - Las migraciones de la nube se aplican a mano a cada proyecto de Supabase con `supabase db push` (ver [docs/supabase.md](supabase.md)): primero a desarrollo y, cuando la versión de la app que las usa llegue a producción, a producción. Automatizarlo desde la CI queda para más adelante.
 

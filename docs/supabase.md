@@ -1,6 +1,6 @@
 # Supabase: puesta en marcha y migraciones
 
-Guía de los pasos que se hacen fuera del repositorio: crear los proyectos de Supabase, enlazarlos con la CLI, aplicarles el esquema, configurar el inicio de sesión con Apple y Google y desplegar la eliminación de la cuenta. Lo técnico está en [arquitectura.md](arquitectura.md) y en los ADR [0003](adr/0003-supabase-como-backend.md), [0015](adr/0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md), [0016](adr/0016-cursor-de-sincronizacion-serializado-por-usuario.md) y [0019](adr/0019-eliminacion-de-la-cuenta-con-una-edge-function-que-revoca-sign-in-with-apple-antes-de-borrar-al-usuario.md).
+Guía de los pasos que se hacen fuera del repositorio: crear los proyectos de Supabase, enlazarlos con la CLI, aplicarles el esquema, configurar el inicio de sesión con Apple y Google y desplegar la eliminación de la cuenta. El build de producción y TestFlight están en [testflight.md](testflight.md). Lo técnico está en [arquitectura.md](arquitectura.md) y en los ADR [0003](adr/0003-supabase-como-backend.md), [0015](adr/0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md), [0016](adr/0016-cursor-de-sincronizacion-serializado-por-usuario.md) y [0019](adr/0019-eliminacion-de-la-cuenta-con-una-edge-function-que-revoca-sign-in-with-apple-antes-de-borrar-al-usuario.md).
 
 ## Qué hay en el repositorio
 
@@ -97,20 +97,27 @@ Pide confirmación: la respuesta por defecto es **No**, así que escribe `y` y p
 
 ### Producción
 
-Como la app todavía no usa la nube, puedes aplicar ya el esquema inicial a producción:
-
 ```powershell
 supabase db push --remote=REF_PROD --dry-run
 supabase db push --remote=REF_PROD
 ```
 
-Sustituye `REF_PROD` por el identificador de `habitos` (producción), igual que antes: sin comillas ni `< >`.
+Sustituye `REF_PROD` por el identificador de `habitos` (producción), igual que antes: sin comillas ni `< >`. Si se queda el texto `REF_PROD`, la CLI lo toma por el nombre de una rama del proyecto enlazado y falla con `Branch "REF_PROD" not found`. En todos los comandos con `--remote=REF_PROD` de esta guía pasa lo mismo.
 
-Pedirá la contraseña de la base de datos de `habitos` (la de producción, no la de desarrollo) y la confirmación.
+Comprueba que la primera línea dice `Target: project <ref de habitos> (not the linked project)`. Si pide confirmación, escribe `y`. Si nombra la rama `production`, es la rama principal de `habitos`, no el entorno: el proyecto se reconoce por el identificador. Si pide la contraseña de la base de datos, es la de `habitos`, no la de desarrollo.
 
 A partir de ahora, cada migración nueva se aplica **primero a desarrollo**, y a producción solo cuando la versión de la app que la necesita vaya a llegar a TestFlight.
 
 ## 6. Comprobar que ha ido bien
+
+Desde la terminal, las migraciones aplicadas a cada proyecto:
+
+```powershell
+supabase migration list --remote
+supabase migration list --remote=REF_PROD
+```
+
+Cada migración de la columna *Local* debe aparecer también en *Remote*. Si *Remote* está vacía, falta aplicarla. Sirve también para saber si un proyecto está al día antes de un build.
 
 En el panel de cada proyecto:
 
