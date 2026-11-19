@@ -109,9 +109,11 @@ La aplicación tiene una sola pantalla principal: la vista de un día (3.4). Tod
   | Recordatorios | No | Cero o más horas del día (ver 3.6). |
   | Color | No | Uno de una paleta de 12 colores, o ninguno. Por defecto, ninguno. Tocar el color elegido lo quita. |
 
+  El hábito empieza el día que se está viendo al crearlo si es un día futuro, para poder planificar hábitos que empiecen un día concreto; el formulario lo indica con una línea discreta: "Empieza el 20 de noviembre de 2026". Creado desde el día actual o desde un día pasado, empieza el día actual. No aparece en los días anteriores a su inicio.
+
 - **RF-07.** *Retirado.* Los hábitos se gestionan desde un día en que tocan (RF-08). El listado de todos los hábitos queda fuera del alcance (sección 4).
 - **RF-08.** El usuario puede editar cualquier dato de un hábito salvo el tipo. Se edita desde sus opciones (RF-34), en cualquier día en que aparezca: pasado, actual o futuro.
-- **RF-09.** Los cambios en un hábito (nombre, meta, días programados, recordatorios…) se aplican desde el día actual en adelante, se edite desde el día que se edite. Los días pasados conservan lo que se registró. Si se edita desde un día distinto del actual, el formulario lo indica con una línea discreta: "Los cambios se aplican desde hoy". El nombre y el color son la excepción: identifican al hábito, así que cambian también en los días pasados.
+- **RF-09.** Los cambios en un hábito (nombre, meta, días programados, recordatorios…) se aplican desde el día actual en adelante, se edite desde el día que se edite. Los días pasados conservan lo que se registró. Si se edita desde un día distinto del actual, el formulario lo indica con una línea discreta: "Los cambios se aplican desde hoy". Un hábito que aún no ha empezado (RF-06) es la excepción: sus cambios se aplican desde el día en que empieza, y el formulario lo indica si se edita desde otro día ("Los cambios se aplican desde el 20 de noviembre de 2026"). El nombre y el color son la excepción: identifican al hábito, así que cambian también en los días pasados.
 - **RF-10.** El usuario puede archivar un hábito. Archivar sirve para dejar de seguir un hábito sin perder lo que se hizo; por ejemplo, uno que ya forma parte de la rutina.
   - Deja de aparecer en los días siguientes y deja de recordarse, pero su historial se conserva y sigue visible en los días pasados. El día en que se archiva solo aparece si ya tenía algo registrado.
   - Archivar pide confirmación, porque no se puede deshacer: para retomar el hábito se crea uno nuevo.

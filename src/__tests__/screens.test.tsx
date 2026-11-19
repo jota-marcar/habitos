@@ -1443,6 +1443,107 @@ describe("calendar (RF-18, RF-31)", () => {
     expect(screen.queryByText("Los cambios se aplican desde hoy")).toBeNull();
   });
 
+  async function createFromMenu(name: string) {
+    await openMenu();
+    await fireEvent.press(screen.getByLabelText("Crear"));
+    await fireEvent.changeText(screen.getByLabelText("Nombre"), name);
+  }
+
+  test("a habit created from a future day starts that day, and the form says so (RF-06)", async () => {
+    await renderApp();
+    await chooseDay("14 de noviembre de 2026");
+
+    await createFromMenu("Correr");
+    expect(screen.getByText("Empieza el 14 de noviembre de 2026")).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText("Guardar"));
+
+    await waitFor(() => expect(screen).toHavePathname("/"));
+    expect(screen.getByText("Sábado, 14 nov")).toBeTruthy();
+    expect(await screen.findByText("Correr")).toBeTruthy();
+    expect(await listHabits(db)).toEqual([
+      expect.objectContaining({ name: "Correr", createdOn: "2026-11-14" }),
+    ]);
+    expect(await listHabitVersions(db)).toEqual([
+      expect.objectContaining({ effectiveFrom: "2026-11-14" }),
+    ]);
+
+    // It is not due before that day.
+    await chooseDay("13 de noviembre de 2026");
+    expect(await screen.findByText("Viernes, 13 nov")).toBeTruthy();
+    expect(screen.queryByText("Correr")).toBeNull();
+  });
+
+  test("a habit created from a past day starts today", async () => {
+    await renderApp();
+    await chooseDay("10 de noviembre de 2026");
+
+    await createFromMenu("Correr");
+    expect(screen.queryByText(/^Empieza el/)).toBeNull();
+    await fireEvent.press(screen.getByLabelText("Guardar"));
+
+    await waitFor(() => expect(screen).toHavePathname("/"));
+    expect(await listHabits(db)).toEqual([
+      expect.objectContaining({ name: "Correr", createdOn: TODAY }),
+    ]);
+  });
+
+  test("the changes to a habit that has not started apply from the day it starts (RF-09)", async () => {
+    const start = localDate("2026-11-14");
+    await addHabit(
+      db,
+      habit("water", {
+        name: "Beber agua",
+        type: "quantitative",
+        createdOn: start,
+      }),
+      version("water", {
+        effectiveFrom: start,
+        target: 2,
+        unit: "L",
+        increment: 0.25,
+      }),
+    );
+    await renderApp();
+    await chooseDay("16 de noviembre de 2026");
+
+    await fireEvent(await screen.findByTestId("habit-water"), "longPress");
+    await fireEvent.press(screen.getByLabelText("Editar"));
+    expect(
+      await screen.findByText(
+        "Los cambios se aplican desde el 14 de noviembre de 2026",
+      ),
+    ).toBeTruthy();
+    await fireEvent.changeText(screen.getByLabelText("Meta"), "3");
+    await fireEvent.press(screen.getByLabelText("Guardar"));
+
+    await waitFor(() => expect(screen).toHavePathname("/"));
+    expect(await listHabitVersions(db)).toEqual([
+      version("water", {
+        effectiveFrom: start,
+        target: 3,
+        unit: "L",
+        increment: 0.25,
+      }),
+    ]);
+  });
+
+  test("the form of a habit that has not started, opened from the day it starts, does not say when the changes apply", async () => {
+    const start = localDate("2026-11-14");
+    await addHabit(
+      db,
+      habit("walk", { name: "Pasear", createdOn: start }),
+      version("walk", { effectiveFrom: start }),
+    );
+    await renderApp();
+    await chooseDay("14 de noviembre de 2026");
+
+    await fireEvent(await screen.findByTestId("habit-walk"), "longPress");
+    await fireEvent.press(screen.getByLabelText("Editar"));
+
+    expect(await screen.findByDisplayValue("Pasear")).toBeTruthy();
+    expect(screen.queryByText(/^Los cambios se aplican/)).toBeNull();
+  });
+
   test("coming back to the app shows today again (RF-12)", async () => {
     const appBecomes = spyOnAppState();
     await addOnWeekday("thursday", "Solo jueves", 3);

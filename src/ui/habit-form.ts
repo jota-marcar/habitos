@@ -61,13 +61,14 @@ export type HabitFormResult =
   | { readonly ok: false; readonly errors: readonly HabitError[] };
 
 /**
- * Builds a new habit, its first version and its reminders from the form. The amounts of a
- * boolean habit are ignored, even if they were typed before changing the type.
+ * Builds a new habit, its first version and its reminders from the form, starting on
+ * `startsOn` (RF-06). The amounts of a boolean habit are ignored, even if they were typed
+ * before changing the type.
  */
 export function buildHabit(
   values: HabitFormValues,
   newId: () => string,
-  today: LocalDate,
+  startsOn: LocalDate,
 ): HabitFormResult {
   const quantitative = values.type === "quantitative";
   const result = createHabit(
@@ -84,7 +85,7 @@ export function buildHabit(
       },
     },
     { habitId: newId(), versionId: newId() },
-    today,
+    startsOn,
   );
   if (!result.ok) return { ok: false, errors: result.errors };
 
@@ -104,7 +105,10 @@ export interface StoredHabit {
   readonly reminders: readonly Reminder[];
 }
 
-/** The form filled in with a habit and the version to edit: the one in force today. */
+/**
+ * The form filled in with a habit and the version to edit: the one the changes replace, in
+ * force today or on the day the habit starts if it has not started yet (RF-09).
+ */
 export function habitFormOf(
   habit: Habit,
   version: HabitVersion,
@@ -130,8 +134,9 @@ export type HabitChangesResult =
 
 /**
  * Builds the changes to a habit from the form (RF-08). The name and the color change in the
- * whole history; the configuration, from today onwards (RF-09) and the type stays as it was, whatever the form says (RF-06). Only the
- * reminders whose time was added or removed change.
+ * whole history; the configuration, from today onwards or from the day the habit starts
+ * (RF-09); and the type stays as it was, whatever the form says (RF-06). Only the reminders
+ * whose time was added or removed change.
  */
 export function buildHabitChanges(
   stored: StoredHabit,

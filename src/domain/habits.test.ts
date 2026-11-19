@@ -7,10 +7,12 @@ import {
   MAX_UNIT_LENGTH,
   archiveHabit,
   changeConfig,
+  changesApplyFrom,
   createHabit,
   parseHabitColor,
   recolorHabit,
   renameHabit,
+  startOfNewHabit,
   versionOn,
   type Habit,
   type HabitConfig,
@@ -77,7 +79,30 @@ describe("parseHabitColor", () => {
   });
 });
 
+describe("startOfNewHabit", () => {
+  test("a habit created from a future day starts that day (RF-06)", () => {
+    const tomorrow = localDate("2026-10-29");
+    expect(startOfNewHabit(tomorrow, today)).toBe(tomorrow);
+  });
+
+  test("a habit created from today starts today", () => {
+    expect(startOfNewHabit(today, today)).toBe(today);
+  });
+
+  test("a habit created from a past day starts today, not in the past", () => {
+    expect(startOfNewHabit(localDate("2026-10-01"), today)).toBe(today);
+  });
+});
+
 describe("createHabit", () => {
+  test("the habit and its first version start on the given day (RF-06)", () => {
+    const start = localDate("2026-11-02");
+    const result = createHabit(meditate, ids, start);
+    if (!result.ok) throw new Error(`Unexpected errors: ${result.errors}`);
+    expect(result.value.habit.createdOn).toBe(start);
+    expect(result.value.version.effectiveFrom).toBe(start);
+  });
+
   test("gives the habit its color, or none (RF-06)", () => {
     const colored = createHabit({ ...meditate, color: "teal" }, ids, today);
     const plain = createHabit(meditate, ids, today);
@@ -388,5 +413,59 @@ describe("changeConfig", () => {
     expect(changed([], newTarget)).toEqual([
       { ...newTarget, id: "v2", habitId: "habit-1", effectiveFrom: today },
     ]);
+  });
+
+  describe("a habit that has not started yet", () => {
+    const start = localDate("2026-11-02");
+    const planned: Habit = { ...habit, createdOn: start };
+    const plannedFirst: HabitVersion = { ...first, effectiveFrom: start };
+
+    test("updates its first version, effective the day it starts (RF-09)", () => {
+      const result = changeConfig(
+        planned,
+        [plannedFirst],
+        newTarget,
+        "v2",
+        today,
+      );
+      expect(result).toEqual({
+        ok: true,
+        value: [{ ...plannedFirst, target: 3 }],
+      });
+    });
+
+    test("adds a version from the day it starts if it has none", () => {
+      const result = changeConfig(planned, [], newTarget, "v2", today);
+      expect(result).toEqual({
+        ok: true,
+        value: [
+          { ...newTarget, id: "v2", habitId: "habit-1", effectiveFrom: start },
+        ],
+      });
+    });
+  });
+});
+
+describe("changesApplyFrom", () => {
+  const habit: Habit = {
+    id: "habit-1",
+    name: "Meditar",
+    type: "boolean",
+    color: null,
+    createdOn: localDate("2026-10-01"),
+    archivedOn: null,
+  };
+
+  test("the changes to a habit that has started apply from today (RF-09)", () => {
+    expect(changesApplyFrom(habit, today)).toBe(today);
+  });
+
+  test("the changes to a habit created today apply from today", () => {
+    expect(changesApplyFrom({ ...habit, createdOn: today }, today)).toBe(today);
+  });
+
+  test("the changes to a habit that has not started apply from the day it starts", () => {
+    const start = localDate("2026-11-02");
+    expect(changesApplyFrom({ ...habit, createdOn: start }, today)).toBe(start);
   });
 });
