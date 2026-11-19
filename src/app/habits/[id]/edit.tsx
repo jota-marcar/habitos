@@ -1,6 +1,7 @@
 // The form to edit a habit (RF-08), presented as a modal. It is opened from the options of
-// the habit (RF-34), on any day it appears. The changes apply from today onwards (RF-09),
-// and the form says so when it was opened from another day.
+// the habit (RF-34), on any day it appears. The changes apply from today onwards, or from the
+// day the habit starts if it has not started yet (RF-09), and the form says so when it was
+// opened from another day.
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -11,9 +12,10 @@ import {
   saveHabitChanges,
 } from "@/data/habits-repository";
 import { listReminders } from "@/data/reminders-repository";
-import { versionOn } from "@/domain/habits";
+import { changesApplyFrom, versionOn } from "@/domain/habits";
 import { newId, today } from "@/ui/clock";
 import { useDatabase } from "@/ui/database";
+import { formatFullDate } from "@/ui/format";
 import {
   buildHabitChanges,
   habitFormOf,
@@ -43,7 +45,11 @@ export default function EditHabit() {
 
       const habit = habits.find((h) => h.id === id);
       const own = versions.filter((v) => v.habitId === id);
-      const current = versionOn(own, today());
+      // The version to edit is the one the changes replace.
+      const current =
+        habit === undefined
+          ? null
+          : versionOn(own, changesApplyFrom(habit, today()));
       // There is nothing to edit if the habit is gone or archived (RF-10).
       if (habit === undefined || habit.archivedOn !== null || !current) {
         router.back();
@@ -61,6 +67,8 @@ export default function EditHabit() {
 
   if (stored === null || initialValues === null) return null;
 
+  const from = changesApplyFrom(stored.habit, today());
+
   const save = async (values: HabitFormValues) => {
     const result = buildHabitChanges(stored, values, newId, today());
     if (!result.ok) return result.errors;
@@ -73,9 +81,11 @@ export default function EditHabit() {
       initialValues={initialValues}
       editing
       note={
-        day !== undefined && day !== today()
-          ? "Los cambios se aplican desde hoy"
-          : undefined
+        day === undefined || day === from
+          ? undefined
+          : from === today()
+            ? "Los cambios se aplican desde hoy"
+            : `Los cambios se aplican desde el ${formatFullDate(from)}`
       }
       onSubmit={save}
     />

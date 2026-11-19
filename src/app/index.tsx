@@ -184,9 +184,10 @@ export default function Today() {
     day.select(chosen);
   };
 
+  // A habit created from a future day starts that day (RF-06).
   const create = () => {
     menu.close();
-    router.push("/habits/new");
+    router.push({ pathname: "/habits/new", params: { day: date } });
   };
 
   const openSettings = () => {

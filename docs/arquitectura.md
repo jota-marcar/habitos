@@ -115,7 +115,7 @@ erDiagram
         text name
         text type "boolean | quantitative"
         text color "nullable, clave de paleta"
-        date created_on
+        date created_on "primer día en que toca"
         date archived_on "nullable"
     }
     HABIT_VERSION {
@@ -143,9 +143,10 @@ erDiagram
 Decisiones del modelo:
 
 - **Las fechas son fechas de calendario** (`2026-10-28`), no instantes con hora. El día va de 00:00 a 23:59 en la hora local del dispositivo y no cambia si el usuario viaja a otra zona horaria.
-- **Qué hábitos tocan el día D:** los que se crearon como mucho en D, no están retirados por archivado en D y, según la versión vigente en D (la de mayor `effective_from` que sea ≤ D), están programados para ese día de la semana.
+- **Qué hábitos tocan el día D:** los que empiezan como mucho en D, no están retirados por archivado en D y, según la versión vigente en D (la de mayor `effective_from` que sea ≤ D), están programados para ese día de la semana.
 - **Archivado:** un hábito archivado deja de tocar a partir del día siguiente al archivado. El propio día del archivado solo toca si ya tiene algo registrado (RF-10). Archivar no se deshace: `archived_on` es una sola fecha, y reactivar exigiría guardar periodos de actividad para que los días intermedios no aparezcan como incumplidos (fuera del alcance del MVP).
-- **Edición desde cualquier día:** la configuración nueva siempre entra en vigor el día actual (`effective_from` = hoy), aunque se edite desde un día pasado o futuro (RF-09). Lo que pertenece al día que se está viendo es su registro.
+- **Inicio de un hábito:** `created_on` es el primer día en que el hábito toca, no el día en que se pulsó Guardar. Un hábito creado desde un día futuro empieza ese día; desde hoy o desde un día pasado, hoy (RF-06). Su primera versión tiene el mismo `effective_from`.
+- **Edición desde cualquier día:** la configuración nueva siempre entra en vigor el día actual (`effective_from` = hoy), aunque se edite desde un día pasado o futuro (RF-09). Lo que pertenece al día que se está viendo es su registro. La excepción es un hábito que aún no ha empezado: sus cambios entran en vigor el día en que empieza, para no crear versiones anteriores al hábito.
 - **Color:** `color` guarda la clave de un color de la paleta (`blue`, `teal`…) o nada, no su valor; el tono de cada clave lo decide la interfaz ([ADR-0014](adr/0014-colores-de-habito-como-dato-del-usuario-guardados-como-clave-de-paleta.md)). Como el nombre, no tiene versiones: cambia en todo el historial.
 - **Días programados:** máscara de 7 bits en `scheduled_days`, con el lunes en el bit 0 y el domingo en el bit 6.
 - **Cantidades:** `target`, `increment` y `value` tienen 2 decimales como máximo y nunca son negativas. Un registro con valor 0 equivale a no tener registro.

@@ -9,9 +9,10 @@ Una incidencia que cambia el comportamiento descrito en la [especificación func
 ## INC-01. Un hábito creado desde un día futuro empieza hoy
 
 - **Encontrada:** 2026-11-19, en producción (TestFlight).
-- **Estado:** pendiente.
+- **Estado:** resuelta.
 - **Qué pasa:** con el calendario en un día posterior a hoy (por ejemplo, mañana), al crear un hábito este aparece desde hoy.
 - **Qué se espera:** el hábito aparece a partir del día que se estaba viendo, para poder planificar hábitos nuevos que empiecen un día concreto.
+- **Cómo se resuelve:** el formulario de creación recibe el día que se está viendo. Si es futuro, el hábito empieza ese día (su `created_on` y el `effective_from` de su primera versión) y el formulario lo indica con "Empieza el …"; desde hoy o un día pasado, empieza hoy. Los cambios a un hábito que aún no ha empezado se aplican desde el día en que empieza, no desde hoy. Se actualizan RF-06 y RF-09.
 
 ## INC-02. Los campos de cantidad no sobrescriben lo escrito
 

@@ -1,5 +1,5 @@
 // Habits and the versions of their configuration.
-// The identity of a habit (name, type, creation and archive dates) is separate from its
+// The identity of a habit (name, type, start and archive dates) is separate from its
 // configuration, which is versioned with an effective date so that changes only apply from
 // today onwards and past days keep what was due then (RF-09, ADR-0006).
 
@@ -51,6 +51,10 @@ export interface Habit {
   readonly type: HabitType;
   /** Not versioned, like the name: it changes in the whole history (ADR-0014). */
   readonly color: HabitColor | null;
+  /**
+   * The first day the habit is due: the day it was created, or a later one if it was created
+   * from a future day (RF-06).
+   */
   readonly createdOn: LocalDate;
   readonly archivedOn: LocalDate | null;
 }
@@ -176,14 +180,27 @@ export interface NewHabit {
   readonly config: HabitConfig;
 }
 
+function later(a: LocalDate, b: LocalDate): LocalDate {
+  return a > b ? a : b;
+}
+
 /**
- * Creates a habit and its first version, effective from the day it is created (RF-06).
- * The identifiers are generated outside the domain.
+ * The day a habit created while `shown` is on screen starts (RF-06): that day if it is in the
+ * future, so that habits can be planned ahead; today otherwise, since a habit does not start in
+ * the past.
+ */
+export function startOfNewHabit(shown: LocalDate, today: LocalDate): LocalDate {
+  return later(shown, today);
+}
+
+/**
+ * Creates a habit and its first version, effective from the day it starts (RF-06), which
+ * `startOfNewHabit` gives. The identifiers are generated outside the domain.
  */
 export function createHabit(
   input: NewHabit,
   ids: { readonly habitId: string; readonly versionId: string },
-  today: LocalDate,
+  startsOn: LocalDate,
 ): Result<{ habit: Habit; version: HabitVersion }, HabitError> {
   const errors = [
     ...validateName(input.name),
@@ -196,14 +213,14 @@ export function createHabit(
     name: input.name.trim(),
     type: input.type,
     color: input.color,
-    createdOn: today,
+    createdOn: startsOn,
     archivedOn: null,
   };
   const version: HabitVersion = {
     ...normalizeConfig(input.config),
     id: ids.versionId,
     habitId: habit.id,
-    effectiveFrom: today,
+    effectiveFrom: startsOn,
   };
   return ok({ habit, version });
 }
@@ -247,9 +264,18 @@ export function versionOn(
 }
 
 /**
- * Changes the configuration of a habit from today onwards (RF-09) and returns all its versions.
- * If there is already a version effective today it is updated; otherwise a new one is added.
- * Past days keep their versions. `versions` belong to `habit`.
+ * The day from which the changes made today to a habit apply (RF-09): today, or the day the
+ * habit starts if it has not started yet.
+ */
+export function changesApplyFrom(habit: Habit, today: LocalDate): LocalDate {
+  return later(habit.createdOn, today);
+}
+
+/**
+ * Changes the configuration of a habit from today onwards, or from the day it starts if it has
+ * not started yet (RF-09), and returns all its versions. If there is already a version
+ * effective that day it is updated; otherwise a new one is added. Past days keep their
+ * versions. `versions` belong to `habit`.
  */
 export function changeConfig(
   habit: Habit,
@@ -262,10 +288,11 @@ export function changeConfig(
   if (errors.length > 0) return fail(errors);
 
   const next = normalizeConfig(config);
-  const current = versionOn(versions, today);
+  const from = changesApplyFrom(habit, today);
+  const current = versionOn(versions, from);
   if (current !== null && sameConfig(current, next)) return ok(versions);
 
-  if (current !== null && current.effectiveFrom === today) {
+  if (current !== null && current.effectiveFrom === from) {
     const updated: HabitVersion = { ...current, ...next };
     return ok(versions.map((v) => (v.id === current.id ? updated : v)));
   }
@@ -274,7 +301,7 @@ export function changeConfig(
     ...next,
     id: newVersionId,
     habitId: habit.id,
-    effectiveFrom: today,
+    effectiveFrom: from,
   };
   return ok([...versions, added]);
 }

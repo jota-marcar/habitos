@@ -1,8 +1,14 @@
-// The form to create a habit (RF-06), presented as a modal.
+// The form to create a habit (RF-06), presented as a modal. It is told the day on screen when it
+// was opened: a habit created from a future day starts that day, and the form says so.
+
+import { useLocalSearchParams } from "expo-router";
 
 import { addHabit } from "@/data/habits-repository";
+import { parseLocalDate } from "@/domain/dates";
+import { startOfNewHabit } from "@/domain/habits";
 import { newId, today } from "@/ui/clock";
 import { useDatabase } from "@/ui/database";
+import { formatFullDate } from "@/ui/format";
 import {
   EMPTY_HABIT_FORM,
   buildHabit,
@@ -11,14 +17,27 @@ import {
 import { HabitFormScreen } from "@/ui/habit-form-screen";
 
 export default function NewHabit() {
+  const { day } = useLocalSearchParams<{ day?: string }>();
   const db = useDatabase();
+  const shown = (day === undefined ? null : parseLocalDate(day)) ?? today();
+  const start = startOfNewHabit(shown, today());
 
   const create = async (values: HabitFormValues) => {
-    const result = buildHabit(values, newId, today());
+    // The start is computed again: the form may have stayed open past midnight.
+    const startsOn = startOfNewHabit(shown, today());
+    const result = buildHabit(values, newId, startsOn);
     if (!result.ok) return result.errors;
     await addHabit(db, result.habit, result.version, result.reminders);
     return [];
   };
 
-  return <HabitFormScreen initialValues={EMPTY_HABIT_FORM} onSubmit={create} />;
+  return (
+    <HabitFormScreen
+      initialValues={EMPTY_HABIT_FORM}
+      note={
+        start === today() ? undefined : `Empieza el ${formatFullDate(start)}`
+      }
+      onSubmit={create}
+    />
+  );
 }
