@@ -50,10 +50,18 @@ El primero solo hace las comprobaciones: que no haya cambios sin commit, que la 
 
 La primera vez, EAS pregunta en la terminal:
 
-- **Iniciar sesión con tu Apple ID**, para gestionar las credenciales.
-- **Certificado de distribución:** reutiliza el de los development builds o crea uno.
-- **Perfil de aprovisionamiento de App Store** para `com.jotamarcar.habitos`: deja que lo cree.
-- **App Store Connect API Key** para el envío: deja que la genere y la guarde en EAS. Los envíos siguientes ya no piden el Apple ID.
+| Pregunta | Respuesta | Por qué |
+|----------|-----------|---------|
+| Iniciar sesión con tu Apple ID | Sí | Para gestionar los certificados y los perfiles |
+| *Reuse this distribution certificate?* | Sí | El de los development builds sirve para todas las apps del equipo, y Apple limita cuántos puede haber |
+| Perfil de aprovisionamiento de App Store para `com.jotamarcar.habitos` | Generarlo | |
+| *Would you like to set up Push Notifications for your project?* | **No** | La app solo usa notificaciones locales (`enableRemoteNotifications: false`). Si se contesta que sí, ofrece reutilizar una clave de push existente (aceptar: no cambia el binario) o crear una nueva (innecesaria) |
+| *Generate a new App Store Connect API Key?* | Sí | EAS la guarda y los envíos siguientes ya no piden el Apple ID |
+| *Select role for the generated API key* | **`APP_MANAGER`** | Basta para subir builds y gestionar TestFlight. `ADMIN`, la opción por defecto, también podría gestionar usuarios y acuerdos de la cuenta, y la clave queda en los servidores de Expo |
+
+En el envío, EAS crea además el grupo de pruebas internas `Team (Expo)` en TestFlight y te añade como probador.
+
+La clave de la API se puede consultar o revocar en **App Store Connect → Usuarios y acceso → Integraciones → App Store Connect API**.
 
 Después, revisa `git diff app.json`. El script avisa si EAS lo ha cambiado. Si el build termina pero el envío falla, se puede repetir solo el envío, sin gastar otro build:
 
@@ -65,10 +73,22 @@ eas submit --platform ios --profile production --latest
 
 1. App Store Connect procesa el build (de 5 a 30 minutos) y avisa por correo. Aparece en la pestaña **TestFlight** de la app.
 2. No pide información de cumplimiento de exportación: `ITSAppUsesNonExemptEncryption: false` en `app.json` ya la da.
-3. En **Pruebas internas**, crea un grupo (por ejemplo, `Interno`), añádete como probador y añade el build. Con la distribución automática del grupo, los builds siguientes llegan solos.
-4. En el iPhone, instala la app **TestFlight** de la App Store, acepta la invitación del correo e instala Hábitos. Convive con Hábitos Dev: son apps distintas.
+3. En **Pruebas internas → Team (Expo)**, el grupo que crea EAS, comprueba que el build está asignado y que apareces como probador. Si el build no está, añádelo con **+**. Los grupos internos no pasan revisión de Apple.
+4. En el iPhone, instala la app **TestFlight** de la App Store, acepta la invitación del correo (o abre TestFlight, si el correo es el de tu Apple ID) e instala Hábitos. Convive con Hábitos Dev: son apps distintas.
 
-Cada build de TestFlight caduca a los **90 días**. Antes de que caduque, hay que subir uno nuevo.
+Cada build de TestFlight caduca a los **90 días**: a partir de ahí la app no se abre. Antes de que caduque, hay que subir uno nuevo.
+
+### 3.1 Probadores externos
+
+Para que pruebe la app alguien que no es usuario de tu cuenta de App Store Connect (un amigo, por ejemplo), se usa un grupo de **pruebas externas**. No le da ningún acceso a tu cuenta.
+
+1. **TestFlight → Información de pruebas:** una descripción breve de la beta, un correo para comentarios, tus datos de contacto y una nota para el revisor: "Se inicia sesión con Sign in with Apple o Google; no hace falta cuenta de demostración".
+2. **Pruebas externas → +:** crea un grupo (por ejemplo, `Amigos`), añade a los probadores por su correo y añade el build. Se envía a la **revisión beta** de Apple.
+3. El estado del build en el grupo pasa por **Pendiente de revisión** (en la cola de Apple), **En revisión** y **Aprobado** (o **Rechazado**, con el motivo en App Store Connect y por correo). Suele tardar menos de un día; la primera vez puede tardar uno o dos. Los builds siguientes de la misma versión no siempre necesitan una revisión completa.
+4. Al aprobarse, a cada probador le llega un correo con un enlace para abrir TestFlight y un código de canje. Basta con abrirlo en el iPhone. El correo de la invitación puede ser distinto del de su Apple ID: la invitación se asocia al Apple ID que la canjea, y es de un solo uso.
+5. **Google:** mientras el proyecto `habitos` de Google Cloud esté "en pruebas", solo pueden entrar con Google las cuentas de su lista de usuarios de prueba (**Google Auth Platform → Público**). Añade las de los probadores, o pulsa **Publicar aplicación** ([supabase.md, 8.2](supabase.md#82-google-cloud-un-proyecto-por-entorno)). Con Apple pueden entrar sin más.
+
+Los datos de los probadores quedan en `habitos`, visibles desde el panel; conviene que lo sepan. Pueden borrarlos con **Ajustes → Eliminar cuenta**. Pueden desinstalar TestFlight y la app sigue funcionando, pero sin TestFlight no reciben los builds nuevos, que hacen falta cuando caduca el actual.
 
 ## 4. Probarlo en el iPhone
 
