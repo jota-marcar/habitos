@@ -41,9 +41,10 @@ Una incidencia que cambia el comportamiento descrito en la [especificación func
 ## INC-05. No es evidente que los valores por defecto de la cantidad se pueden cambiar
 
 - **Encontrada:** 2026-11-20, en producción (TestFlight).
-- **Estado:** pendiente.
+- **Estado:** resuelta.
 - **Qué pasa:** en el formulario del hábito, Meta, Unidad e Incremento vienen rellenos con valores por defecto que se muestran con menos opacidad. Un usuario nuevo no ve con claridad que son campos que puede tocar y modificar.
 - **Qué se espera:** los tres campos se reconocen a simple vista como editables (por ejemplo, con un marco o un fondo sutil), sin romper el aspecto minimalista.
+- **Cómo se resuelve:** el valor de cada uno de los tres campos va en una caja redondeada con un fondo algo más claro que el de la sección (el color de los bordes del tema), alineada a la derecha y del mismo ancho en los tres, para que queden en columna. En Meta y Unidad lo atenuado no es un valor por defecto, sino un ejemplo ("2", "L") que desaparece al escribir; solo Incremento trae un valor real (1). La caja deja claro en los dos casos que es un campo. El nombre no cambia: ocupa toda la fila y ya se reconoce como campo.
 
 ## INC-06. El punto de color no muestra el progreso del hábito
 
