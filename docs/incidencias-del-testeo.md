@@ -57,9 +57,10 @@ Una incidencia que cambia el comportamiento descrito en la [especificación func
 ## INC-07. Al completar un hábito, no se ve por qué cambia de sitio
 
 - **Encontrada:** 2026-11-20, en producción (TestFlight).
-- **Estado:** pendiente.
+- **Estado:** resuelta.
 - **Qué pasa:** al completar un hábito, este se marca como completado, pero el usuario no lo ve moverse a la parte de completados. Al volver a la aplicación lo encuentra abajo y no sabe por qué ha cambiado de sitio.
 - **Qué se espera:** al completarlo, además de marcarse, el hábito se desplaza en ese momento con una breve animación hasta la lista de completados, de modo que el usuario vea el movimiento y entienda el cambio.
+- **Cómo se resuelve:** hasta ahora, RF-12 dejaba el hábito en su sitio mientras se veía el día, para que la lista no se moviera bajo el dedo. Moverlo al instante haría que el siguiente toque de una ráfaga cayera en otro hábito (por ejemplo, al sumar a uno cuantitativo que acaba de alcanzar la meta). Por eso se mueve tras una pausa: el hábito se marca al momento y, tras 1 s sin tocar ningún hábito, se desliza en 350 ms hasta su grupo. Lo mismo ocurre al dejar de estar cumplido, que vuelve a los pendientes. Cada toque reinicia la espera, así que, si se marcan varios seguidos, se mueven todos juntos al terminar. En el grupo de llegada ocupa el lugar que le corresponde por sus recordatorios, y el resto no se reordena. Los dos grupos pasan a estar en un mismo contenedor para que la fila conserve su vista y se desplace, en lugar de desaparecer arriba y aparecer abajo. La animación es una transición de Reanimated, que ya estaba instalado, así que no hace falta un build nuevo. Con "Reducir movimiento" activado, iOS se la salta. Se actualiza RF-12.
 
 ## INC-08. El texto de la lista de hábitos es algo pequeño
 

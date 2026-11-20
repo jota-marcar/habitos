@@ -1,7 +1,9 @@
 // The day view, the only main screen (RF-30). No header and no fixed buttons: the date at the
 // top, a box with the habits of the day and, under it, the strip the menu is pulled up from
 // (RF-32). In the box, the pending habits sit at the top and the done ones at the bottom, with
-// the free space between them (RF-12). A tap records a habit (RF-14, RF-15) and holding it down opens its options (RF-34).
+// the free space between them (RF-12). A habit that was done or undone slides to its group,
+// after a pause in the taps. A tap records a habit (RF-14, RF-15) and holding it down opens its
+// options (RF-34).
 // The calendar that changes the day is pulled down from the date or from the list (RF-31).
 
 import { useRouter } from "expo-router";
@@ -14,8 +16,12 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
-import { FlatList, GestureDetector } from "react-native-gesture-handler";
-import { useSharedValue } from "react-native-reanimated";
+import { GestureDetector, ScrollView } from "react-native-gesture-handler";
+import Animated, {
+  Easing,
+  LinearTransition,
+  useSharedValue,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { LocalDate } from "@/domain/dates";
@@ -28,8 +34,12 @@ import { Sheet, SheetOption, useOpenSheetGesture, useSheet } from "@/ui/sheet";
 import { fontSize, radius, spacing, topGap, useColors } from "@/ui/theme";
 import { useDay } from "@/ui/use-day";
 
-// A done habit stays in its place, dimmed (RF-13).
+// A done habit is dimmed (RF-13).
 const DONE_OPACITY = 0.4;
+
+// How a habit slides to its group, and the others make room for it (RF-12). It is brief, and
+// with Reduce Motion on, iOS skips it.
+const MOVE = LinearTransition.duration(350).easing(Easing.inOut(Easing.quad));
 
 // The least space between the two groups, when they fill the box and it scrolls (RF-12).
 const GROUP_GAP = spacing.xl;
@@ -90,6 +100,23 @@ function HabitRow({
         </Text>
       )}
     </Pressable>
+  );
+}
+
+/**
+ * A row of the list, with the line that separates it from the one above unless it is the first
+ * of its group. The two groups are in the same container, so that a row that changes group
+ * keeps its view and slides from one place to the other.
+ */
+function MovingHabitRow({
+  first,
+  ...row
+}: Parameters<typeof HabitRow>[0] & { first: boolean }) {
+  return (
+    <Animated.View layout={MOVE}>
+      {first ? null : <Separator />}
+      <HabitRow {...row} />
+    </Animated.View>
   );
 }
 
@@ -223,48 +250,41 @@ export default function Today() {
           {habits === null ? null : allHabits?.length === 0 ? (
             <EmptyDay hasAnyHabit={hasAnyHabit} isToday={isToday} />
           ) : (
-            <FlatList
+            <ScrollView
               key={date}
               testID="day-habits"
-              data={habits.pending}
               // The drag that opens the calendar goes along with the scroll of the list.
               simultaneousWith={openCalendarFromList}
               // A list that fits does not move, so pulling it down only brings the calendar.
               alwaysBounceVertical={false}
               onScroll={onListScroll}
               scrollEventThrottle={16}
-              keyExtractor={(item) => item.habit.id}
-              renderItem={({ item }) => (
-                <HabitRow
+              // The list fills the box, and the gap between the groups takes the space left,
+              // which pushes the done group to the bottom.
+              contentContainerStyle={styles.groups}
+            >
+              {habits.pending.map((item, index) => (
+                <MovingHabitRow
+                  key={item.habit.id}
+                  first={index === 0}
                   item={item}
                   showColor={showColor}
                   onPress={() => void record(item.habit.id)}
                   onLongPress={() => openOptions(item)}
                 />
-              )}
-              ItemSeparatorComponent={Separator}
-              // The list fills the box, and the done group takes the space left under the
-              // pending one, pushed to the bottom.
-              contentContainerStyle={styles.groups}
-              ListFooterComponentStyle={styles.doneGroup}
-              ListFooterComponent={
-                habits.done.length === 0 ? undefined : (
-                  <View testID="day-habits-done">
-                    {habits.done.map((item, index) => (
-                      <View key={item.habit.id}>
-                        {index === 0 ? null : <Separator />}
-                        <HabitRow
-                          item={item}
-                          showColor={showColor}
-                          onPress={() => void record(item.habit.id)}
-                          onLongPress={() => openOptions(item)}
-                        />
-                      </View>
-                    ))}
-                  </View>
-                )
-              }
-            />
+              ))}
+              <View key="gap" testID="day-habits-gap" style={styles.groupGap} />
+              {habits.done.map((item, index) => (
+                <MovingHabitRow
+                  key={item.habit.id}
+                  first={index === 0}
+                  item={item}
+                  showColor={showColor}
+                  onPress={() => void record(item.habit.id)}
+                  onLongPress={() => openOptions(item)}
+                />
+              ))}
+            </ScrollView>
           )}
         </View>
       </GestureDetector>
@@ -344,11 +364,7 @@ const styles = StyleSheet.create({
   name: { flexShrink: 1, fontSize: fontSize.list },
   progress: { fontSize: fontSize.list, fontVariant: ["tabular-nums"] },
   groups: { flexGrow: 1 },
-  doneGroup: {
-    flexGrow: 1,
-    justifyContent: "flex-end",
-    paddingTop: GROUP_GAP,
-  },
+  groupGap: { flexGrow: 1, minHeight: GROUP_GAP },
   separator: {
     height: StyleSheet.hairlineWidth,
     marginLeft: spacing.md,

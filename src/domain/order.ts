@@ -2,8 +2,9 @@
 // pending habits and the done ones. On the current day each group starts with the habits whose
 // reminders have all gone off, then the others by their next reminder, and the habits without
 // reminders at the end. On any other day there is no "now", so they go by their first reminder.
-// While a day is on screen the order and the groups are kept, so the list does not move when a
-// habit is marked: the interface computes them when it shows the day and then only keeps them.
+// While a day is on screen the order and the groups are kept, so the list does not move under
+// the finger: the interface computes them when it shows the day and then keeps them, except that
+// after a pause in the taps the habits that were done or undone move to their group.
 
 import type { DayHabit } from "./day";
 import type { Reminder } from "./reminders";
@@ -75,6 +76,47 @@ export function sortDayHabits(
     pending: sorted.filter((d) => !d.done),
     done: sorted.filter((d) => d.done),
   };
+}
+
+/**
+ * Moves to the other group the habits of `groups` that are in the wrong one: done habits in the
+ * pending group and pending habits in the done group (RF-12). Each goes where the sorting of the
+ * day would put it among the habits already there; the others keep their places, so the list
+ * only changes where a habit leaves and where it arrives. `now` is as in `sortDayHabits`. Habits
+ * that are not in `dayHabits` are left as they are.
+ */
+export function settleGroups(
+  dayHabits: readonly DayHabit[],
+  groups: DayGroups<string>,
+  reminders: readonly Reminder[],
+  now: LocalTime | null,
+): DayGroups<string> {
+  const sorted = sortByReminders(
+    dayHabits,
+    (d) => d.habit.id,
+    reminders,
+    now,
+  ).map((d) => d.habit.id);
+  const doneIds = new Set(
+    dayHabits.filter((d) => d.done).map((d) => d.habit.id),
+  );
+  const isPending = (id: string) => sorted.includes(id) && !doneIds.has(id);
+
+  const pending = groups.pending.filter((id) => !doneIds.has(id));
+  const done = groups.done.filter((id) => !isPending(id));
+  const toDone = groups.pending.filter((id) => doneIds.has(id));
+  const toPending = groups.done.filter(isPending);
+
+  // A habit goes before the first one of its new group that the sorting puts after it.
+  const place = (group: string[], id: string) => {
+    const after = group.findIndex(
+      (other) => sorted.indexOf(other) > sorted.indexOf(id),
+    );
+    group.splice(after === -1 ? group.length : after, 0, id);
+  };
+  toDone.forEach((id) => place(done, id));
+  toPending.forEach((id) => place(pending, id));
+  return { pending, done };
 }
 
 /**
