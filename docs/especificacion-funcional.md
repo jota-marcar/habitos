@@ -131,7 +131,8 @@ Es la pantalla principal de la aplicación (ver 3.1).
     - En cualquier otro día, por la hora de su primer recordatorio.
     - Los que no tienen recordatorio van al final y, a igualdad, se mantiene el orden de creación.
     - El orden se calcula con la hora en que se muestra el día; con la aplicación abierta, la lista no se reordena sola al pasar las horas.
-  - Mientras se está viendo un día, la lista no se reordena: un hábito que se cumple, o que deja de estar cumplido, se queda en su sitio y en su grupo, para que la lista no se mueva bajo el dedo. Pasa al otro grupo la próxima vez que se muestra el día: al abrir la aplicación, al volver a ella o al elegir un día en el calendario.
+  - Un hábito que se cumple, o que deja de estar cumplido, se marca al momento y se queda en su sitio un instante (alrededor de un segundo). Pasado ese tiempo sin tocar ningún hábito, se desplaza con una breve animación hasta el otro grupo, de modo que se vea por qué cambia de sitio. Cada toque vuelve a empezar la espera: mientras se siguen tocando hábitos, la lista no se mueve bajo el dedo. En el grupo de llegada ocupa el lugar que le corresponde por sus recordatorios, y el resto de la lista no se reordena.
+  - Los cambios que llegan de fuera mientras se ve el día (desde un recordatorio o desde otro dispositivo) no mueven la lista: los hábitos pasan a su grupo la próxima vez que se muestra el día o tras la siguiente pausa en los toques.
   - Si llega la medianoche con la aplicación abierta, la pantalla pasa sola al nuevo día actual. Si se estaba viendo otro día (RF-18), se queda en él.
   - Al volver a la aplicación después de haber salido de ella se muestra de nuevo el día actual, aunque se estuviera viendo otro.
 - **RF-13.** Cada hábito de la lista muestra su nombre y su estado:

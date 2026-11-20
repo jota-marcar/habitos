@@ -4,7 +4,9 @@
 //
 // The groups (pending and done) and their order are computed when the day is shown, at the
 // time it is shown if it is the current day, and then kept while it stays on screen, so the
-// list does not move under the finger when a habit is marked (RF-12).
+// list does not move under the finger when a habit is marked (RF-12). Only after a pause in the
+// taps do the habits that were done or undone move to their group, where the screen animates
+// them.
 
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -28,7 +30,12 @@ import {
 } from "@/domain/entries";
 import { archiveHabit } from "@/domain/habits";
 import { localTimeOf } from "@/domain/times";
-import { keepGroups, sortDayHabits, type DayGroups } from "@/domain/order";
+import {
+  keepGroups,
+  settleGroups,
+  sortDayHabits,
+  type DayGroups,
+} from "@/domain/order";
 import { onReminderRecorded } from "@/notifications/actions";
 import { refreshReminders } from "@/notifications/reminders";
 import { onSyncedChanges, syncSoon } from "@/sync/app-sync";
@@ -61,6 +68,13 @@ export interface Day {
 
 const habitIdOf = (dayHabit: DayHabit) => dayHabit.habit.id;
 
+/**
+ * How long the list waits after the last change made on it before moving the habits that were
+ * done or undone to their group (RF-12): enough to see the habit marked, and to tap it again
+ * without it going away.
+ */
+export const SETTLE_DELAY_MS = 1000;
+
 export function useDay(): Day {
   const db = useDatabase();
   const [date, setDate] = useState(today);
@@ -76,6 +90,15 @@ export function useDay(): Day {
   const writes = useRef<Promise<void>>(Promise.resolve());
   // Discards the reads that finish after a newer one has started.
   const lastRead = useRef(0);
+  // The pause after the last change, and whether it is over: the next read then moves the
+  // habits to their group.
+  const settleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const settleDue = useRef(false);
+
+  const holdSettling = useCallback(() => {
+    clearTimeout(settleTimer.current);
+    settleDue.current = false;
+  }, []);
 
   const load = useCallback(
     async (shownDate: LocalDate, sort: boolean) => {
@@ -92,10 +115,10 @@ export function useDay(): Day {
         { habits: allHabits, versions, entries },
         shownDate,
       );
+      // The current day is sorted by what is overdue and what comes next; any other day, by
+      // the first reminders (RF-12).
+      const time = shownDate === today() ? localTimeOf(now()) : null;
       if (sort || order.current === null) {
-        // The current day is sorted by what is overdue and what comes next; any other
-        // day, by the first reminders (RF-12).
-        const time = shownDate === today() ? localTimeOf(now()) : null;
         const sorted = sortDayHabits(dayHabits, reminders, time);
         order.current = {
           pending: sorted.pending.map(habitIdOf),
@@ -103,6 +126,15 @@ export function useDay(): Day {
         };
         setHabits(sorted);
       } else {
+        if (settleDue.current) {
+          order.current = settleGroups(
+            dayHabits,
+            order.current,
+            reminders,
+            time,
+          );
+          settleDue.current = false;
+        }
         setHabits(keepGroups(dayHabits, habitIdOf, order.current));
       }
       setHasAnyHabit(allHabits.some((h) => h.archivedOn === null));
@@ -120,13 +152,17 @@ export function useDay(): Day {
   // focus and when the app comes back from the background.
   const show = useCallback(
     (day: LocalDate) => {
+      holdSettling();
       checkToday();
       shown.current = day;
       setDate(day);
       void load(day, true);
     },
-    [checkToday, load],
+    [checkToday, holdSettling, load],
   );
+
+  // A pending pause does not outlive the screen.
+  useEffect(() => holdSettling, [holdSettling]);
 
   // Gaining focus is opening the app, which starts on the current day, and coming back from a
   // form, which keeps the day that was on screen.
@@ -196,10 +232,13 @@ export function useDay(): Day {
     [db, date, load],
   );
 
-  // Records the value that `next` gives for a habit of the day on screen.
+  // Records the value that `next` gives for a habit of the day on screen. Each change holds the
+  // habits in their places and starts the pause again, once it is written; when the pause is
+  // over, the day is read again and they move to their group.
   const setValue = useCallback(
-    (habitId: string, next: (dayHabit: DayHabit) => number): Promise<void> =>
-      change(async () => {
+    (habitId: string, next: (dayHabit: DayHabit) => number): Promise<void> => {
+      holdSettling();
+      const write = change(async () => {
         if (!canRecordOn(date, today())) return;
         const [allHabits, versions, entries] = await Promise.all([
           listHabits(db),
@@ -219,8 +258,17 @@ export function useDay(): Day {
           date,
           value: next(dayHabit),
         });
-      }),
-    [db, date, change],
+      });
+      void write.then(() => {
+        clearTimeout(settleTimer.current);
+        settleTimer.current = setTimeout(() => {
+          settleDue.current = true;
+          void load(shown.current, false);
+        }, SETTLE_DELAY_MS);
+      }, holdSettling);
+      return write;
+    },
+    [db, date, change, holdSettling, load],
   );
 
   const record = useCallback(

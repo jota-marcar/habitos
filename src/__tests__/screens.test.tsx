@@ -6,7 +6,6 @@ import {
   renderRouter,
   screen,
   waitFor,
-  within,
 } from "expo-router/testing-library";
 import {
   Alert,
@@ -46,6 +45,7 @@ import { localTime } from "@/domain/times";
 import { AppStack, STACK_SETTINGS } from "@/ui/app-stack";
 import { DatabaseContext } from "@/ui/database";
 import { SessionContext } from "@/ui/session";
+import { SETTLE_DELAY_MS } from "@/ui/use-day";
 
 // Thursday, 12 November 2026: after the day the fixtures are created (2026-11-01).
 const TODAY = localDate("2026-11-12");
@@ -324,13 +324,24 @@ function habitNames() {
     .map((row) => row.props.accessibilityLabel as string);
 }
 
-/** The names of the habits in the done group, at the bottom of the box (RF-12). */
+/**
+ * The names of the habits in the done group, at the bottom of the box (RF-12): the ones after
+ * the gap that separates the groups. Both groups are in the same container, so that a habit
+ * slides from one to the other.
+ */
 function doneNames() {
-  const group = screen.queryByTestId("day-habits-done");
-  if (group === null) return [];
-  return within(group)
-    .getAllByTestId(/^habit-/)
+  const items = screen.getAllByTestId(/^habit-|^day-habits-gap$/);
+  const gap = items.findIndex((item) => item.props.testID === "day-habits-gap");
+  return items
+    .slice(gap + 1)
     .map((row) => row.props.accessibilityLabel as string);
+}
+
+/** Lets the pause after the last tap go by, after which the habits move to their group. */
+async function waitForTheMove(ms = SETTLE_DELAY_MS) {
+  await act(async () => {
+    jest.advanceTimersByTime(ms);
+  });
 }
 
 async function addBoolean(id: string, name: string, time?: string) {
@@ -507,8 +518,7 @@ describe("day view", () => {
     expect(await screen.findByText("0,75 / 0,5 L")).toBeTruthy();
   });
 
-  test("keeps the order while the day is on screen and sorts it when coming back (RF-12)", async () => {
-    const appBecomes = spyOnAppState();
+  test("moves a habit that is done to the done group after a pause in the taps (RF-12)", async () => {
     await addBoolean("read", "Leer", "22:00");
     await addBoolean("walk", "Pasear", "08:00");
     await addBoolean("none", "Sin hora");
@@ -518,20 +528,54 @@ describe("day view", () => {
 
     await fireEvent.press(screen.getByTestId("habit-walk"));
 
+    // It is marked at once, but stays in its place for a moment.
     expect(await screen.findByRole("checkbox", { checked: true })).toBeTruthy();
     expect(habitNames()).toEqual(["Pasear", "Leer", "Sin hora"]);
-    // It stays in the pending group until the day is shown again.
     expect(doneNames()).toEqual([]);
 
-    // Opening the Control Center is not leaving the app.
-    await appBecomes("inactive");
-    await appBecomes("active");
-    expect(habitNames()).toEqual(["Pasear", "Leer", "Sin hora"]);
+    await waitForTheMove(SETTLE_DELAY_MS - 1);
+    expect(doneNames()).toEqual([]);
 
-    await appBecomes("background");
-    await appBecomes("active");
+    await waitForTheMove(1);
     expect(habitNames()).toEqual(["Leer", "Sin hora", "Pasear"]);
     expect(doneNames()).toEqual(["Pasear"]);
+  });
+
+  test("keeps every habit in its place while the taps go on (RF-12)", async () => {
+    await addBoolean("read", "Leer", "22:00");
+    await addBoolean("walk", "Pasear", "08:00");
+    await renderApp();
+    await screen.findByText("Pasear");
+
+    await fireEvent.press(screen.getByTestId("habit-walk"));
+    await waitForTheMove(SETTLE_DELAY_MS - 100);
+    await fireEvent.press(screen.getByTestId("habit-read"));
+    await waitForTheMove(SETTLE_DELAY_MS - 100);
+
+    // The second tap started the pause again, so nothing has moved yet.
+    expect(doneNames()).toEqual([]);
+
+    await waitForTheMove(100);
+    expect(doneNames()).toEqual(["Pasear", "Leer"]);
+  });
+
+  test("puts the habit among the done ones by its reminders (RF-12)", async () => {
+    const appBecomes = spyOnAppState();
+    await addBoolean("late", "Tarde", "21:00");
+    await addBoolean("early", "Pronto", "11:00");
+    await addBoolean("noon", "Mediodía", "12:00");
+    await renderApp();
+    await screen.findByText("Pronto");
+    await fireEvent.press(screen.getByTestId("habit-late"));
+    await fireEvent.press(screen.getByTestId("habit-early"));
+    await appBecomes("background");
+    await appBecomes("active");
+    expect(doneNames()).toEqual(["Pronto", "Tarde"]);
+
+    await fireEvent.press(screen.getByTestId("habit-noon"));
+    await waitForTheMove();
+
+    expect(doneNames()).toEqual(["Pronto", "Mediodía", "Tarde"]);
   });
 
   test("today puts the overdue habits first, then the others by their next reminder (RF-12)", async () => {
@@ -554,14 +598,12 @@ describe("day view", () => {
     expect(habitNames()).toEqual(["Meditar", "Leer", "Beber agua", "Sin hora"]);
   });
 
-  test("a habit undone while the day is on screen stays in the done group (RF-12)", async () => {
-    const appBecomes = spyOnAppState();
+  test("moves a habit that is undone back to the pending group after the pause (RF-12)", async () => {
     await addBoolean("read", "Leer");
     await addBoolean("walk", "Pasear");
     await renderApp();
     await fireEvent.press(await screen.findByTestId("habit-walk"));
-    await appBecomes("background");
-    await appBecomes("active");
+    await waitForTheMove();
     expect(doneNames()).toEqual(["Pasear"]);
 
     await fireEvent.press(screen.getByTestId("habit-walk"));
@@ -570,6 +612,10 @@ describe("day view", () => {
       await screen.findByRole("checkbox", { checked: false, name: "Pasear" }),
     ).toBeTruthy();
     expect(doneNames()).toEqual(["Pasear"]);
+
+    await waitForTheMove();
+    expect(habitNames()).toEqual(["Leer", "Pasear"]);
+    expect(doneNames()).toEqual([]);
   });
 
   test("moves on to the new day at midnight while the app stays open (RF-12)", async () => {

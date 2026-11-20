@@ -1,6 +1,12 @@
 import { localDate } from "./dates";
 import type { DayHabit } from "./day";
-import { keepGroups, keepOrder, sortByReminders, sortDayHabits } from "./order";
+import {
+  keepGroups,
+  keepOrder,
+  settleGroups,
+  sortByReminders,
+  sortDayHabits,
+} from "./order";
 import type { Reminder } from "./reminders";
 import { EVERY_DAY } from "./schedule";
 import { localTime } from "./times";
@@ -269,5 +275,96 @@ describe("keepGroups", () => {
       pending: ["a"],
       done: [],
     });
+  });
+});
+
+describe("settleGroups", () => {
+  test("moves a habit that was done to the done group, and back when undone (RF-12)", () => {
+    const dayHabits = [dayHabit("a", true), dayHabit("b", false)];
+
+    expect(
+      settleGroups(dayHabits, { pending: ["a"], done: ["b"] }, [], null),
+    ).toEqual({ pending: ["b"], done: ["a"] });
+  });
+
+  test("leaves the groups as they are when every habit is in its own", () => {
+    const groups = { pending: ["b", "a"], done: ["d", "c"] };
+    const dayHabits = [
+      dayHabit("a", false),
+      dayHabit("b", false),
+      dayHabit("c", true),
+      dayHabit("d", true),
+    ];
+
+    expect(settleGroups(dayHabits, groups, [], null)).toEqual(groups);
+  });
+
+  test("puts the habit where the sorting of the day puts it among the ones already there", () => {
+    const dayHabits = [
+      dayHabit("early", true),
+      dayHabit("noon", true),
+      dayHabit("moved", true),
+      dayHabit("late", true),
+    ];
+    const reminders = [
+      reminder("early", "07:00"),
+      reminder("noon", "12:00"),
+      reminder("moved", "09:00"),
+      reminder("late", "21:00"),
+    ];
+    const groups = { pending: ["moved"], done: ["early", "noon", "late"] };
+
+    expect(settleGroups(dayHabits, groups, reminders, null)).toEqual({
+      pending: [],
+      done: ["early", "moved", "noon", "late"],
+    });
+  });
+
+  test("puts the habit at the end when the sorting puts it after all the others", () => {
+    const dayHabits = [dayHabit("a", false), dayHabit("b", false)];
+    const reminders = [reminder("a", "07:00")];
+
+    expect(
+      settleGroups(dayHabits, { pending: ["a"], done: ["b"] }, reminders, null),
+    ).toEqual({ pending: ["a", "b"], done: [] });
+  });
+
+  test("sorts by what is overdue on the current day", () => {
+    const dayHabits = [dayHabit("next", false), dayHabit("overdue", false)];
+    const reminders = [reminder("next", "12:00"), reminder("overdue", "08:00")];
+
+    expect(
+      settleGroups(
+        dayHabits,
+        { pending: ["next"], done: ["overdue"] },
+        reminders,
+        localTime("10:00"),
+      ),
+    ).toEqual({ pending: ["overdue", "next"], done: [] });
+  });
+
+  test("keeps the places of the others, even if the sorting would now change them", () => {
+    const dayHabits = [
+      dayHabit("b", false),
+      dayHabit("a", false),
+      dayHabit("c", true),
+    ];
+
+    expect(
+      settleGroups(dayHabits, { pending: ["a", "b", "c"], done: [] }, [], null),
+    ).toEqual({ pending: ["a", "b"], done: ["c"] });
+  });
+
+  test("leaves the habits that are no longer there as they are", () => {
+    const dayHabits = [dayHabit("a", true)];
+
+    expect(
+      settleGroups(
+        dayHabits,
+        { pending: ["gone", "a"], done: ["also-gone"] },
+        [],
+        null,
+      ),
+    ).toEqual({ pending: ["gone"], done: ["also-gone", "a"] });
   });
 });
