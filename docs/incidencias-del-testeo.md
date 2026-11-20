@@ -4,7 +4,7 @@ Lo que se encuentra al probar la aplicación en el iPhone (la variante de produc
 
 Una incidencia que cambia el comportamiento descrito en la [especificación funcional](especificacion-funcional.md) se resuelve actualizándola en el mismo Pull Request.
 
-**Estados:** pendiente, resuelta (en una rama o PR sin fusionar) y publicada (en un build de TestFlight).
+**Estados:** pendiente, resuelta (en una rama o PR sin fusionar), publicada (en un build de TestFlight) y cancelada (se descarta, al menos de momento, con el motivo).
 
 ## INC-01. Un hábito creado desde un día futuro empieza hoy
 
@@ -49,9 +49,10 @@ Una incidencia que cambia el comportamiento descrito en la [especificación func
 ## INC-06. El punto de color no muestra el progreso del hábito
 
 - **Encontrada:** 2026-11-20, en producción (TestFlight).
-- **Estado:** pendiente.
+- **Estado:** resuelta.
 - **Qué pasa:** el indicador de color delante de cada hábito de la lista es un círculo relleno, igual sea cual sea el progreso del día.
 - **Qué se espera:** el indicador es una circunferencia (solo el borde) del color del hábito que se va rellenando a medida que avanza el progreso del día, y queda completa al cumplir la meta. Cambia lo descrito en RF-13 de la especificación funcional.
+- **Cómo se resuelve:** el indicador pasa a ser una circunferencia de 14 pt (antes, un punto de 10 pt) con un borde de 1,5 pt, que se rellena por sectores, como las agujas de un reloj desde las 12. Un hábito booleano la tiene vacía o llena; uno cuantitativo, en proporción a la cantidad sobre la meta, y llena al alcanzarla o superarla. Al tocar el hábito, el relleno avanza con una animación breve (250 ms). Los hábitos sin color ya no llevan un aro gris vacío, que se confundiría con el 0 % de uno con color: dejan el hueco vacío, para que los nombres sigan alineados. Se dibuja con vistas de React Native (dos mitades que giran tras un recorte), sin dependencias nuevas ni build nuevo. Se actualiza RF-13.
 
 ## INC-07. Al completar un hábito, no se ve por qué cambia de sitio
 
@@ -71,6 +72,7 @@ Una incidencia que cambia el comportamiento descrito en la [especificación func
 ## INC-09. Nada indica que hay un calendario arriba
 
 - **Encontrada:** 2026-11-20, en producción (TestFlight).
-- **Estado:** pendiente.
+- **Estado:** cancelada.
 - **Qué pasa:** el menú inferior tiene una franja que indica que se puede deslizar para abrirlo, pero el calendario de arriba no tiene ninguna señal.
 - **Qué se espera:** a valorar una franja arriba, idéntica a la de abajo, que indique que se puede deslizar para abrir el calendario. Antes de decidir, hay que comprobar que no recarga la pantalla ni le resta minimalismo. Relacionada con INC-04.
+- **Por qué se cancela:** de momento basta con el mensaje inicial de INC-04, que ya explica que deslizando desde arriba se abre el calendario. Se evita añadir otra franja a la pantalla. Si los probadores siguen sin encontrar el calendario, se puede retomar.

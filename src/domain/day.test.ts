@@ -1,4 +1,4 @@
-import { habitsForDay, isDone } from "./day";
+import { habitsForDay, isDone, progressOf } from "./day";
 import { localDate } from "./dates";
 import type { Entry } from "./entries";
 import type { Habit, HabitConfig, HabitVersion } from "./habits";
@@ -82,6 +82,30 @@ describe("isDone", () => {
 
   test("a quantitative habit with no target is never done", () => {
     expect(isDone("quantitative", booleanVersion, 100)).toBe(false);
+  });
+});
+
+describe("progressOf", () => {
+  const booleanVersion = version("meditate", "2026-10-01");
+  const waterVersion = version("water", "2026-10-01", waterConfig);
+
+  test("a boolean habit is either not done or done (RF-13)", () => {
+    expect(progressOf("boolean", booleanVersion, 0)).toBe(0);
+    expect(progressOf("boolean", booleanVersion, 1)).toBe(1);
+  });
+
+  test("a quantitative habit goes up with the amount (RF-13)", () => {
+    expect(progressOf("quantitative", waterVersion, 0)).toBe(0);
+    expect(progressOf("quantitative", waterVersion, 0.5)).toBe(0.25);
+    expect(progressOf("quantitative", waterVersion, 2)).toBe(1);
+  });
+
+  test("a quantitative habit stays full past the target (RF-16)", () => {
+    expect(progressOf("quantitative", waterVersion, 3)).toBe(1);
+  });
+
+  test("a quantitative habit with no target has no progress", () => {
+    expect(progressOf("quantitative", booleanVersion, 5)).toBe(0);
   });
 });
 
