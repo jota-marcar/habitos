@@ -4,7 +4,7 @@ Lo que se encuentra al probar la aplicación en el iPhone (la variante de produc
 
 Una incidencia que cambia el comportamiento descrito en la [especificación funcional](especificacion-funcional.md) se resuelve actualizándola en el mismo Pull Request.
 
-**Estados:** pendiente, resuelta (en una rama o PR sin fusionar) y publicada (en un build de TestFlight).
+**Estados:** pendiente, resuelta (en una rama o PR sin fusionar), publicada (en un build de TestFlight) y cancelada (se descarta, al menos de momento, con el motivo).
 
 ## INC-01. Un hábito creado desde un día futuro empieza hoy
 
@@ -71,6 +71,7 @@ Una incidencia que cambia el comportamiento descrito en la [especificación func
 ## INC-09. Nada indica que hay un calendario arriba
 
 - **Encontrada:** 2026-11-20, en producción (TestFlight).
-- **Estado:** pendiente.
+- **Estado:** cancelada.
 - **Qué pasa:** el menú inferior tiene una franja que indica que se puede deslizar para abrirlo, pero el calendario de arriba no tiene ninguna señal.
 - **Qué se espera:** a valorar una franja arriba, idéntica a la de abajo, que indique que se puede deslizar para abrir el calendario. Antes de decidir, hay que comprobar que no recarga la pantalla ni le resta minimalismo. Relacionada con INC-04.
+- **Por qué se cancela:** de momento basta con el mensaje inicial de INC-04, que ya explica que deslizando desde arriba se abre el calendario. Se evita añadir otra franja a la pantalla. Si los probadores siguen sin encontrar el calendario, se puede retomar.
