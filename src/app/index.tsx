@@ -19,10 +19,11 @@ import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { LocalDate } from "@/domain/dates";
-import type { DayHabit } from "@/domain/day";
+import { progressOf, type DayHabit } from "@/domain/day";
 import { CalendarSheet } from "@/ui/calendar-sheet";
 import { formatDayTitle, formatProgress } from "@/ui/format";
 import { HabitOptionsSheet } from "@/ui/habit-options-sheet";
+import { PROGRESS_DOT_SIZE, ProgressDot } from "@/ui/progress-dot";
 import { Sheet, SheetOption, useOpenSheetGesture, useSheet } from "@/ui/sheet";
 import { fontSize, radius, spacing, topGap, useColors } from "@/ui/theme";
 import { useDay } from "@/ui/use-day";
@@ -32,9 +33,6 @@ const DONE_OPACITY = 0.4;
 
 // The least space between the two groups, when they fill the box and it scrolls (RF-12).
 const GROUP_GAP = spacing.xl;
-
-// The dot with the color of a habit, before its name (RF-13).
-const DOT_SIZE = 10;
 
 // The strip is thin, but the area that catches the drag is as tall as a button.
 const STRIP_TOUCH_HEIGHT = 44;
@@ -46,7 +44,7 @@ function HabitRow({
   onLongPress,
 }: {
   item: DayHabit;
-  /** Whether the rows of the day have a dot for the color of their habit (RF-13). */
+  /** Whether the rows of the day have a dot with the color and progress of their habit (RF-13). */
   showColor: boolean;
   onPress: () => void;
   onLongPress: () => void;
@@ -72,18 +70,16 @@ function HabitRow({
       ]}
     >
       <View style={styles.label}>
-        {/* A habit without a color has an empty dot, so that the names line up. */}
-        {showColor ? (
-          <View
+        {/* A habit without a color leaves the room of the dot empty, so that the names line up. */}
+        {!showColor ? null : habit.color === null ? (
+          <View testID={`no-color-${habit.id}`} style={styles.noDot} />
+        ) : (
+          <ProgressDot
             testID={`color-dot-${habit.id}`}
-            style={[
-              styles.dot,
-              habit.color === null
-                ? { borderColor: colors.border, borderWidth: 1 }
-                : { backgroundColor: colors.habit[habit.color] },
-            ]}
+            color={colors.habit[habit.color]}
+            progress={progressOf(habit.type, version, value)}
           />
-        ) : null}
+        )}
         <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
           {habit.name}
         </Text>
@@ -344,7 +340,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     gap: spacing.sm + 2,
   },
-  dot: { borderRadius: radius.round, height: DOT_SIZE, width: DOT_SIZE },
+  noDot: { height: PROGRESS_DOT_SIZE, width: PROGRESS_DOT_SIZE },
   name: { flexShrink: 1, fontSize: fontSize.list },
   progress: { fontSize: fontSize.list, fontVariant: ["tabular-nums"] },
   groups: { flexGrow: 1 },

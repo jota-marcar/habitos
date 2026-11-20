@@ -138,7 +138,7 @@ Es la pantalla principal de la aplicación (ver 3.1).
   - Booleano: solo el nombre.
   - Cuantitativo: el nombre, la cantidad acumulada y la meta (por ejemplo, "1,25 / 2 L").
   - En los dos, un hábito cumplido se muestra atenuado.
-  - Un hábito con color lleva un punto de ese color delante del nombre. Si algún hábito del día tiene color, los que no lo tienen llevan un punto vacío, para que los nombres queden alineados; si ninguno lo tiene, no hay puntos.
+  - Un hábito con color lleva delante del nombre una circunferencia de ese color que se va rellenando, como las agujas de un reloj desde las 12, a medida que avanza el progreso del día. Un hábito booleano la tiene vacía o llena; uno cuantitativo, en proporción a la cantidad acumulada sobre la meta, y llena al alcanzarla o superarla. Si algún hábito del día tiene color, los que no lo tienen dejan ese hueco vacío, para que los nombres queden alineados; si ninguno lo tiene, no hay circunferencias.
 - **RF-14.** Un hábito booleano se marca y desmarca con un toque.
 - **RF-15.** Un hábito cuantitativo suma su incremento con un toque. Desde sus opciones (RF-34) también se puede restar el incremento o escribir la cantidad exacta. La cantidad nunca baja de 0 y admite 2 decimales como máximo.
 - **RF-16.** Un hábito cuantitativo cuenta como cumplido cuando la cantidad acumulada alcanza la meta. Se puede superar la meta.

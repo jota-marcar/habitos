@@ -33,6 +33,20 @@ export function isDone(
   return version.target !== null && value >= version.target;
 }
 
+/**
+ * How much of the day's goal is done, from 0 to 1 (RF-13). A boolean habit is either not done
+ * or done; a quantitative one goes up with the amount and stays at 1 past the target.
+ */
+export function progressOf(
+  type: HabitType,
+  version: HabitVersion,
+  value: number,
+): number {
+  if (isDone(type, version, value)) return 1;
+  if (type === "boolean" || version.target === null) return 0;
+  return value / version.target;
+}
+
 // An archived habit stops appearing after the day it was archived. On that day it only
 // appears if something was recorded, so that no history is hidden (RF-10).
 function isRetiredOn(habit: Habit, date: LocalDate, value: number): boolean {

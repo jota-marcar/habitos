@@ -389,24 +389,53 @@ describe("day view", () => {
     expect(screen.getByText("Hoy")).toHaveStyle({ fontSize: 20 });
   });
 
-  test("shows a dot with the color of each habit, empty for those without one (RF-13)", async () => {
+  test("shows a circle with the color of each habit, filled up to its progress (RF-13)", async () => {
     await addHabit(
       db,
       habit("read", { name: "Leer", color: "teal" }),
       version("read"),
     );
+    await addHabit(
+      db,
+      habit("water", {
+        name: "Beber agua",
+        type: "quantitative",
+        color: "blue",
+      }),
+      version("water", { target: 2, unit: "L", increment: 0.25 }),
+    );
     await addBoolean("walk", "Pasear");
+    await saveEntry(db, { id: "e1", habitId: "read", date: TODAY, value: 1 });
+    await saveEntry(db, {
+      id: "e2",
+      habitId: "water",
+      date: TODAY,
+      value: 0.5,
+    });
     await renderApp();
     await screen.findByText("Leer");
 
+    // Done: full.
     expect(screen.getByTestId("color-dot-read")).toHaveStyle({
-      backgroundColor: "#2DD4BF",
+      borderColor: "#2DD4BF",
     });
-    expect(screen.getByTestId("color-dot-walk")).toHaveStyle({
-      borderWidth: 1,
+    expect(screen.getByTestId("color-dot-read-left")).toHaveStyle({
+      transform: [{ rotate: "180deg" }],
     });
-    // The dots are not rows of the list.
-    expect(habitNames()).toEqual(["Leer", "Pasear"]);
+    // A quarter of the goal: a quarter of the circle.
+    expect(screen.getByTestId("color-dot-water-right")).toHaveStyle({
+      transform: [{ rotate: "90deg" }],
+    });
+    expect(screen.getByTestId("color-dot-water-left")).toHaveStyle({
+      transform: [{ rotate: "0deg" }],
+    });
+    // A habit without a color has no circle, only its room, so that the names line up.
+    expect(screen.queryByTestId("color-dot-walk")).toBeNull();
+    expect(screen.getByTestId("no-color-walk")).not.toHaveStyle({
+      borderWidth: 1.5,
+    });
+    // The circles are not rows of the list.
+    expect(habitNames()).toEqual(["Beber agua", "Pasear", "Leer"]);
   });
 
   test("a day with no colored habit has no dots (RF-13)", async () => {
@@ -415,6 +444,7 @@ describe("day view", () => {
     await screen.findByText("Pasear");
 
     expect(screen.queryByTestId(/^color-dot-/)).toBeNull();
+    expect(screen.queryByTestId(/^no-color-/)).toBeNull();
   });
 
   test("says when no habit is due today", async () => {
@@ -661,8 +691,10 @@ describe("new habit", () => {
     expect(await listHabits(db)).toEqual([
       expect.objectContaining({ name: "Meditar", color: "green" }),
     ]);
-    expect(await screen.findByTestId(/^color-dot-/)).toHaveStyle({
-      backgroundColor: "#4ADE80",
+    expect(
+      await screen.findByTestId(/^color-dot-(?!.*-(right|left)$)/),
+    ).toHaveStyle({
+      borderColor: "#4ADE80",
     });
   });
 
