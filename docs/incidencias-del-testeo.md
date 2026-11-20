@@ -29,3 +29,45 @@ Una incidencia que cambia el comportamiento descrito en la [especificación func
 - **Qué pasa:** al pulsar "Añadir recordatorio", el selector de horas y minutos se despliega hacia abajo y queda en parte fuera de la pantalla: hay que desplazarse a mano para verlo y confirmar.
 - **Qué se espera:** el formulario se desplaza solo hasta que el selector y sus botones se ven enteros.
 - **Cómo se resuelve:** al abrir el selector se cierra el teclado, si estaba abierto (lo taparía), y en cuanto el formulario crece para hacerle sitio se desplaza con animación hasta el final, donde quedan el selector y sus botones. Los recordatorios son la última sección del formulario, así que el final es justo lo que hay que mostrar. Solo se desplaza esa vez: el resto de cambios deja el formulario donde lo ponga el usuario.
+
+## INC-04. El mensaje inicial no explica cómo abrir el calendario
+
+- **Encontrada:** 2026-11-20, en producción (TestFlight).
+- **Estado:** pendiente.
+- **Qué pasa:** sin hábitos, el mensaje inicial solo explica el menú inferior ("Desliza hacia arriba desde la franja de abajo para crear uno."). No dice que deslizando hacia abajo desde arriba se abre el calendario.
+- **Qué se espera:** el mensaje inicial explica también el gesto del calendario, sin dejar de ser breve. Relacionada con INC-09.
+
+## INC-05. No es evidente que los valores por defecto de la cantidad se pueden cambiar
+
+- **Encontrada:** 2026-11-20, en producción (TestFlight).
+- **Estado:** pendiente.
+- **Qué pasa:** en el formulario del hábito, Meta, Unidad e Incremento vienen rellenos con valores por defecto que se muestran con menos opacidad. Un usuario nuevo no ve con claridad que son campos que puede tocar y modificar.
+- **Qué se espera:** los tres campos se reconocen a simple vista como editables (por ejemplo, con un marco o un fondo sutil), sin romper el aspecto minimalista.
+
+## INC-06. El punto de color no muestra el progreso del hábito
+
+- **Encontrada:** 2026-11-20, en producción (TestFlight).
+- **Estado:** pendiente.
+- **Qué pasa:** el indicador de color delante de cada hábito de la lista es un círculo relleno, igual sea cual sea el progreso del día.
+- **Qué se espera:** el indicador es una circunferencia (solo el borde) del color del hábito que se va rellenando a medida que avanza el progreso del día, y queda completa al cumplir la meta. Cambia lo descrito en RF-13 de la especificación funcional.
+
+## INC-07. Al completar un hábito, no se ve por qué cambia de sitio
+
+- **Encontrada:** 2026-11-20, en producción (TestFlight).
+- **Estado:** pendiente.
+- **Qué pasa:** al completar un hábito, este se marca como completado, pero el usuario no lo ve moverse a la parte de completados. Al volver a la aplicación lo encuentra abajo y no sabe por qué ha cambiado de sitio.
+- **Qué se espera:** al completarlo, además de marcarse, el hábito se desplaza en ese momento con una breve animación hasta la lista de completados, de modo que el usuario vea el movimiento y entienda el cambio.
+
+## INC-08. El texto de la lista de hábitos es algo pequeño
+
+- **Encontrada:** 2026-11-20, en producción (TestFlight).
+- **Estado:** pendiente.
+- **Qué pasa:** los nombres y el progreso de los hábitos de la lista se leen algo pequeños.
+- **Qué se espera:** un tamaño de letra ligeramente mayor en la lista de hábitos (solo un poco).
+
+## INC-09. Nada indica que hay un calendario arriba
+
+- **Encontrada:** 2026-11-20, en producción (TestFlight).
+- **Estado:** pendiente.
+- **Qué pasa:** el menú inferior tiene una franja que indica que se puede deslizar para abrirlo, pero el calendario de arriba no tiene ninguna señal.
+- **Qué se espera:** a valorar una franja arriba, idéntica a la de abajo, que indique que se puede deslizar para abrir el calendario. Antes de decidir, hay que comprobar que no recarga la pantalla ni le resta minimalismo. Relacionada con INC-04.
