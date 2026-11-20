@@ -10,14 +10,16 @@
       "environment": "development",
       "env": {
         "APP_VARIANT": "development"
-      }
+      },
+      "channel": "development"
     },
     "production": {
       "autoIncrement": true,
       "environment": "production",
       "env": {
         "APP_VARIANT": "production"
-      }
+      },
+      "channel": "production"
     }
   },
   "submit": {
