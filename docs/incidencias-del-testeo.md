@@ -4,7 +4,7 @@ Lo que se encuentra al probar la aplicación en el iPhone (la variante de produc
 
 Una incidencia que cambia el comportamiento descrito en la [especificación funcional](especificacion-funcional.md) se resuelve actualizándola en el mismo Pull Request.
 
-**Estados:** pendiente, resuelta (en una rama o PR sin fusionar), publicada (en un build de TestFlight) y cancelada (se descarta, al menos de momento, con el motivo).
+**Estados:** pendiente, resuelta (corregida en una rama o ya fusionada, pero aún no llega a los probadores), publicada (en un build de TestFlight o en una actualización OTA de producción) y cancelada (se descarta, al menos de momento, con el motivo).
 
 ## INC-01. Un hábito creado desde un día futuro empieza hoy
 

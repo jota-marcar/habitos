@@ -23,6 +23,7 @@ Cada ADR documenta una decisión técnica importante: el contexto, las opciones 
 | [0017](0017-inicio-de-sesion-nativo-con-apple-y-google-y-sesion-en-el-llavero.md) | Inicio de sesión nativo con Apple y Google y sesión en el llavero | Propuesto |
 | [0018](0018-sincronizacion-con-pull-antes-que-push-y-union-por-clave-natural.md) | Sincronización con pull antes que push y unión por clave natural | Propuesto |
 | [0019](0019-eliminacion-de-la-cuenta-con-una-edge-function-que-revoca-sign-in-with-apple-antes-de-borrar-al-usuario.md) | Eliminación de la cuenta con una Edge Function que revoca Sign in with Apple antes de borrar al usuario | Propuesto |
+| [0020](0020-actualizaciones-ota-con-eas-update-primero-en-desarrollo-y-despues-en-produccion.md) | Actualizaciones OTA con EAS Update, primero en desarrollo y después en producción | Propuesto |
 
 ## Plantilla
 

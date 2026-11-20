@@ -9,6 +9,7 @@ Guía para compilar la variante de producción, Hábitos (`com.jotamarcar.habito
 | `eas.json` → `build.production` | El perfil del build: `APP_VARIANT=production` y las variables del entorno `production` de EAS |
 | `eas.json` → `submit.production` | El envío a App Store Connect: `ascAppId` es el identificador de la app allí |
 | `scripts/build.mjs` | `npm run build:prod`: comprueba que se compila `main` al día, lanza el build y lo envía a TestFlight |
+| `scripts/update.mjs` | `npm run update:dev` y `npm run update:prod`: publican una actualización OTA, primero en Hábitos Dev y después en producción ([sección 6](#6-actualizaciones-ota)) |
 
 `appVersionSource: "remote"` y `autoIncrement` hacen que EAS guarde y suba el número de build en cada compilación. La versión que ve el usuario es `version` en `app.json`.
 
@@ -104,6 +105,47 @@ Si algo falla, el registro de la función está en **Edge Functions → delete-a
 
 ## 5. Las versiones siguientes
 
+Un cambio solo de JavaScript llega con una actualización OTA ([sección 6](#6-actualizaciones-ota)), sin build. Un cambio nativo (una dependencia con código nativo, `app.json`, `app.config.ts`) necesita un build:
+
 1. Las migraciones nuevas y los cambios de `delete-account` se aplican a `habitos` antes de que el build que los usa llegue a TestFlight ([supabase.md, secciones 5 y 9.3](supabase.md#5-aplicar-el-esquema)).
 2. Si cambia algo que ve el usuario, sube `version` en `app.json`. El número de build lo sube EAS.
-3. `npm run build:prod` desde `main` al día.
+3. `npm run build:dev` para Hábitos Dev, y pruébalo.
+4. `npm run build:prod` desde `main` al día.
+
+## 6. Actualizaciones OTA
+
+Los cambios solo de JavaScript llegan a los builds ya instalados con EAS Update, sin gastar builds ni pasar por TestFlight ([ADR-0020](adr/0020-actualizaciones-ota-con-eas-update-primero-en-desarrollo-y-despues-en-produccion.md)). Solo los reciben los builds que ya llevan `expo-updates` y cuyo código nativo coincide con el de la actualización.
+
+### 6.1 Probarla en Hábitos Dev
+
+Desde la rama del PR o desde `main`, sin cambios pendientes:
+
+```powershell
+npm run update:dev
+```
+
+Publica en el canal `development`, con las variables del entorno `development` de EAS. Para probarla:
+
+1. Abre Hábitos Dev en el iPhone sin el servidor de desarrollo del PC.
+2. En el lanzador de desarrollo, entra en **Extensions** (con la sesión de Expo iniciada) y abre la última actualización de la rama `development`.
+3. Pruébala. Si no aparece, el código nativo de Hábitos Dev no coincide con el de la actualización: hace falta un `npm run build:dev`.
+
+### 6.2 Publicarla en producción
+
+Con el PR fusionado y `main` al día (`/sync`), y las migraciones que necesite ya aplicadas a `habitos`:
+
+```powershell
+npm run update:prod
+```
+
+Comprueba que es `main` al día, pide confirmar que se ha probado en Hábitos Dev y publica en el canal `production`, con las variables del entorno `production` de EAS. Hábitos la descarga la próxima vez que se abre y la usa la siguiente.
+
+### 6.3 Si falla
+
+Si una actualización falla al arrancar, `expo-updates` vuelve sola a la anterior. Para deshacerla en los demás casos:
+
+```powershell
+eas update:rollback
+```
+
+Permite volver a una actualización anterior o al código del propio build. Para dejar de servir actualizaciones sin publicar otra: `eas channel:pause production` (y `eas channel:resume production` para reanudar).
