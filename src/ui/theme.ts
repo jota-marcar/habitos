@@ -51,8 +51,10 @@ export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
 export const fontSize = {
   caption: 13,
   body: 17,
-  /** The date at the top of the day view: a touch larger than the body text. */
-  heading: 19,
+  /** The names and the progress of the habits in the day view: a touch larger than the body. */
+  list: 18,
+  /** The date at the top of the day view: a touch larger than the list under it. */
+  heading: 20,
   title: 22,
   large: 28,
 } as const;
