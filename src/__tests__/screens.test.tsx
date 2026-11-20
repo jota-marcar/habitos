@@ -343,10 +343,15 @@ async function addBoolean(id: string, name: string, time?: string) {
 }
 
 describe("day view", () => {
-  test("shows Hoy and invites to create the first habit (RF-30)", async () => {
+  test("shows Hoy and explains how to create the first habit and open the calendar (RF-30)", async () => {
     await renderApp();
 
     expect(await screen.findByText("Todavía no tienes hábitos.")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Desliza desde abajo para crear uno y desde arriba para abrir el calendario.",
+      ),
+    ).toBeTruthy();
     expect(screen.getByText("Hoy")).toBeTruthy();
   });
 

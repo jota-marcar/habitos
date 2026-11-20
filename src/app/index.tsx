@@ -123,7 +123,8 @@ function EmptyDay({
       </Text>
       {hasAnyHabit ? null : (
         <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
-          Desliza hacia arriba desde la franja de abajo para crear uno.
+          Desliza desde abajo para crear uno y desde arriba para abrir el
+          calendario.
         </Text>
       )}
     </View>

@@ -33,9 +33,10 @@ Una incidencia que cambia el comportamiento descrito en la [especificación func
 ## INC-04. El mensaje inicial no explica cómo abrir el calendario
 
 - **Encontrada:** 2026-11-20, en producción (TestFlight).
-- **Estado:** pendiente.
+- **Estado:** resuelta.
 - **Qué pasa:** sin hábitos, el mensaje inicial solo explica el menú inferior ("Desliza hacia arriba desde la franja de abajo para crear uno."). No dice que deslizando hacia abajo desde arriba se abre el calendario.
 - **Qué se espera:** el mensaje inicial explica también el gesto del calendario, sin dejar de ser breve. Relacionada con INC-09.
+- **Cómo se resuelve:** el mensaje pasa a ser "Desliza desde abajo para crear uno y desde arriba para abrir el calendario.": explica los dos gestos en una sola frase, igual de breve que la anterior.
 
 ## INC-05. No es evidente que los valores por defecto de la cantidad se pueden cambiar
 
