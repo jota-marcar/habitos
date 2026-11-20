@@ -371,6 +371,19 @@ describe("day view", () => {
     expect(screen.queryByText("Solo domingos")).toBeNull();
   });
 
+  test("the habits of the list are a touch larger than the body text, and the date larger still", async () => {
+    await addHabit(
+      db,
+      habit("water", { name: "Beber agua", type: "quantitative" }),
+      version("water", { target: 2, unit: "L", increment: 0.25 }),
+    );
+    await renderApp();
+
+    expect(await screen.findByText("Beber agua")).toHaveStyle({ fontSize: 18 });
+    expect(screen.getByText("0 / 2 L")).toHaveStyle({ fontSize: 18 });
+    expect(screen.getByText("Hoy")).toHaveStyle({ fontSize: 20 });
+  });
+
   test("shows a dot with the color of each habit, empty for those without one (RF-13)", async () => {
     await addHabit(
       db,

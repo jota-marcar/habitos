@@ -61,9 +61,10 @@ Una incidencia que cambia el comportamiento descrito en la [especificación func
 ## INC-08. El texto de la lista de hábitos es algo pequeño
 
 - **Encontrada:** 2026-11-20, en producción (TestFlight).
-- **Estado:** pendiente.
+- **Estado:** resuelta.
 - **Qué pasa:** los nombres y el progreso de los hábitos de la lista se leen algo pequeños.
 - **Qué se espera:** un tamaño de letra ligeramente mayor en la lista de hábitos (solo un poco).
+- **Cómo se resuelve:** el nombre y el progreso de los hábitos de la lista pasan de 17 a 18 pt, y la fecha de arriba, de 19 a 20 pt, para que siga destacando sobre la lista. El resto de textos de la aplicación no cambia.
 
 ## INC-09. Nada indica que hay un calendario arriba
 

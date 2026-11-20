@@ -344,8 +344,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm + 2,
   },
   dot: { borderRadius: radius.round, height: DOT_SIZE, width: DOT_SIZE },
-  name: { flexShrink: 1, fontSize: fontSize.body },
-  progress: { fontSize: fontSize.body, fontVariant: ["tabular-nums"] },
+  name: { flexShrink: 1, fontSize: fontSize.list },
+  progress: { fontSize: fontSize.list, fontVariant: ["tabular-nums"] },
   groups: { flexGrow: 1 },
   doneGroup: {
     flexGrow: 1,
