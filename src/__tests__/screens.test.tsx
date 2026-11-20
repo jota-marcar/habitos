@@ -177,6 +177,22 @@ jest.mock("@react-native-community/datetimepicker", () => {
 });
 
 // The notifications of the device: the permission and what is scheduled, by identifier.
+// The haptics played, in order.
+const mockHaptics: string[] = [];
+jest.mock("expo-haptics", () => ({
+  NotificationFeedbackType: { Success: "success" },
+  ImpactFeedbackStyle: { Light: "light" },
+  notificationAsync: async (type: string) => {
+    mockHaptics.push(`notification:${type}`);
+  },
+  selectionAsync: async () => {
+    mockHaptics.push("selection");
+  },
+  impactAsync: async (style: string) => {
+    mockHaptics.push(`impact:${style}`);
+  },
+}));
+
 let mockNotificationsAllowed = true;
 const mockScheduled = new Map<string, unknown>();
 jest.mock("expo-notifications", () => ({
@@ -516,6 +532,46 @@ describe("day view", () => {
 
     await fireEvent.press(screen.getByTestId("habit-water"));
     expect(await screen.findByText("0,75 / 0,5 L")).toBeTruthy();
+  });
+
+  test("a tap is felt: a tick for each change and the success of iOS when it is done", async () => {
+    await addHabit(
+      db,
+      habit("water", { name: "Beber agua", type: "quantitative" }),
+      version("water", { target: 0.5, unit: "L", increment: 0.25 }),
+    );
+    await addBoolean("walk", "Pasear");
+    await renderApp();
+    mockHaptics.length = 0;
+
+    await fireEvent.press(await screen.findByTestId("habit-water"));
+    await screen.findByText("0,25 / 0,5 L");
+    await fireEvent.press(screen.getByTestId("habit-water"));
+    await screen.findByText("0,5 / 0,5 L");
+    await fireEvent.press(screen.getByTestId("habit-water"));
+    await screen.findByText("0,75 / 0,5 L");
+    await fireEvent.press(screen.getByTestId("habit-walk"));
+    await screen.findByRole("checkbox", { checked: true });
+    await fireEvent.press(screen.getByTestId("habit-walk"));
+    await screen.findByRole("checkbox", { checked: false });
+
+    expect(mockHaptics).toEqual([
+      "selection",
+      "notification:success",
+      "selection",
+      "notification:success",
+      "selection",
+    ]);
+  });
+
+  test("holding a habit is felt like a context menu of iOS", async () => {
+    await addBoolean("walk", "Pasear");
+    await renderApp();
+    mockHaptics.length = 0;
+
+    await fireEvent(await screen.findByTestId("habit-walk"), "longPress");
+
+    expect(mockHaptics).toEqual(["impact:light"]);
   });
 
   test("moves a habit that is done to the done group after a pause in the taps (RF-12)", async () => {
