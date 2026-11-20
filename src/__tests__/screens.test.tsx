@@ -735,6 +735,22 @@ describe("new habit", () => {
     expect(screen.getByLabelText("Nombre")).not.toHaveProp("selectTextOnFocus");
   });
 
+  test("the amounts are in boxes, so that they are seen as fields to change", async () => {
+    await renderApp("/habits/new");
+    await fireEvent.press(screen.getByText("Cantidad"));
+
+    for (const label of ["Meta", "Unidad", "Incremento"]) {
+      expect(screen.getByLabelText(label)).toHaveStyle({
+        backgroundColor: "#27272A",
+        textAlign: "right",
+      });
+    }
+    // The name takes the whole row: it is already seen as a field.
+    expect(screen.getByLabelText("Nombre")).not.toHaveStyle({
+      backgroundColor: "#27272A",
+    });
+  });
+
   test("shows the errors next to their fields and saves nothing", async () => {
     await renderApp("/habits/new");
 

@@ -109,9 +109,10 @@ export function Section({
 
 /**
  * A text field to place inside a Section: its label on the left and what is typed on the
- * right. With `labelHidden` the field takes the whole row and is typed from the left, for
- * free text with spaces: iOS does not draw the space at the end of a right-aligned field
- * until another character follows it.
+ * right, in a box with a subtle background, so that it is seen at a glance as something to
+ * touch and change, even when it only shows an example. With `labelHidden` the field takes
+ * the whole row and is typed from the left, for free text with spaces: iOS does not draw the
+ * space at the end of a right-aligned field until another character follows it.
  */
 export function Field({
   label,
@@ -133,7 +134,7 @@ export function Field({
         placeholderTextColor={colors.textSecondary}
         style={[
           styles.fieldInput,
-          !labelHidden && styles.fieldInputRight,
+          !labelHidden && [styles.fieldBox, { backgroundColor: colors.border }],
           { color: colors.text },
         ]}
         {...props}
@@ -248,6 +249,9 @@ export function ColorSwatch({
   );
 }
 
+// Wide enough for an amount or a unit such as "páginas"; longer text scrolls inside.
+const FIELD_BOX_WIDTH = 120;
+
 const SWATCH_SIZE = 44;
 const SWATCH_COLOR_SIZE = 30;
 
@@ -274,9 +278,17 @@ const styles = StyleSheet.create({
   },
   error: { fontSize: fontSize.caption, paddingHorizontal: spacing.md },
   field: { alignItems: "center", flexDirection: "row", gap: spacing.md },
-  fieldLabel: { fontSize: fontSize.body },
+  fieldLabel: { flex: 1, fontSize: fontSize.body },
   fieldInput: { flex: 1, fontSize: fontSize.body },
-  fieldInputRight: { textAlign: "right" },
+  // The same width for every box, so that they line up one under the other.
+  fieldBox: {
+    borderRadius: radius.sm,
+    flex: 0,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs + 2,
+    textAlign: "right",
+    width: FIELD_BOX_WIDTH,
+  },
   segments: { flexDirection: "row", gap: spacing.sm },
   segment: {
     alignItems: "center",
