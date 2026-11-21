@@ -212,6 +212,15 @@ describe("eas.json", () => {
     },
   );
 
+  // A build only receives the updates published to its channel (ADR-0020): each variant has
+  // its own, so an update for one never reaches the other.
+  test.each(Object.entries(easJson.build))(
+    "the %s profile receives the updates of the channel of its variant",
+    (_, profile) => {
+      expect(profile.channel).toBe(profile.env.APP_VARIANT);
+    },
+  );
+
   // Only the production build goes to App Store Connect, to the app created there by hand
   // (docs/testflight.md): its Apple ID is a number.
   test("only the production profile is sent to App Store Connect", () => {

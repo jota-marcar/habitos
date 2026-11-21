@@ -40,6 +40,15 @@ describe("app.json", () => {
     });
   });
 
+  // EAS Update (ADR-0020): the updates come from the EAS project of the app, and the fingerprint
+  // policy only sends an update to the builds whose native code it matches.
+  test("receives updates from its EAS project, only when the native code matches", () => {
+    expect(expo.updates).toEqual({
+      url: `https://u.expo.dev/${(extra.eas as { projectId: string }).projectId}`,
+    });
+    expect(expo.runtimeVersion).toEqual({ policy: "fingerprint" });
+  });
+
   test("enables Sign in with Apple, which adds its entitlement (ADR-0017)", () => {
     expect(ios.usesAppleSignIn).toBe(true);
     expect(expo.plugins).toContain("expo-apple-authentication");

@@ -11,21 +11,20 @@
 //        npm run build:prod            production build, sent to TestFlight
 //        add `-- --check`              only runs the guards
 
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
+
+import {
+  fail,
+  printSource,
+  requireCommitted,
+  requireMainUpToDate,
+  warnIfAppJsonChanged,
+} from "./release-guards.mjs";
 
 const PROFILES = {
   development: { fromMain: false, extraArgs: "" },
   production: { fromMain: true, extraArgs: " --auto-submit" },
 };
-
-function git(...args) {
-  return execFileSync("git", args, { encoding: "utf8" }).trim();
-}
-
-function fail(...lines) {
-  for (const line of lines) console.error(line);
-  process.exit(1);
-}
 
 const profileName = process.argv[2];
 const profile = PROFILES[profileName];
@@ -36,32 +35,9 @@ if (profile === undefined) {
 }
 const checkOnly = process.argv.includes("--check");
 
-const uncommitted = git("status", "--porcelain");
-if (uncommitted) {
-  fail(
-    "There are uncommitted changes. Commit or discard them first:",
-    uncommitted,
-  );
-}
-
-const branch = git("rev-parse", "--abbrev-ref", "HEAD");
-if (profile.fromMain) {
-  if (branch !== "main") {
-    fail(
-      `A ${profileName} build must come from main, and this is ${branch}. Merge the PR and run /sync first.`,
-    );
-  }
-  git("fetch", "--quiet", "origin", "main");
-  if (git("rev-parse", "HEAD") !== git("rev-parse", "origin/main")) {
-    fail(
-      "main is not the same as origin/main. Bring it up to date (/sync) and push nothing to main.",
-    );
-  }
-}
-
-console.log(`Profile: ${profileName}`);
-console.log(`Branch: ${branch}`);
-console.log(`Commit: ${git("log", "-1", "--format=%h %s")}`);
+requireCommitted();
+if (profile.fromMain) requireMainUpToDate(`A ${profileName} build`);
+printSource(profileName);
 
 if (checkOnly) {
   console.log("Ready to build.");
@@ -74,10 +50,6 @@ const build = spawnSync(
   { stdio: "inherit", shell: true },
 );
 
-if (git("status", "--porcelain", "app.json")) {
-  console.warn(
-    "\nWARNING: EAS CLI has changed app.json. Review it with `git diff app.json` and run `npm test` before committing anything.",
-  );
-}
+warnIfAppJsonChanged();
 
 process.exit(build.status ?? 1);
