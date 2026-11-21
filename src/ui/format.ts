@@ -3,6 +3,7 @@
 import type { Month } from "@/domain/calendar";
 import { weekdayOf, type LocalDate, type Weekday } from "@/domain/dates";
 import type { HabitColor, HabitConfig } from "@/domain/habits";
+import type { Week } from "@/domain/weeks";
 
 /** Initials of the weekdays, from Monday to Sunday. */
 export const WEEKDAY_INITIALS: Readonly<Record<Weekday, string>> = {
@@ -85,6 +86,27 @@ export function formatDayTitle(date: LocalDate, today: LocalDate): string {
   const weekday = capitalized(WEEKDAY_NAMES[weekdayOf(date)]);
   const short = `${weekday}, ${day} ${MONTH_ABBREVIATIONS[month - 1]}`;
   return date.slice(0, 4) === today.slice(0, 4) ? short : `${short} ${year}`;
+}
+
+/**
+ * The dates of a week (RF-40): "16–22 nov", or "30 nov – 6 dic" across two months. A week of
+ * another year says which: "5–11 ene 2027", and one across two years says both.
+ */
+export function formatWeekRange(
+  { start, end }: Week,
+  today: LocalDate,
+): string {
+  const [startYear, startMonth, startDay] = start.split("-").map(Number);
+  const [endYear, endMonth, endDay] = end.split("-").map(Number);
+  const startMonthName = MONTH_ABBREVIATIONS[startMonth - 1];
+  const last = `${endDay} ${MONTH_ABBREVIATIONS[endMonth - 1]}`;
+  if (startYear !== endYear) {
+    return `${startDay} ${startMonthName} ${startYear} – ${last} ${endYear}`;
+  }
+  const year = String(endYear) === today.slice(0, 4) ? "" : ` ${endYear}`;
+  return startMonth === endMonth
+    ? `${startDay}–${last}${year}`
+    : `${startDay} ${startMonthName} – ${last}${year}`;
 }
 
 /** The title of a month of the calendar (RF-18): "Noviembre 2026". */

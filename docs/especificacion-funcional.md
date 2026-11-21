@@ -51,6 +51,9 @@ A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo
 | **Cambios pendientes** | `pendingChanges` | Cambios hechos en el dispositivo que aún no se han copiado en la cuenta. |
 | **Ajustes** | `settings` | Pantalla con las opciones de la cuenta, que se abre desde el menú. |
 | **Opciones** | `options` | Acciones sobre un hábito que se abren al mantenerlo pulsado: corregir la cantidad, editar, archivar y eliminar. |
+| **Horizonte** | `horizon` | Cada página de la pantalla principal, según el plazo que abarca: los hábitos del día, los objetivos de la semana y, más adelante, los objetivos a largo plazo. |
+| **Semana** | `week` | Periodo de lunes a domingo en la hora local del dispositivo. |
+| **Objetivo semanal** | `WeeklyGoal` | Algo que el usuario quiere conseguir en el conjunto de una semana, sin importar qué día lo haga. |
 
 La columna "En el código" es el nombre en inglés con el que cada término aparece en el código y en el modelo de datos ([ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)). Cada término se traduce siempre igual; uno nuevo se añade aquí antes de usarlo en el código. `goal` queda reservado para los objetivos de la [visión a futuro](#6-visión-a-futuro-tres-horizontes), y `Record` se evita porque ya tiene otro significado en el lenguaje de programación.
 
@@ -60,7 +63,7 @@ Cada requisito conserva su número aunque cambie de sección, y el número de un
 
 ### 3.1 Estructura de la interfaz
 
-La aplicación tiene una sola pantalla principal: la vista de un día (3.4). Todo lo demás se despliega desde ella con gestos.
+La aplicación tiene una sola pantalla principal, con una página por horizonte: la vista de un día (3.4) y la de los objetivos de la semana (RF-40). Todo lo demás se despliega desde ella con gestos.
 
 ```
   Hoy                          ← fecha
@@ -80,9 +83,16 @@ La aplicación tiene una sola pantalla principal: la vista de un día (3.4). Tod
   - **Una franja fina** justo debajo del recuadro, que indica que desde ahí se despliega el menú. Queda bien separada del borde inferior de la pantalla, para no confundirse con los gestos del propio teléfono.
 - **RF-31.** Al deslizar hacia abajo desde la fecha, o desde la lista cuando ya está arriba del todo, se despliega el **calendario** desde arriba (RF-18). Se cierra deslizándolo hacia arriba o tocando fuera de él.
 - **RF-32.** Al deslizar hacia arriba desde la franja se despliega el **menú** desde abajo. Se cierra deslizándolo hacia abajo o tocando fuera de él. Tiene dos opciones, cada una con su icono:
-  - **Crear**, que en el MVP crea un hábito (RF-06). Cuando haya más horizontes ([sección 6](#6-visión-a-futuro-tres-horizontes)), creará un elemento del horizonte que se esté viendo.
+  - **Crear**, que crea un elemento del horizonte que se esté viendo. En Hábitos crea un hábito (RF-06). En Objetivos semanales no aparece hasta que exista el formulario de nuevo objetivo.
   - **Ajustes**, con las opciones de la cuenta (RF-03, RF-04).
-- **RF-33.** Deslizar hacia la izquierda o hacia la derecha en la pantalla principal queda reservado para cambiar de horizonte ([sección 6](#6-visión-a-futuro-tres-horizontes)). En el MVP no hace nada.
+- **RF-33.** Deslizar el recuadro hacia la izquierda o hacia la derecha cambia de horizonte. El orden es Hábitos, Objetivos semanales y, más adelante, Objetivos a largo plazo, y el carrusel termina en sus extremos.
+  - Solo se desplaza el recuadro. El título no se mueve: el anterior desaparece y aparece el nuevo a medida que avanza el desplazamiento.
+  - La franja del menú no cambia, y no hay ningún indicador de página.
+  - Un deslizamiento que empieza sobre un elemento de la lista no lo registra.
+- **RF-40.** La página de **Objetivos semanales** tiene la misma estructura que la de Hábitos. Su título es "Esta semana" y las fechas de la semana (por ejemplo, "16–22 nov"); en otra semana, solo sus fechas. Mientras no haya objetivos, el recuadro indica que todavía no hay ninguno.
+- **RF-41.** Todos los horizontes comparten la fecha que se está viendo: la página semanal muestra la semana de ese día.
+  - En la página semanal, el calendario (RF-18) resalta la semana entera, y al tocar un día se pasa a su semana.
+  - Al tocar el título de otra semana se vuelve a la semana actual y al día actual.
 
 ### 3.2 Cuenta de usuario
 
@@ -224,6 +234,8 @@ Funcionalidades descartadas por ahora, en orden aproximado de interés:
 11. Pasar al día anterior o al siguiente sin abrir el calendario.
 12. Accesibilidad con lector de pantalla (VoiceOver): acciones equivalentes a los gestos para quien no puede verlos.
 13. Cambiar las horas de los avisos de pendientes (RF-37) o desactivarlos, desde los ajustes (RF-32).
+14. Carrusel circular: que al deslizar desde el último horizonte se vuelva al primero (RF-33).
+15. Un tutorial que explique los gestos de la aplicación, también el paso entre horizontes.
 
 ## 5. Preguntas abiertas
 
@@ -262,7 +274,7 @@ Los tres horizontes podrían relacionarse: un objetivo a largo plazo se consigue
 
 ### Puntos a tener en cuenta
 
-- **Estructura.** Cada horizonte sería una página de la pantalla principal, y se pasaría de una a otra deslizando hacia los lados, gesto que ya queda reservado (RF-33). Todas seguirían la estructura de la sección 3.1: arriba el periodo (el día, la semana…), en el centro el recuadro con la lista y debajo el menú, cuya opción "Crear" crearía un elemento del horizonte que se esté viendo.
+- **Estructura.** Cada horizonte es una página de la pantalla principal, y se pasa de una a otra deslizando hacia los lados (RF-33). Todas siguen la estructura de la sección 3.1: arriba el periodo (el día, la semana…), en el centro el recuadro con la lista y debajo el menú, cuya opción "Crear" crearía un elemento del horizonte que se esté viendo.
 - **Recordatorios en cada horizonte.** Siguiendo el principio de que el recordatorio es el punto fuerte, cada parte podría tener los suyos: a una hora para los hábitos, de progreso para la semana ("llevas 2 de 5 horas y es jueves") y de cuenta atrás para el largo plazo ("quedan 40 días").
 - **Minimalismo.** Cada parte nueva tendrá que justificar su presencia cuando llegue, como cualquier otra funcionalidad.
 - **Visión del producto.** Hoy el problema que se resuelve es el olvido. Con los tres horizontes se ampliaría a no perder de vista lo que uno quiere hacer, hoy, esta semana y a largo plazo. Si se adopta, habrá que revisar la sección 1.
@@ -272,5 +284,4 @@ Los tres horizontes podrían relacionarse: un objetivo a largo plazo se consigue
 
 - ¿Cómo se vinculan los horizontes y qué se ve de ese vínculo?
 - ¿Cómo conviven los objetivos semanales recurrentes y los puntuales?
-- ¿Qué día empieza la semana?
 - ¿Cómo se mide el progreso de un objetivo a largo plazo: hitos intermedios, avance calculado a partir de lo vinculado, o solo cumplido o no en la fecha?

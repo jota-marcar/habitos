@@ -1,6 +1,7 @@
-// The day view, the only main screen (RF-30). No header and no fixed buttons: the date at the
-// top, a box with the habits of the day and, under it, the strip the menu is pulled up from
-// (RF-32). In the box, the pending habits sit at the top and the done ones at the bottom, with
+// The main screen (RF-30), with a page per horizon that the box slides through (RF-33): the
+// habits of the day and the goals of the week (RF-40). No header and no fixed buttons: the
+// period at the top, the box and, under it, the strip the menu is pulled up from (RF-32).
+// In the box of the day, the pending habits sit at the top and the done ones at the bottom, with
 // the free space between them (RF-12). A habit that was done or undone slides to its group,
 // after a pause in the taps. A tap records a habit (RF-14, RF-15) and holding it down opens its
 // options (RF-34).
@@ -28,10 +29,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { LocalDate } from "@/domain/dates";
 import { progressOf, type DayHabit } from "@/domain/day";
+import { isInWeek, weekOf } from "@/domain/weeks";
 import { CalendarSheet } from "@/ui/calendar-sheet";
-import { formatDayTitle, formatProgress } from "@/ui/format";
+import { formatDayTitle, formatProgress, formatWeekRange } from "@/ui/format";
 import { HabitOptionsSheet } from "@/ui/habit-options-sheet";
 import { playOptionsOpened } from "@/ui/haptics";
+import { HorizonPager, HorizonTitles, useHorizons } from "@/ui/horizons";
 import { PROGRESS_DOT_SIZE, ProgressDot } from "@/ui/progress-dot";
 import { Sheet, SheetOption, useOpenSheetGesture, useSheet } from "@/ui/sheet";
 import { fontSize, radius, spacing, topGap, useColors } from "@/ui/theme";
@@ -163,6 +166,17 @@ function EmptyDay({
   );
 }
 
+function EmptyWeek() {
+  const colors = useColors();
+  return (
+    <View style={styles.empty}>
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>
+        Todavía no tienes objetivos semanales.
+      </Text>
+    </View>
+  );
+}
+
 export default function Today() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -170,6 +184,12 @@ export default function Today() {
   const day = useDay();
   const { date, today, habits, hasAnyHabit, record } = day;
   const isToday = date === today;
+  const horizons = useHorizons();
+  const onHabits = horizons.horizon === "habits";
+  // The week on screen is the one of the day on screen (RF-41).
+  const week = weekOf(date);
+  const isThisWeek = isInWeek(today, week);
+  const weekRange = formatWeekRange(week, today);
 
   const calendar = useSheet("top");
   const openCalendarFromDate = useOpenSheetGesture(calendar, "day-date");
@@ -248,55 +268,64 @@ export default function Today() {
           testID="day-date"
           style={[styles.dateArea, { paddingTop: insets.top + topGap }]}
         >
-          {/* Touching the date of another day goes back to the current one (RF-21). */}
-          <Pressable
-            accessibilityRole={isToday ? "text" : "button"}
-            accessibilityHint={isToday ? undefined : "Vuelve a hoy"}
-            disabled={isToday}
-            hitSlop={spacing.sm}
-            onPress={() => showDay(today)}
-          >
-            <Text style={[styles.date, { color: colors.textSecondary }]}>
-              {formatDayTitle(date, today)}
-            </Text>
-          </Pressable>
+          {/* Touching the title of another period goes back to the current one (RF-21, RF-41). */}
+          <HorizonTitles
+            horizons={horizons}
+            titles={{
+              habits: {
+                title: formatDayTitle(date, today),
+                returnHint: isToday ? undefined : "Vuelve a hoy",
+                onReturn: () => showDay(today),
+              },
+              weekly: {
+                title: isThisWeek ? "Esta semana" : weekRange,
+                detail: isThisWeek ? weekRange : undefined,
+                returnHint: isThisWeek ? undefined : "Vuelve a esta semana",
+                onReturn: () => showDay(today),
+              },
+            }}
+          />
         </View>
       </GestureDetector>
 
       <GestureDetector gesture={openCalendarFromList}>
-        <View
-          testID="day-list"
-          style={[styles.box, { backgroundColor: colors.surface }]}
-        >
-          {habits === null ? null : allHabits?.length === 0 ? (
-            <EmptyDay hasAnyHabit={hasAnyHabit} isToday={isToday} />
-          ) : (
-            <ScrollView
-              key={date}
-              testID="day-habits"
-              // The drag that opens the calendar goes along with the scroll of the list.
-              simultaneousWith={openCalendarFromList}
-              // A list that fits does not move, so pulling it down only brings the calendar.
-              alwaysBounceVertical={false}
-              onScroll={onListScroll}
-              scrollEventThrottle={16}
-              // The list fills the box, and the gap between the groups takes the space left,
-              // which pushes the done group to the bottom.
-              contentContainerStyle={styles.groups}
-            >
-              {/* A single list: with one per group, a row that changes group would be a new
-                  view, which appears in its place instead of sliding there. */}
-              {[
-                ...habits.pending.map(renderRow),
-                <View
-                  key="gap"
-                  testID="day-habits-gap"
-                  style={styles.groupGap}
-                />,
-                ...habits.done.map(renderRow),
-              ]}
-            </ScrollView>
-          )}
+        <View testID="day-list" style={styles.pager}>
+          <HorizonPager
+            horizons={horizons}
+            pages={{
+              habits:
+                habits === null ? null : allHabits?.length === 0 ? (
+                  <EmptyDay hasAnyHabit={hasAnyHabit} isToday={isToday} />
+                ) : (
+                  <ScrollView
+                    key={date}
+                    testID="day-habits"
+                    // The drag that opens the calendar goes along with the scroll of the list.
+                    simultaneousWith={openCalendarFromList}
+                    // A list that fits does not move, so pulling it down only brings the calendar.
+                    alwaysBounceVertical={false}
+                    onScroll={onListScroll}
+                    scrollEventThrottle={16}
+                    // The list fills the box, and the gap between the groups takes the space
+                    // left, which pushes the done group to the bottom.
+                    contentContainerStyle={styles.groups}
+                  >
+                    {/* A single list: with one per group, a row that changes group would be a
+                        new view, which appears in its place instead of sliding there. */}
+                    {[
+                      ...habits.pending.map(renderRow),
+                      <View
+                        key="gap"
+                        testID="day-habits-gap"
+                        style={styles.groupGap}
+                      />,
+                      ...habits.done.map(renderRow),
+                    ]}
+                  </ScrollView>
+                ),
+              weekly: <EmptyWeek />,
+            }}
+          />
         </View>
       </GestureDetector>
 
@@ -313,16 +342,20 @@ export default function Today() {
         sheet={calendar}
         date={date}
         today={today}
+        wholeWeek={!onHabits}
         onSelect={showDay}
       />
 
       <Sheet sheet={menu} closeLabel="Cerrar el menú" testID="menu">
-        <SheetOption
-          icon="plus"
-          fallbackIcon="+"
-          label="Crear"
-          onPress={create}
-        />
+        {/* There is nothing to create on the weekly page until its form exists (RF-32). */}
+        {onHabits ? (
+          <SheetOption
+            icon="plus"
+            fallbackIcon="+"
+            label="Crear"
+            onPress={create}
+          />
+        ) : null}
         <SheetOption
           icon="gearshape"
           fallbackIcon="⚙"
@@ -348,13 +381,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     paddingHorizontal: spacing.md + spacing.md,
   },
-  date: { fontSize: fontSize.heading, fontWeight: "600" },
-  box: {
-    borderRadius: radius.md,
-    flex: 1,
-    marginHorizontal: spacing.md,
-    overflow: "hidden",
-  },
+  pager: { flex: 1 },
   row: {
     alignItems: "center",
     flexDirection: "row",
