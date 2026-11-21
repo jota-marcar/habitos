@@ -10,6 +10,8 @@ Aplicación móvil para hacer el seguimiento de hábitos diarios, con los record
 
 Responde siempre en español.
 
+**Prevenir los errores, no deshacerlos.** Es un principio fundamental del producto (principio 5 de `docs/especificacion-funcional.md`): la aplicación debe estar diseñada para que el usuario no cometa errores, o casi nunca. Si un usuario se equivoca, no hay que implementar una forma de deshacerlo, sino repensar lo ya implementado para que no se equivoque. Tenlo siempre presente al buscar o proponer soluciones, al resolver incidencias y al debatir ideas: ante un error del usuario, la propuesta es cambiar el diseño que lo provoca.
+
 **Idioma.** El código va en inglés y la documentación en español ([ADR-0007](docs/adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)):
 
 - En inglés: todo lo que está dentro de un fichero de código o de configuración (nombres, comentarios, nombres de tests, códigos de error, tablas y columnas, scripts, hooks y flujos de CI).
