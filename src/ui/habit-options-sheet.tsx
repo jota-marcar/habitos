@@ -5,9 +5,9 @@ import type { SFSymbol } from "expo-symbols";
 import { Alert } from "react-native";
 
 import { parseAmount } from "@/domain/amounts";
-import type { DayHabit } from "@/domain/day";
 import { exactAmount } from "@/domain/entries";
-import { habitOptions, type HabitOption } from "@/domain/options";
+import { habitOptions, taskOptions, type HabitOption } from "@/domain/options";
+import { isDayTask, type DayItem } from "@/domain/tasks";
 
 import { formatAmount, formatProgress } from "./format";
 import { AMOUNT_ERROR_MESSAGES } from "./messages";
@@ -26,8 +26,8 @@ const ICONS: Readonly<
 
 interface Props {
   sheet: SheetState;
-  /** The habit that was held down, as it is now on the day on screen. */
-  dayHabit: DayHabit | null;
+  /** The habit or task that was held down, as it is now on the day on screen. */
+  dayHabit: DayItem | null;
   day: Day;
   onEdit: (habitId: string) => void;
 }
@@ -47,10 +47,12 @@ export function HabitOptionsSheet(props: Props) {
 
 function Options({
   sheet,
-  dayHabit: { habit, version, value },
+  dayHabit: item,
   day,
   onEdit,
-}: Props & { dayHabit: DayHabit }) {
+}: Props & { dayHabit: DayItem }) {
+  const { habit, version, value } = item;
+  const isTask = isDayTask(item);
   const quantitative = habit.type === "quantitative";
   const unit = version.unit ?? "";
 
@@ -122,7 +124,9 @@ function Options({
       sheet.close();
       confirm(
         `¿Eliminar «${habit.name}»?`,
-        "Se borrará de todos los días, también de los pasados, junto con todo su historial. No se puede deshacer.",
+        isTask
+          ? "La tarea se borrará para siempre. No se puede deshacer."
+          : "Se borrará de todos los días, también de los pasados, junto con todo su historial. No se puede deshacer.",
         "Eliminar",
         () => day.remove(habit.id),
       );
@@ -135,7 +139,10 @@ function Options({
         title={habit.name}
         detail={quantitative ? formatProgress(value, version) : null}
       />
-      {habitOptions(habit, day.date, day.today).map((option) => (
+      {(isTask
+        ? taskOptions(item)
+        : habitOptions(habit, day.date, day.today)
+      ).map((option) => (
         <SheetOption
           key={option}
           {...ICONS[option]}

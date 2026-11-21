@@ -13,6 +13,7 @@ const ACCOUNT_TABLES = [
   "reminders",
   "habit_versions",
   "habits",
+  "tasks",
 ] as const;
 
 /**

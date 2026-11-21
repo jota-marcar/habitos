@@ -8,6 +8,7 @@ import type { Entry } from "./entries";
 import type { Habit, HabitVersion } from "./habits";
 import type { Reminder } from "./reminders";
 import { EVERY_DAY, scheduledDaysFrom } from "./schedule";
+import type { Task } from "./tasks";
 import { localTime } from "./times";
 
 // 2026-11-09 is a Monday.
@@ -61,6 +62,91 @@ function summary(digests: readonly PendingDigest[]): string[] {
 }
 
 const read = { habits: [habit("read")], versions: [version("read")] };
+
+function task(id: string, dueOn: string, dueTime: string): Task {
+  return {
+    id,
+    name: id,
+    type: "boolean",
+    color: null,
+    target: null,
+    unit: null,
+    increment: null,
+    dueOn: localDate(dueOn),
+    dueTime: localTime(dueTime),
+    value: 0,
+    completedOn: null,
+  };
+}
+
+const NO_HABITS = { habits: [], versions: [], entries: [], reminders: [] };
+
+function taskSummary(digests: readonly PendingDigest[]): string[] {
+  return digests.map(
+    (d) => `${d.date} ${d.time} ${d.tasks.map((t) => t.id).join(",")}`,
+  );
+}
+
+describe("the tasks in the digests", () => {
+  test("appear at 17:00 every day until they are due, and never at 22:00", () => {
+    const digests = upcomingPendingDigests(
+      { ...NO_HABITS, tasks: [task("pay", "2026-11-11", "20:00")] },
+      at("2026-11-09", "10:00"),
+    );
+
+    expect(taskSummary(digests)).toEqual([
+      "2026-11-09 17:00 pay",
+      "2026-11-10 17:00 pay",
+      "2026-11-11 17:00 pay",
+    ]);
+  });
+
+  test("do not appear once they are due", () => {
+    const digests = upcomingPendingDigests(
+      { ...NO_HABITS, tasks: [task("pay", "2026-11-09", "17:00")] },
+      at("2026-11-09", "10:00"),
+    );
+
+    expect(digests).toEqual([]);
+  });
+
+  test("do not appear once they are done", () => {
+    const done = {
+      ...task("pay", "2026-11-11", "20:00"),
+      value: 1,
+      completedOn: localDate("2026-11-09"),
+    };
+
+    expect(
+      upcomingPendingDigests(
+        { ...NO_HABITS, tasks: [done] },
+        at("2026-11-09", "10:00"),
+      ),
+    ).toEqual([]);
+  });
+
+  test("go along with the habits at 17:00, but not at 22:00", () => {
+    const digests = upcomingPendingDigests(
+      {
+        ...read,
+        entries: [],
+        reminders: [],
+        tasks: [task("pay", "2026-11-09", "20:00")],
+      },
+      at("2026-11-09", "10:00"),
+      2,
+    );
+
+    expect(summary(digests)).toEqual([
+      "2026-11-09 17:00 read",
+      "2026-11-09 22:00 read",
+    ]);
+    expect(taskSummary(digests)).toEqual([
+      "2026-11-09 17:00 pay",
+      "2026-11-09 22:00 ",
+    ]);
+  });
+});
 
 describe("upcomingPendingDigests", () => {
   test("warns twice a day, at fixed times (RF-37)", () => {

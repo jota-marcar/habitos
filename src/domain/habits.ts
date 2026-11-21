@@ -73,11 +73,9 @@ export interface HabitVersion extends HabitConfig {
   readonly effectiveFrom: LocalDate;
 }
 
-export type HabitError =
-  | "name_empty"
-  | "name_too_long"
-  | "scheduled_days_invalid"
-  | "scheduled_days_empty"
+export type NameError = "name_empty" | "name_too_long";
+
+export type AmountsError =
   | "amounts_not_allowed"
   | "target_not_positive"
   | "target_too_precise"
@@ -85,6 +83,12 @@ export type HabitError =
   | "unit_too_long"
   | "increment_not_positive"
   | "increment_too_precise";
+
+export type HabitError =
+  NameError | "scheduled_days_invalid" | "scheduled_days_empty" | AmountsError;
+
+/** The amounts of a habit or a task. They are null when it is boolean. */
+export type Amounts = Pick<HabitConfig, "target" | "unit" | "increment">;
 
 export const DEFAULT_SCHEDULED_DAYS: ScheduledDays = EVERY_DAY;
 export const DEFAULT_INCREMENT = 1;
@@ -98,20 +102,56 @@ function lengthOf(text: string): number {
   return [...text.trim()].length;
 }
 
-function validateName(name: string): HabitError[] {
+/** Checks the name of a habit or a task (RF-06, RF-40). */
+export function validateName(name: string): NameError[] {
   if (name.trim() === "") return ["name_empty"];
   return lengthOf(name) > MAX_NAME_LENGTH ? ["name_too_long"] : [];
 }
 
 function validateAmount(
   value: number | null,
-  notPositive: HabitError,
-  tooPrecise: HabitError,
-): HabitError[] {
+  notPositive: AmountsError,
+  tooPrecise: AmountsError,
+): AmountsError[] {
   if (value === null || !Number.isFinite(value) || value <= 0) {
     return [notPositive];
   }
   return isAmount(value) ? [] : [tooPrecise];
+}
+
+/** Checks the amounts of a habit or a task of type `type` (RF-06, RF-40). */
+export function validateAmounts(
+  type: HabitType,
+  amounts: Amounts,
+): AmountsError[] {
+  if (type === "boolean") {
+    const hasAmounts =
+      amounts.target !== null ||
+      amounts.unit !== null ||
+      amounts.increment !== null;
+    return hasAmounts ? ["amounts_not_allowed"] : [];
+  }
+
+  const errors: AmountsError[] = [
+    ...validateAmount(
+      amounts.target,
+      "target_not_positive",
+      "target_too_precise",
+    ),
+  ];
+  if (amounts.unit === null || amounts.unit.trim() === "") {
+    errors.push("unit_empty");
+  } else if (lengthOf(amounts.unit) > MAX_UNIT_LENGTH) {
+    errors.push("unit_too_long");
+  }
+  errors.push(
+    ...validateAmount(
+      amounts.increment,
+      "increment_not_positive",
+      "increment_too_precise",
+    ),
+  );
+  return errors;
 }
 
 function validateConfig(type: HabitType, config: HabitConfig): HabitError[] {
@@ -123,34 +163,7 @@ function validateConfig(type: HabitType, config: HabitConfig): HabitError[] {
     errors.push("scheduled_days_empty");
   }
 
-  if (type === "boolean") {
-    const hasAmounts =
-      config.target !== null ||
-      config.unit !== null ||
-      config.increment !== null;
-    if (hasAmounts) errors.push("amounts_not_allowed");
-    return errors;
-  }
-
-  errors.push(
-    ...validateAmount(
-      config.target,
-      "target_not_positive",
-      "target_too_precise",
-    ),
-  );
-  if (config.unit === null || config.unit.trim() === "") {
-    errors.push("unit_empty");
-  } else if (lengthOf(config.unit) > MAX_UNIT_LENGTH) {
-    errors.push("unit_too_long");
-  }
-  errors.push(
-    ...validateAmount(
-      config.increment,
-      "increment_not_positive",
-      "increment_too_precise",
-    ),
-  );
+  errors.push(...validateAmounts(type, config));
   return errors;
 }
 

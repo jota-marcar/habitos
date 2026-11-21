@@ -81,11 +81,31 @@ const SYNC_STATE = `
   ) STRICT;
 `;
 
+// Tasks: something to do once, before a due day and time (ADR-0021). Their state is not stored:
+// it follows from value, completed_on and the due moment.
+const TASKS = `
+  CREATE TABLE tasks (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('boolean', 'quantitative')),
+    color TEXT,
+    target REAL,
+    unit TEXT,
+    increment REAL,
+    due_on TEXT NOT NULL,
+    due_time TEXT NOT NULL,
+    value REAL NOT NULL DEFAULT 0 CHECK (value >= 0),
+    completed_on TEXT,
+    ${SYNC_COLUMNS}
+  ) STRICT;
+`;
+
 /** Every migration, in order. The version of the schema is the position, starting at 1. */
 export const MIGRATIONS: readonly string[] = [
   INITIAL_SCHEMA,
   HABIT_COLOR,
   SYNC_STATE,
+  TASKS,
 ];
 
 /** The version of the schema of `db`: 0 for a new database. */

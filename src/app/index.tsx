@@ -7,6 +7,7 @@
 // The calendar that changes the day is pulled down from the date or from the list (RF-31).
 
 import { useRouter } from "expo-router";
+import { SymbolView } from "expo-symbols";
 import { useEffect, useState } from "react";
 import {
   Pressable,
@@ -27,7 +28,8 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { LocalDate } from "@/domain/dates";
-import { progressOf, type DayHabit } from "@/domain/day";
+import { progressOf } from "@/domain/day";
+import { isDayTask, type DayItem } from "@/domain/tasks";
 import { CalendarSheet } from "@/ui/calendar-sheet";
 import { formatDayTitle, formatProgress } from "@/ui/format";
 import { HabitOptionsSheet } from "@/ui/habit-options-sheet";
@@ -57,7 +59,7 @@ function HabitRow({
   onPress,
   onLongPress,
 }: {
-  item: DayHabit;
+  item: DayItem;
   /** Whether the rows of the day have a dot with the color and progress of their habit (RF-13). */
   showColor: boolean;
   onPress: () => void;
@@ -66,9 +68,16 @@ function HabitRow({
   const colors = useColors();
   const { habit, version, value, done } = item;
   const boolean = habit.type === "boolean";
-  const progress = boolean ? null : formatProgress(value, version);
+  // A task that was not done in time stands out as a failure (RF-44).
+  const missed = isDayTask(item) && item.missed;
+  // A pending task shows when it is due (RF-42).
+  const dueTime = isDayTask(item) && !done ? item.task.dueTime : null;
+  const detail =
+    [boolean ? null : formatProgress(value, version), dueTime]
+      .filter((text) => text !== null)
+      .join(" · ") || null;
 
-  const targetOpacity = done ? DONE_OPACITY : 1;
+  const targetOpacity = done && !missed ? DONE_OPACITY : 1;
   const opacity = useSharedValue(targetOpacity);
   useEffect(() => {
     opacity.set(withTiming(targetOpacity, { duration: SETTLE_DELAY_MS }));
@@ -80,16 +89,30 @@ function HabitRow({
       <Pressable
         testID={`habit-${habit.id}`}
         accessibilityRole={boolean ? "checkbox" : "button"}
-        accessibilityState={boolean ? { checked: done } : undefined}
-        accessibilityLabel={habit.name}
-        accessibilityValue={progress === null ? undefined : { text: progress }}
+        accessibilityState={boolean ? { checked: done && !missed } : undefined}
+        accessibilityLabel={missed ? `${habit.name}, no realizada` : habit.name}
+        accessibilityValue={detail === null ? undefined : { text: detail }}
         onPress={onPress}
         onLongPress={onLongPress}
         style={({ pressed }) => [styles.row, pressed && styles.pressed]}
       >
         <View style={styles.label}>
           {/* A habit without a color leaves the room of the dot empty, so that the names line up. */}
-          {!showColor ? null : habit.color === null ? (
+          {missed ? (
+            <View testID={`missed-${habit.id}`} style={styles.noDot}>
+              <SymbolView
+                name="xmark"
+                size={PROGRESS_DOT_SIZE}
+                tintColor={colors.danger}
+                weight="bold"
+                fallback={
+                  <Text style={[styles.missedIcon, { color: colors.danger }]}>
+                    ✕
+                  </Text>
+                }
+              />
+            </View>
+          ) : !showColor ? null : habit.color === null ? (
             <View testID={`no-color-${habit.id}`} style={styles.noDot} />
           ) : (
             <ProgressDot
@@ -98,13 +121,20 @@ function HabitRow({
               progress={progressOf(habit.type, version, value)}
             />
           )}
-          <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
+          <Text
+            style={[
+              styles.name,
+              { color: missed ? colors.danger : colors.text },
+              missed && styles.missedName,
+            ]}
+            numberOfLines={2}
+          >
             {habit.name}
           </Text>
         </View>
-        {progress === null ? null : (
+        {detail === null ? null : (
           <Text style={[styles.progress, { color: colors.textSecondary }]}>
-            {progress}
+            {detail}
           </Text>
         )}
       </Pressable>
@@ -190,23 +220,26 @@ export default function Today() {
   const options = useSheet();
   // The habit whose options were opened. Its row gives how it is now; what it was like when
   // it was held down is kept for when it is no longer on the day, while the sheet closes.
-  const [held, setHeld] = useState<DayHabit | null>(null);
+  const [held, setHeld] = useState<DayItem | null>(null);
   const allHabits =
     habits === null ? null : [...habits.pending, ...habits.done];
   const heldNow =
     allHabits?.find((item) => item.habit.id === held?.habit.id) ?? held;
 
-  // The dots only appear on a day with some habit that has a color (RF-13).
+  // The dots only appear on a day with some habit that has a color (RF-13). The cross of a
+  // missed task takes the same room, so that the names stay lined up (RF-44).
   const showColor =
-    allHabits?.some((item) => item.habit.color !== null) ?? false;
+    allHabits?.some(
+      (item) => item.habit.color !== null || (isDayTask(item) && item.missed),
+    ) ?? false;
 
-  const openOptions = (item: DayHabit) => {
+  const openOptions = (item: DayItem) => {
     playOptionsOpened();
     setHeld(item);
     options.open();
   };
 
-  const renderRow = (item: DayHabit, index: number) => (
+  const renderRow = (item: DayItem, index: number) => (
     <MovingHabitRow
       key={item.habit.id}
       first={index === 0}
@@ -220,7 +253,10 @@ export default function Today() {
   // The form is told the day it was opened from, to say when the changes apply (RF-09).
   const edit = (habitId: string) =>
     router.push({
-      pathname: "/habits/[id]/edit",
+      pathname:
+        heldNow !== null && isDayTask(heldNow)
+          ? "/tasks/[id]/edit"
+          : "/habits/[id]/edit",
       params: { id: habitId, day: date },
     });
 
@@ -230,9 +266,15 @@ export default function Today() {
   };
 
   // A habit created from a future day starts that day (RF-06).
-  const create = () => {
+  const createHabit = () => {
     menu.close();
     router.push({ pathname: "/habits/new", params: { day: date } });
+  };
+
+  // A task created from a future day is due that day by default (RF-40).
+  const createTask = () => {
+    menu.close();
+    router.push({ pathname: "/tasks/new", params: { day: date } });
   };
 
   const openSettings = () => {
@@ -318,10 +360,16 @@ export default function Today() {
 
       <Sheet sheet={menu} closeLabel="Cerrar el menú" testID="menu">
         <SheetOption
-          icon="plus"
+          icon="repeat"
+          fallbackIcon="↻"
+          label="Crear hábito"
+          onPress={createHabit}
+        />
+        <SheetOption
+          icon="calendar.badge.plus"
           fallbackIcon="+"
-          label="Crear"
-          onPress={create}
+          label="Crear tarea"
+          onPress={createTask}
         />
         <SheetOption
           icon="gearshape"
@@ -372,6 +420,8 @@ const styles = StyleSheet.create({
   },
   noDot: { height: PROGRESS_DOT_SIZE, width: PROGRESS_DOT_SIZE },
   name: { flexShrink: 1, fontSize: fontSize.list },
+  missedName: { textDecorationLine: "line-through" },
+  missedIcon: { fontSize: fontSize.caption, textAlign: "center" },
   progress: { fontSize: fontSize.list, fontVariant: ["tabular-nums"] },
   groups: { flexGrow: 1 },
   groupGap: { flexGrow: 1, minHeight: GROUP_GAP },

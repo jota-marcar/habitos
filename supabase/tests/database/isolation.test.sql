@@ -1,7 +1,7 @@
 -- Each user only reads, creates and changes their own rows, and nobody deletes physically
 -- (Row Level Security, supabase/migrations).
 begin;
-select plan(19);
+select plan(23);
 
 -- Two users: Ana (aaaa…) and Bea (bbbb…), each with a habit and its rows.
 insert into auth.users (id, email) values
@@ -20,6 +20,9 @@ insert into public.entries (id, user_id, habit_id, date, value) values
 insert into public.reminders (id, user_id, habit_id, time) values
   ('aaaaaaaa-0000-4000-8000-000000000004', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-0000-4000-8000-000000000001', '08:00'),
   ('bbbbbbbb-0000-4000-8000-000000000004', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'bbbbbbbb-0000-4000-8000-000000000001', '08:00');
+insert into public.tasks (id, user_id, name, type, due_on, due_time) values
+  ('aaaaaaaa-0000-4000-8000-000000000005', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Pay', 'boolean', '2026-11-02', '22:00'),
+  ('bbbbbbbb-0000-4000-8000-000000000005', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'Call', 'boolean', '2026-11-02', '22:00');
 
 -- Signed out: no access at all.
 set local role anon;
@@ -52,6 +55,26 @@ select results_eq(
   'select id from public.reminders',
   array['aaaaaaaa-0000-4000-8000-000000000004'::uuid],
   'Ana only reads her reminders'
+);
+select results_eq(
+  'select id from public.tasks',
+  array['aaaaaaaa-0000-4000-8000-000000000005'::uuid],
+  'Ana only reads her tasks'
+);
+select throws_ok(
+  $$ insert into public.tasks (id, user_id, name, type, due_on, due_time)
+     values ('aaaaaaaa-0000-4000-8000-000000000015', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'Spy', 'boolean', '2026-11-03', '22:00') $$,
+  '42501', null,
+  'Ana cannot create a task for Bea'
+);
+select is_empty(
+  $$ update public.tasks set name = 'Hacked' where id = 'bbbbbbbb-0000-4000-8000-000000000005' returning id $$,
+  'Ana cannot change a task of Bea'
+);
+select throws_ok(
+  $$ delete from public.tasks where id = 'aaaaaaaa-0000-4000-8000-000000000005' $$,
+  '42501', null,
+  'Ana cannot delete her tasks physically'
 );
 
 select lives_ok(
@@ -126,9 +149,10 @@ select is(
 delete from auth.users where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 select is(
   (select count(*)::int from public.habits) + (select count(*)::int from public.habit_versions)
-    + (select count(*)::int from public.entries) + (select count(*)::int from public.reminders),
-  4,
-  'Deleting the account of Ana leaves only the four rows of Bea'
+    + (select count(*)::int from public.entries) + (select count(*)::int from public.reminders)
+    + (select count(*)::int from public.tasks),
+  5,
+  'Deleting the account of Ana leaves only the five rows of Bea'
 );
 select is_empty(
   $$ select 1 from public.habits where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' $$,

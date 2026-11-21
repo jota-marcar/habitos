@@ -37,6 +37,14 @@ export function AppStack() {
           options={{ title: "Editar hábito", presentation: "modal" }}
         />
         <Stack.Screen
+          name="tasks/new"
+          options={{ title: "Nueva tarea", presentation: "modal" }}
+        />
+        <Stack.Screen
+          name="tasks/[id]/edit"
+          options={{ title: "Editar tarea", presentation: "modal" }}
+        />
+        <Stack.Screen
           name="settings"
           options={{ title: "Ajustes", presentation: "modal" }}
         />

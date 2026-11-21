@@ -1,5 +1,6 @@
 // Tests of the screens with the real navigation and a real database on the SQLite built into
 // Node. Tests cannot live in src/app: Expo Router would treat each file as a screen.
+import { router } from "expo-router";
 import {
   act,
   fireEvent,
@@ -24,6 +25,8 @@ import EditHabit from "@/app/habits/[id]/edit";
 import NewHabit from "@/app/habits/new";
 import Settings from "@/app/settings";
 import SignIn from "@/app/sign-in";
+import EditTask from "@/app/tasks/[id]/edit";
+import NewTask from "@/app/tasks/new";
 import { listEntries, saveEntry } from "@/data/entries-repository";
 import {
   addHabit,
@@ -31,10 +34,12 @@ import {
   listHabits,
 } from "@/data/habits-repository";
 import { listReminders } from "@/data/reminders-repository";
+import { listTasks, saveTask } from "@/data/tasks-repository";
 import {
   habit,
   markSynced,
   openMigratedDatabase,
+  task,
   version,
 } from "@/data/testing/fixtures";
 import { notifyReminderRecorded } from "@/notifications/actions";
@@ -50,11 +55,12 @@ import { SETTLE_DELAY_MS } from "@/ui/use-day";
 // Thursday, 12 November 2026: after the day the fixtures are created (2026-11-01).
 const TODAY = localDate("2026-11-12");
 let mockToday: string = TODAY;
+let mockTime = "10:00";
 jest.mock("@/ui/clock", () => ({
   ...jest.requireActual("@/ui/clock"),
   today: () => jest.requireActual("@/domain/dates").localDate(mockToday),
-  // 10:00 of the current day, for the reminders.
-  now: () => new Date(`${mockToday}T10:00:00`),
+  // 10:00 of the current day unless a test moves it, for the reminders and the tasks.
+  now: () => new Date(`${mockToday}T${mockTime}:00`),
 }));
 
 let mockIdCounter = 0;
@@ -246,6 +252,7 @@ let db: TestDatabase;
 
 beforeEach(async () => {
   mockToday = TODAY;
+  mockTime = "10:00";
   mockNotificationsAllowed = true;
   mockScheduled.clear();
   mockSession = session("apple", "persona@example.com");
@@ -292,6 +299,8 @@ async function renderApp(initialUrl = "/") {
       index: Today,
       "habits/new": NewHabit,
       "habits/[id]/edit": EditHabit,
+      "tasks/new": NewTask,
+      "tasks/[id]/edit": EditTask,
       settings: Settings,
       "sign-in": SignIn,
     },
@@ -345,7 +354,7 @@ function spyOnAppState() {
 async function openMenu() {
   await layOutMenu();
   await drag("menu-strip", -300, -800);
-  expect(screen.getByLabelText("Crear")).toBeTruthy();
+  expect(screen.getByLabelText("Crear hábito")).toBeTruthy();
 }
 
 /** The names of the habits of the day, from top to bottom. */
@@ -735,14 +744,14 @@ describe("menu", () => {
   test("is hidden until it is pulled up from the strip (RF-32)", async () => {
     await renderApp();
     await screen.findByText("Todavía no tienes hábitos.");
-    expect(screen.queryByLabelText("Crear")).toBeNull();
+    expect(screen.queryByLabelText("Crear hábito")).toBeNull();
 
     await layOutMenu();
     await drag("menu-strip", -20);
-    expect(screen.queryByLabelText("Crear")).toBeNull();
+    expect(screen.queryByLabelText("Crear hábito")).toBeNull();
 
     await openMenu();
-    await fireEvent.press(screen.getByLabelText("Crear"));
+    await fireEvent.press(screen.getByLabelText("Crear hábito"));
 
     expect(screen).toHavePathname("/habits/new");
   });
@@ -753,7 +762,7 @@ describe("menu", () => {
 
     await fireEvent.press(screen.getByLabelText("Cerrar el menú"));
 
-    expect(screen.queryByLabelText("Crear")).toBeNull();
+    expect(screen.queryByLabelText("Crear hábito")).toBeNull();
   });
 
   test("closes when dragged down", async () => {
@@ -763,11 +772,11 @@ describe("menu", () => {
 
     await layOutMenu();
     await drag("menu-drag", 10, 50);
-    expect(screen.getByLabelText("Crear")).toBeTruthy();
+    expect(screen.getByLabelText("Crear hábito")).toBeTruthy();
 
     await layOutMenu();
     await drag("menu-drag", 200, 800);
-    expect(screen.queryByLabelText("Crear")).toBeNull();
+    expect(screen.queryByLabelText("Crear hábito")).toBeNull();
   });
 });
 
@@ -779,7 +788,7 @@ describe("new habit", () => {
   async function openForm() {
     await renderApp();
     await openMenu();
-    await fireEvent.press(screen.getByLabelText("Crear"));
+    await fireEvent.press(screen.getByLabelText("Crear hábito"));
   }
 
   test("creates a boolean habit with a reminder and goes back to the day (RF-06)", async () => {
@@ -1736,7 +1745,7 @@ describe("calendar (RF-18, RF-31)", () => {
 
   async function createFromMenu(name: string) {
     await openMenu();
-    await fireEvent.press(screen.getByLabelText("Crear"));
+    await fireEvent.press(screen.getByLabelText("Crear hábito"));
     await fireEvent.changeText(screen.getByLabelText("Nombre"), name);
   }
 
@@ -1874,6 +1883,268 @@ describe("calendar (RF-18, RF-31)", () => {
     });
 
     expect(screen.getByText("Martes, 10 nov")).toBeTruthy();
+  });
+});
+
+describe("tasks (RF-40 to RF-46)", () => {
+  const dueToday = { dueOn: TODAY, dueTime: localTime("20:00") };
+  const save = () => fireEvent.press(screen.getByLabelText("Guardar"));
+  // Saving goes back once the task is written, which must not spill into the next test.
+  const saveAndClose = async () => {
+    await save();
+    expect(screen).toHavePathname("/");
+  };
+  const hold = async (id: string) =>
+    fireEvent(await screen.findByTestId(`habit-${id}`), "longPress");
+
+  async function chooseDay(label: string) {
+    await layOut("calendar");
+    await drag("day-date", 300, 800);
+    await fireEvent.press(screen.getByLabelText(label));
+  }
+
+  test("the menu creates a habit or a task", async () => {
+    await renderApp();
+    await openMenu();
+
+    expect(screen.getByLabelText("Crear hábito")).toBeTruthy();
+    expect(screen.getByLabelText("Ajustes")).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText("Crear tarea"));
+
+    expect(screen).toHavePathname("/tasks/new");
+    expect(screen.queryByText("DÍAS")).toBeNull();
+    expect(screen.queryByText("RECORDATORIOS")).toBeNull();
+    expect(screen.getByText("VENCIMIENTO")).toBeTruthy();
+  });
+
+  test("creates a task due at 22:00 of today by default", async () => {
+    await renderApp("/tasks/new");
+
+    await fireEvent.changeText(screen.getByLabelText("Nombre"), "Pagar");
+    await saveAndClose();
+
+    expect(await listTasks(db)).toEqual([
+      expect.objectContaining({
+        name: "Pagar",
+        type: "boolean",
+        dueOn: TODAY,
+        dueTime: "22:00",
+      }),
+    ]);
+    expect([...mockScheduled.keys()]).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^task\..+\.2h$/),
+        expect.stringMatching(/^task\..+\.1h$/),
+        expect.stringMatching(/^task\..+\.due$/),
+      ]),
+    );
+  });
+
+  test("creates a quantitative task from a future day", async () => {
+    await renderApp("/tasks/new?day=2026-11-20");
+
+    await fireEvent.changeText(screen.getByLabelText("Nombre"), "Leer");
+    await fireEvent.press(screen.getByText("Cantidad"));
+    await fireEvent.changeText(screen.getByLabelText("Meta"), "20");
+    await fireEvent.changeText(screen.getByLabelText("Unidad"), "páginas");
+    await saveAndClose();
+
+    expect(await listTasks(db)).toEqual([
+      expect.objectContaining({
+        type: "quantitative",
+        target: 20,
+        unit: "páginas",
+        increment: 1,
+        dueOn: "2026-11-20",
+      }),
+    ]);
+  });
+
+  test("a due moment that has passed is rejected, and says so", async () => {
+    await renderApp("/tasks/new");
+    await fireEvent.changeText(screen.getByLabelText("Nombre"), "Pagar");
+    // The mock of the picker chooses 08:30, before the 10:00 of the tests.
+    await fireEvent.press(screen.getByTestId("task-due-picker"));
+
+    await save();
+
+    expect(
+      await screen.findByText("Ese momento ya ha pasado. Elige otro."),
+    ).toBeTruthy();
+    expect(await listTasks(db)).toEqual([]);
+  });
+
+  test("says which field is wrong", async () => {
+    await renderApp("/tasks/new");
+
+    await fireEvent.press(screen.getByText("Cantidad"));
+    await save();
+
+    expect(await screen.findByText("Escribe un nombre.")).toBeTruthy();
+    expect(
+      screen.getByText("La meta debe ser un número mayor que 0."),
+    ).toBeTruthy();
+  });
+
+  test("warns if the reminders are not allowed", async () => {
+    mockNotificationsAllowed = false;
+    const alert = jest.spyOn(Alert, "alert");
+    await renderApp("/tasks/new");
+
+    await fireEvent.changeText(screen.getByLabelText("Nombre"), "Pagar");
+    await saveAndClose();
+
+    expect(alert.mock.lastCall?.[1]).toContain("de esta tarea");
+  });
+
+  test("a pending task shows when it is due and is marked with a tap", async () => {
+    await saveTask(db, task("pay", { ...dueToday, name: "Pagar" }));
+    await renderApp();
+
+    expect(await screen.findByText("20:00")).toBeTruthy();
+    await fireEvent.press(screen.getByTestId("habit-pay"));
+
+    expect((await listTasks(db))[0]).toMatchObject({
+      value: 1,
+      completedOn: TODAY,
+    });
+    expect(mockHaptics).toContain("notification:success");
+  });
+
+  test("a task can be done from its future day and moves to today", async () => {
+    await saveTask(
+      db,
+      task("pay", { name: "Pagar", dueOn: localDate("2026-11-20") }),
+    );
+    await renderApp();
+    expect(screen.queryByText("Pagar")).toBeNull();
+    await chooseDay("20 de noviembre de 2026");
+
+    await fireEvent.press(await screen.findByTestId("habit-pay"));
+    expect((await listTasks(db))[0].completedOn).toBe(TODAY);
+    // It stays in place until the pause is over, and then leaves that day.
+    expect(screen.getByText("Pagar")).toBeTruthy();
+    await waitForTheMove();
+
+    expect(screen.queryByText("Pagar")).toBeNull();
+    await fireEvent.press(screen.getByText("Viernes, 20 nov"));
+    expect(await screen.findByText("Pagar")).toBeTruthy();
+  });
+
+  test("a missed task stays on its day as a failure and can only be deleted", async () => {
+    await saveTask(
+      db,
+      task("pay", {
+        name: "Pagar",
+        dueOn: TODAY,
+        dueTime: localTime("09:00"),
+      }),
+    );
+    await renderApp();
+
+    expect(await screen.findByTestId("missed-pay")).toBeTruthy();
+    expect(screen.getByLabelText("Pagar, no realizada")).toBeTruthy();
+    expect(doneNames()).toEqual(["Pagar, no realizada"]);
+    expect(screen.queryByText("09:00")).toBeNull();
+
+    await fireEvent.press(screen.getByTestId("habit-pay"));
+    await waitForTheMove();
+    expect((await listTasks(db))[0].value).toBe(0);
+
+    await hold("pay");
+    expect(screen.queryByLabelText("Editar")).toBeNull();
+    expect(screen.getByLabelText("Eliminar")).toBeTruthy();
+  });
+
+  test("a task that comes due with the screen open shows it", async () => {
+    await saveTask(
+      db,
+      task("pay", {
+        name: "Pagar",
+        dueOn: TODAY,
+        dueTime: localTime("11:00"),
+      }),
+    );
+    await renderApp();
+    await screen.findByText("Pagar");
+    expect(screen.queryByTestId("missed-pay")).toBeNull();
+
+    mockTime = "11:00";
+    await act(async () => {
+      jest.advanceTimersByTime(3_600_250);
+    });
+
+    expect(await screen.findByTestId("missed-pay")).toBeTruthy();
+  });
+
+  test("edits a task from its options, keeping its type", async () => {
+    await saveTask(
+      db,
+      task("water", {
+        ...dueToday,
+        name: "Agua",
+        type: "quantitative",
+        target: 2,
+        unit: "L",
+        increment: 0.5,
+      }),
+    );
+    await renderApp();
+    await hold("water");
+    await fireEvent.press(screen.getByLabelText("Editar"));
+
+    expect(screen).toHavePathname("/tasks/water/edit");
+    expect(await screen.findByDisplayValue("Agua")).toBeTruthy();
+    expect(screen.queryByText("TIPO")).toBeNull();
+    await fireEvent.changeText(screen.getByLabelText("Meta"), "3");
+    await saveAndClose();
+
+    expect((await listTasks(db))[0].target).toBe(3);
+  });
+
+  test("does not open the form of a task that is closed", async () => {
+    await saveTask(
+      db,
+      task("pay", { dueOn: TODAY, dueTime: localTime("09:00") }),
+    );
+    await renderApp();
+    await screen.findByTestId("habit-pay");
+
+    await act(async () => {
+      router.push({ pathname: "/tasks/[id]/edit", params: { id: "pay" } });
+    });
+
+    await waitFor(() => expect(screen).toHavePathname("/"));
+  });
+
+  test("corrects the amount and deletes a task from its options", async () => {
+    await saveTask(
+      db,
+      task("water", {
+        ...dueToday,
+        name: "Agua",
+        type: "quantitative",
+        target: 2,
+        unit: "L",
+        increment: 0.5,
+        value: 1,
+      }),
+    );
+    const alert = jest.spyOn(Alert, "alert");
+    await renderApp();
+    await hold("water");
+
+    await fireEvent.press(screen.getByLabelText("Restar 0,5 L"));
+    expect((await listTasks(db))[0].value).toBe(0.5);
+
+    await fireEvent.press(screen.getByLabelText("Eliminar"));
+    const buttons = alert.mock.lastCall?.[2] as AlertButton[];
+    expect(alert.mock.lastCall?.[1]).toContain("La tarea se borrará");
+    await act(async () => {
+      await buttons.find((b) => b.text === "Eliminar")?.onPress?.();
+    });
+
+    expect(await listTasks(db)).toEqual([]);
   });
 });
 

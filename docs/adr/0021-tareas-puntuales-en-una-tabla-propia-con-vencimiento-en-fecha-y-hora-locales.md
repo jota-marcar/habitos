@@ -59,5 +59,6 @@ Condicionan la decisión:
 
 - Hay que aplicar la migración de Supabase a cada proyecto antes de publicar la versión que la usa, primero en desarrollo y después en producción (ver [docs/supabase.md](../supabase.md)). Las versiones anteriores de la app ignoran la tabla nueva.
 - No hay cambios nativos: la funcionalidad llega con una actualización OTA ([ADR-0020](0020-actualizaciones-ota-con-eas-update-primero-en-desarrollo-y-despues-en-produccion.md)).
+- **Esta actualización no se puede deshacer con `eas update:rollback`.** Añade una migración local, y el JavaScript anterior se niega a abrir una base con un esquema más nuevo, así que la app dejaría de arrancar en los dispositivos que ya la hayan recibido. Un fallo se corrige publicando una actualización nueva.
 - Los avisos dependen de la última vez que la app refrescó la ventana. Una tarea lejana puede quedar fuera de los 60 hasta el siguiente refresco, y un cambio hecho en otro dispositivo no cancela los avisos hasta sincronizar. Son las mismas limitaciones aceptadas para los recordatorios.
 - Compartir la lista con los hábitos es provisional: se revisará con el rediseño de la pantalla principal.

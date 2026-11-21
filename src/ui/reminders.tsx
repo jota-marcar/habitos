@@ -26,14 +26,16 @@ export function ReminderKeeper() {
 }
 
 /**
- * Warns that the reminders of a habit just saved will not arrive, if they are not allowed
- * (RF-36). The habit is saved anyway: its reminders start working once they are allowed.
+ * Warns that the reminders of a habit or task just saved will not arrive, if they are not
+ * allowed (RF-36, RF-45). It is saved anyway: its reminders start working once they are allowed.
  */
-export async function warnIfRemindersNotAllowed(): Promise<void> {
+export async function warnIfRemindersNotAllowed(
+  subject = "este hábito",
+): Promise<void> {
   if (await ensureNotificationPermission()) return;
   Alert.alert(
     "Recordatorios desactivados",
-    "No recibirás los recordatorios de este hábito hasta que los actives en los ajustes del teléfono.",
+    `No recibirás los recordatorios de ${subject} hasta que los actives en los ajustes del teléfono.`,
     [
       { text: "Ahora no", style: "cancel" },
       { text: "Abrir Ajustes", onPress: () => void Linking.openSettings() },

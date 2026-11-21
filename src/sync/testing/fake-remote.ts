@@ -19,6 +19,7 @@ const NATURAL_KEYS: Record<SyncTable, readonly string[]> = {
   habit_versions: ["habit_id", "effective_from"],
   entries: ["habit_id", "date"],
   reminders: ["habit_id", "time"],
+  tasks: [],
 };
 
 /** The error of Postgres for a unique key that already exists. */
@@ -48,6 +49,7 @@ export class FakeRemote implements Remote {
     habit_versions: new Map(),
     entries: new Map(),
     reminders: new Map(),
+    tasks: new Map(),
   };
 
   /** Runs before answering each pull: what other devices do meanwhile. */
@@ -97,7 +99,8 @@ export class FakeRemote implements Remote {
     const keys = NATURAL_KEYS[table];
     const seen = new Set<string>();
     for (const row of rows.values()) {
-      if (table !== "habits" && !this.rows.habits.has(String(row.habit_id))) {
+      const hasHabit = table !== "habits" && table !== "tasks";
+      if (hasHabit && !this.rows.habits.has(String(row.habit_id))) {
         throw new Error(`The habit of ${table} ${row.id} does not exist.`);
       }
       if (keys.length === 0 || row.deleted === true) continue;

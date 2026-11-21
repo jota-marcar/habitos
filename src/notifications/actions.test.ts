@@ -1,6 +1,12 @@
 import { listEntries, saveEntry } from "@/data/entries-repository";
 import { addHabit, saveHabit } from "@/data/habits-repository";
-import { habit, openMigratedDatabase, version } from "@/data/testing/fixtures";
+import { listTasks, saveTask } from "@/data/tasks-repository";
+import {
+  habit,
+  openMigratedDatabase,
+  task,
+  version,
+} from "@/data/testing/fixtures";
 import type { TestDatabase } from "@/data/testing/node-database";
 import { localDate } from "@/domain/dates";
 import { localTime, type LocalDateTime } from "@/domain/times";
@@ -68,6 +74,72 @@ afterEach(() => {
 
 const valueOf = async (habitId: string, date = TODAY) =>
   (await listEntries(db, date, date)).find((e) => e.habitId === habitId)?.value;
+
+describe("the button of a task alert", () => {
+  const dueTonight = { dueOn: TODAY, dueTime: localTime("23:00") };
+
+  function pressOnTask(buttonId: string | null, taskId: string, now = NOW) {
+    const { notifier } = fakeNotifier();
+    return answerReminder(
+      db,
+      notifier,
+      {
+        buttonId,
+        notification: {
+          id: `task.${taskId}.1h`,
+          at: { date: TODAY, time: localTime("22:00") },
+          title: taskId,
+          body: null,
+          habitId: null,
+          taskId,
+          category: "task_boolean",
+        },
+      },
+      now,
+      () => "unused",
+    );
+  }
+
+  test("marks a boolean task done today, and never unmarks it", async () => {
+    await saveTask(db, task("pay", dueTonight));
+
+    expect(await pressOnTask("done", "pay")).toBe(true);
+    expect(await pressOnTask("done", "pay")).toBe(true);
+
+    expect((await listTasks(db))[0]).toMatchObject({
+      value: 1,
+      completedOn: TODAY,
+    });
+  });
+
+  test("adds the increment to a quantitative task", async () => {
+    await saveTask(
+      db,
+      task("water", {
+        ...dueTonight,
+        type: "quantitative",
+        target: 2,
+        unit: "L",
+        increment: 0.25,
+        value: 1,
+      }),
+    );
+
+    await pressOnTask("add", "water");
+
+    expect((await listTasks(db))[0].value).toBe(1.25);
+  });
+
+  test("does nothing if the task is closed, deleted or the alert was tapped", async () => {
+    await saveTask(db, task("pay", dueTonight));
+    const late = { date: TODAY, time: localTime("23:00") };
+
+    expect(await pressOnTask("done", "pay", late)).toBe(false);
+    expect(await pressOnTask("done", "gone")).toBe(false);
+    expect(await pressOnTask(null, "pay")).toBe(false);
+    expect((await listTasks(db))[0].value).toBe(0);
+  });
+});
 
 describe("answerReminder", () => {
   test("Hecho marks a boolean habit done (RF-25)", async () => {

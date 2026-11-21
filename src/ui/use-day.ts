@@ -20,6 +20,7 @@ import {
   saveHabit,
 } from "@/data/habits-repository";
 import { listReminders } from "@/data/reminders-repository";
+import { deleteTask, listTasks, saveTask } from "@/data/tasks-repository";
 import type { LocalDate } from "@/domain/dates";
 import { habitsForDay, isDone, type DayHabit } from "@/domain/day";
 import {
@@ -29,6 +30,14 @@ import {
   toggled,
 } from "@/domain/entries";
 import { archiveHabit } from "@/domain/habits";
+import {
+  dayTaskOf,
+  dueTimesAsReminders,
+  isTaskOnDay,
+  nextTaskDue,
+  recordTask,
+  type DayItem,
+} from "@/domain/tasks";
 import { localTimeOf } from "@/domain/times";
 import {
   keepGroups,
@@ -37,6 +46,7 @@ import {
   type DayGroups,
 } from "@/domain/order";
 import { onReminderRecorded } from "@/notifications/actions";
+import { instantOf, localDateTimeOf } from "@/notifications/planner";
 import { refreshReminders } from "@/notifications/reminders";
 import { onSyncedChanges, syncSoon } from "@/sync/app-sync";
 
@@ -51,9 +61,12 @@ export interface Day {
   readonly today: LocalDate;
   /** Shows another day (RF-18), or the current one again (RF-21). */
   readonly select: (date: LocalDate) => void;
-  /** Its habits in the groups and order of the screen, or null while they are being read. */
-  readonly habits: DayGroups<DayHabit> | null;
-  /** Whether there is any habit at all, on this day or not. */
+  /**
+   * Its habits and tasks in the groups and order of the screen (RF-42), or null while they are
+   * being read.
+   */
+  readonly habits: DayGroups<DayItem> | null;
+  /** Whether there is any habit or task at all, on this day or not. */
   readonly hasAnyHabit: boolean;
   /** Marks or unmarks a boolean habit, or adds the increment to a quantitative one. */
   readonly record: (habitId: string) => Promise<void>;
@@ -67,7 +80,12 @@ export interface Day {
   readonly remove: (habitId: string) => Promise<void>;
 }
 
-const habitIdOf = (dayHabit: DayHabit) => dayHabit.habit.id;
+const habitIdOf = (dayHabit: DayItem) => dayHabit.habit.id;
+
+// A timer fires a moment after the due minute starts, so that the task is already closed then.
+const DUE_MARGIN_MS = 250;
+// The longest delay a timer admits. A task due later is read again before it arrives.
+const MAX_TIMER_MS = 2_147_483_647;
 
 /**
  * How long the list waits after the last change made on it before moving the habits that were
@@ -83,8 +101,10 @@ export function useDay(): Day {
   // The same two days, for what happens outside a render: timers and the state of the app.
   const shown = useRef(date);
   const current = useRef(currentDay);
-  const [habits, setHabits] = useState<DayGroups<DayHabit> | null>(null);
+  const [habits, setHabits] = useState<DayGroups<DayItem> | null>(null);
   const [hasAnyHabit, setHasAnyHabit] = useState(false);
+  // The instant the next pending task is due, when the screen has to show it as missed (RF-44).
+  const [nextDueAt, setNextDueAt] = useState<number | null>(null);
   // The groups computed when the day was shown, as habit ids.
   const order = useRef<DayGroups<string> | null>(null);
   // Changes are written one after another, so that quick taps do not overwrite each other.
@@ -104,23 +124,36 @@ export function useDay(): Day {
   const load = useCallback(
     async (shownDate: LocalDate, sort: boolean) => {
       const read = ++lastRead.current;
-      const [allHabits, versions, entries, reminders] = await Promise.all([
-        listHabits(db),
-        listHabitVersions(db),
-        listEntries(db, shownDate, shownDate),
-        listReminders(db),
-      ]);
+      const [allHabits, versions, entries, reminders, tasks] =
+        await Promise.all([
+          listHabits(db),
+          listHabitVersions(db),
+          listEntries(db, shownDate, shownDate),
+          listReminders(db),
+          listTasks(db),
+        ]);
       if (read !== lastRead.current) return;
 
-      const dayHabits = habitsForDay(
-        { habits: allHabits, versions, entries },
-        shownDate,
-      );
+      const clock = localDateTimeOf(now());
+      // A task done or undone may belong to another day from now on (RF-43). Like a habit, it
+      // stays in its place until the pause is over, so that it can be seen and tapped again.
+      const held =
+        sort || settleDue.current || order.current === null
+          ? new Set<string>()
+          : new Set([...order.current.pending, ...order.current.done]);
+      const dayItems: DayItem[] = [
+        ...habitsForDay({ habits: allHabits, versions, entries }, shownDate),
+        ...tasks
+          .filter((t) => isTaskOnDay(t, shownDate) || held.has(t.id))
+          .map((t) => dayTaskOf(t, clock)),
+      ];
+      // A task is sorted as if its due time were its only reminder (RF-42).
+      const agenda = [...reminders, ...dueTimesAsReminders(tasks)];
       // The current day is sorted by what is overdue and what comes next; any other day, by
       // the first reminders (RF-12).
       const time = shownDate === today() ? localTimeOf(now()) : null;
       if (sort || order.current === null) {
-        const sorted = sortDayHabits(dayHabits, reminders, time);
+        const sorted = sortDayHabits(dayItems, agenda, time);
         order.current = {
           pending: sorted.pending.map(habitIdOf),
           done: sorted.done.map(habitIdOf),
@@ -128,20 +161,38 @@ export function useDay(): Day {
         setHabits(sorted);
       } else {
         if (settleDue.current) {
-          order.current = settleGroups(
-            dayHabits,
-            order.current,
-            reminders,
-            time,
-          );
+          const settled = settleGroups(dayItems, order.current, agenda, time);
+          // A task that left the day must not keep a place, in case it comes back.
+          const onDay = new Set(dayItems.map(habitIdOf));
+          order.current = {
+            pending: settled.pending.filter((id) => onDay.has(id)),
+            done: settled.done.filter((id) => onDay.has(id)),
+          };
           settleDue.current = false;
         }
-        setHabits(keepGroups(dayHabits, habitIdOf, order.current));
+        setHabits(keepGroups(dayItems, habitIdOf, order.current));
       }
-      setHasAnyHabit(allHabits.some((h) => h.archivedOn === null));
+      setHasAnyHabit(
+        allHabits.some((h) => h.archivedOn === null) || tasks.length > 0,
+      );
+      const nextDue = nextTaskDue(tasks, clock);
+      setNextDueAt(nextDue === null ? null : instantOf(nextDue).getTime());
     },
     [db],
   );
+
+  // When a task is due with the screen open, it changes its look at that moment, in its place
+  // (RF-44). Reading the day looks for the next one.
+  useEffect(() => {
+    if (nextDueAt === null) return;
+    const delay = nextDueAt - now().getTime() + DUE_MARGIN_MS;
+    if (delay > MAX_TIMER_MS) return;
+    const timer = setTimeout(
+      () => void load(shown.current, false),
+      Math.max(delay, 0),
+    );
+    return () => clearTimeout(timer);
+  }, [load, nextDueAt]);
 
   const checkToday = useCallback(() => {
     current.current = today();
@@ -245,6 +296,28 @@ export function useDay(): Day {
     ): Promise<void> => {
       holdSettling();
       const write = change(async () => {
+        // A task can be recorded from any day until it is due (RF-43, RF-44).
+        const task = (await listTasks(db)).find((t) => t.id === habitId);
+        if (task !== undefined) {
+          const clock = localDateTimeOf(now());
+          const recorded = recordTask(
+            task,
+            next(dayTaskOf(task, clock)),
+            clock,
+          );
+          if (recorded === null) return;
+          if (withHaptics) {
+            playRecorded(
+              recordedFeedback(
+                task.completedOn !== null,
+                recorded.completedOn !== null,
+              ),
+            );
+          }
+          await saveTask(db, recorded);
+          return;
+        }
+
         if (!canRecordOn(date, today())) return;
         const [allHabits, versions, entries] = await Promise.all([
           listHabits(db),
@@ -322,7 +395,11 @@ export function useDay(): Day {
   );
 
   const remove = useCallback(
-    (habitId: string) => change(() => deleteHabit(db, habitId)),
+    (habitId: string) =>
+      change(async () => {
+        const isTask = (await listTasks(db)).some((t) => t.id === habitId);
+        await (isTask ? deleteTask(db, habitId) : deleteHabit(db, habitId));
+      }),
     [db, change],
   );
 

@@ -66,11 +66,11 @@ export interface DayGroups<T> {
  * The groups of the day view when it is shown (RF-12): pending habits and done ones, each
  * sorted by its reminders. `now` is the time if the day is the current one, or null.
  */
-export function sortDayHabits(
-  dayHabits: readonly DayHabit[],
+export function sortDayHabits<T extends DayHabit>(
+  dayHabits: readonly T[],
   reminders: readonly Reminder[],
   now: LocalTime | null,
-): DayGroups<DayHabit> {
+): DayGroups<T> {
   const sorted = sortByReminders(dayHabits, (d) => d.habit.id, reminders, now);
   return {
     pending: sorted.filter((d) => !d.done),

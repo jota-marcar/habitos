@@ -35,6 +35,7 @@ describe("migrate", () => {
       "reminders",
       "sync_account",
       "sync_cursors",
+      "tasks",
     ]);
     expect(await schemaVersion(db)).toBe(MIGRATIONS.length);
   });

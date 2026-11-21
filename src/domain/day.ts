@@ -26,7 +26,7 @@ export interface DayHabit {
  */
 export function isDone(
   type: HabitType,
-  version: HabitVersion,
+  version: Pick<HabitVersion, "target">,
   value: number,
 ): boolean {
   if (type === "boolean") return value >= 1;

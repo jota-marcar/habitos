@@ -7,6 +7,7 @@ import type { Database } from "@/data/database";
 import { listEntries } from "@/data/entries-repository";
 import { listHabitVersions, listHabits } from "@/data/habits-repository";
 import { listReminders } from "@/data/reminders-repository";
+import { listTasks } from "@/data/tasks-repository";
 import { localDate, localDateOf, type LocalDate } from "@/domain/dates";
 import { habitsForDay, type DayHabit } from "@/domain/day";
 import { upcomingPendingDigests, type PendingDigest } from "@/domain/digests";
@@ -19,6 +20,12 @@ import {
   type GestureHint,
   type UpcomingReminder,
 } from "@/domain/reminders";
+import {
+  upcomingTaskAlerts,
+  type Task,
+  type TaskAlert,
+  type TaskAlertMoment,
+} from "@/domain/tasks";
 import { localTimeOf, type LocalDateTime } from "@/domain/times";
 import { formatAmount } from "@/ui/format";
 
@@ -38,11 +45,16 @@ export const DIGEST_PREFIX = "digest.";
 /** Every snoozed notification has an identifier that starts like this. */
 export const SNOOZE_PREFIX = "snooze.";
 
+/** Every task alert of the window has an identifier that starts like this (RF-45). */
+export const TASK_PREFIX = "task.";
+
 /** The buttons of the reminders (RF-25). */
 export const BUTTONS = { done: "done", add: "add", snooze: "snooze" } as const;
 
 const BOOLEAN_CATEGORY = "reminder_boolean";
 const QUANTITATIVE_CATEGORY_PREFIX = "reminder_add_";
+const TASK_BOOLEAN_CATEGORY = "task_boolean";
+const TASK_QUANTITATIVE_CATEGORY_PREFIX = "task_add_";
 
 // Future days cannot be recorded (RF-20), so this only bounds a query that reaches today.
 const LAST_DATE = localDate("9999-12-31");
@@ -170,17 +182,79 @@ function listOf(names: readonly string[]): string {
   return `${items.slice(0, -1).join(", ")} ${andBefore(last)} ${last}`;
 }
 
-/** The notification of a pending digest: how many habits are left, and which (RF-37). */
+function countOf(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+/** "Te queda 1 hábito", "Te quedan 2 tareas", "Te quedan 2 hábitos y 1 tarea" (RF-37). */
+function digestTitle(habits: number, tasks: number): string {
+  const parts = [
+    ...(habits > 0 ? [countOf(habits, "hábito", "hábitos")] : []),
+    ...(tasks > 0 ? [countOf(tasks, "tarea", "tareas")] : []),
+  ];
+  return `${habits + tasks === 1 ? "Te queda" : "Te quedan"} ${parts.join(" y ")}`;
+}
+
+/**
+ * The notification of a pending digest: how much is left, and what (RF-37). The tasks go first,
+ * because they have a deadline.
+ */
 export function digestNotification(digest: PendingDigest): PlannedNotification {
-  const { date, time, habits } = digest;
-  const count = habits.length;
+  const { date, time, habits, tasks } = digest;
   return {
     id: `${DIGEST_PREFIX}${date}.${time}`,
     at: { date, time },
-    title: count === 1 ? "Te queda 1 hábito" : `Te quedan ${count} hábitos`,
-    body: listOf(habits.map((d) => d.habit.name)),
+    title: digestTitle(habits.length, tasks.length),
+    body: listOf([
+      ...tasks.map((task) => task.name),
+      ...habits.map((d) => d.habit.name),
+    ]),
     habitId: null,
     category: null,
+  };
+}
+
+const TASK_ALERT_TEXTS: Readonly<Record<TaskAlertMoment, string>> = {
+  "2h": "Vence en 2 horas",
+  "1h": "Vence en 1 hora",
+  due: "No se ha realizado a tiempo",
+};
+
+/** The category of the alerts of a task: its button, without snoozing (RF-45). */
+export function taskCategoryOf(task: Task): NotificationCategory {
+  if (task.type === "boolean") {
+    return {
+      id: TASK_BOOLEAN_CATEGORY,
+      buttons: [{ id: BUTTONS.done, title: "Hecho" }],
+    };
+  }
+  const increment = formatAmount(task.increment ?? 0);
+  return {
+    id: `${TASK_QUANTITATIVE_CATEGORY_PREFIX}${task.id.replace(/[:-]/g, "_")}`,
+    buttons: [
+      { id: BUTTONS.add, title: `+${increment} ${task.unit ?? ""}`.trim() },
+    ],
+  };
+}
+
+/** The notification of a task alert (RF-45). The one at the due moment has no buttons. */
+export function taskAlertNotification({
+  task,
+  moment,
+  at,
+}: TaskAlert): PlannedNotification {
+  const text = TASK_ALERT_TEXTS[moment];
+  const target = formatAmount(task.target ?? 0);
+  const progress =
+    `Llevas ${formatAmount(task.value)} de ${target} ${task.unit ?? ""}`.trim();
+  return {
+    id: `${TASK_PREFIX}${task.id}.${moment}`,
+    at,
+    title: task.name,
+    body: task.type === "boolean" ? text : `${text}. ${progress}`,
+    habitId: null,
+    taskId: task.id,
+    category: moment === "due" ? null : taskCategoryOf(task).id,
   };
 }
 
@@ -241,19 +315,26 @@ export async function planReminders(
   now: LocalDateTime,
   gestureHint: GestureHint = NO_GESTURE_HINT,
 ): Promise<ReminderPlan> {
-  const [habits, versions, entries, reminders] = await Promise.all([
+  const [habits, versions, entries, reminders, tasks] = await Promise.all([
     listHabits(db),
     listHabitVersions(db),
     listEntries(db, now.date, LAST_DATE),
     listReminders(db),
+    listTasks(db),
   ]);
-  const data = { habits, versions, entries, reminders };
+  const data = { habits, versions, entries, reminders, tasks };
   const upcoming = upcomingReminders(data, now);
   const digests = upcomingPendingDigests(data, now);
+  const taskAlerts = upcomingTaskAlerts(tasks, now);
 
   const categories = new Map<string, NotificationCategory>();
   for (const { dayHabit } of upcoming) {
     const category = categoryOfDay(dayHabit);
+    if (!categories.has(category.id)) categories.set(category.id, category);
+  }
+  for (const { task, moment } of taskAlerts) {
+    if (moment === "due") continue;
+    const category = taskCategoryOf(task);
     if (!categories.has(category.id)) categories.set(category.id, category);
   }
   const pendingToday = habitsForDay({ habits, versions, entries }, now.date)
@@ -268,7 +349,10 @@ export async function planReminders(
 
   return {
     notifications: windowOf(
-      upcoming.map((reminder) => notificationOf(reminder, hint)),
+      [
+        ...upcoming.map((reminder) => notificationOf(reminder, hint)),
+        ...taskAlerts.map(taskAlertNotification),
+      ],
       digests.map(digestNotification),
     ),
     categories: [...categories.values()],
@@ -320,7 +404,11 @@ export async function syncNotifications(
   const kept = new Set<string>();
   for (const notification of scheduled) {
     const { id } = notification;
-    if (!id.startsWith(REMINDER_PREFIX) && !id.startsWith(DIGEST_PREFIX)) {
+    if (
+      ![REMINDER_PREFIX, DIGEST_PREFIX, TASK_PREFIX].some((p) =>
+        id.startsWith(p),
+      )
+    ) {
       continue;
     }
     if (wanted.get(id) === notification.signature) {

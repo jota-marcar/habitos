@@ -10,8 +10,10 @@ export interface PlannedNotification {
   readonly at: LocalDateTime;
   readonly title: string;
   readonly body: string | null;
-  /** The habit of a reminder, or null for a pending digest, which names several (RF-37). */
+  /** The habit of a reminder, or null for a task alert or a digest, which names several (RF-37). */
   readonly habitId: string | null;
+  /** The task of a task alert (RF-45). */
+  readonly taskId?: string;
   /** The category, which gives the notification its buttons (RF-25), or null for none. */
   readonly category: string | null;
 }

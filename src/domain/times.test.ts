@@ -1,10 +1,55 @@
+import { localDate } from "./dates";
 import {
   addMinutes,
+  isBefore,
   localTime,
   localTimeOf,
   minutesOf,
   parseLocalTime,
+  shiftMoment,
 } from "./times";
+
+const moment = (date: string, time: string) => ({
+  date: localDate(date),
+  time: localTime(time),
+});
+
+describe("isBefore", () => {
+  test("compares the time within a day", () => {
+    expect(
+      isBefore(moment("2026-11-12", "09:00"), moment("2026-11-12", "10:00")),
+    ).toBe(true);
+    expect(
+      isBefore(moment("2026-11-12", "10:00"), moment("2026-11-12", "10:00")),
+    ).toBe(false);
+  });
+
+  test("the day comes before the time", () => {
+    expect(
+      isBefore(moment("2026-11-11", "23:00"), moment("2026-11-12", "01:00")),
+    ).toBe(true);
+    expect(
+      isBefore(moment("2026-11-12", "01:00"), moment("2026-11-11", "23:00")),
+    ).toBe(false);
+  });
+});
+
+describe("shiftMoment", () => {
+  test("moves within the day", () => {
+    expect(shiftMoment(moment("2026-11-12", "20:00"), -120)).toEqual(
+      moment("2026-11-12", "18:00"),
+    );
+  });
+
+  test("crosses midnight in both directions", () => {
+    expect(shiftMoment(moment("2026-11-13", "00:30"), -60)).toEqual(
+      moment("2026-11-12", "23:30"),
+    );
+    expect(shiftMoment(moment("2026-11-30", "23:30"), 45)).toEqual(
+      moment("2026-12-01", "00:15"),
+    );
+  });
+});
 
 describe("parseLocalTime", () => {
   test.each(["00:00", "08:30", "19:05", "23:59"])("accepts %s", (text) => {

@@ -19,6 +19,7 @@ import type {
 // the signature travel in the data.
 interface ReminderData {
   readonly habitId: string | null;
+  readonly taskId?: string;
   readonly date: string;
   readonly time: string;
   readonly signature: string;
@@ -34,17 +35,20 @@ function signatureIn(data: Record<string, unknown> | undefined): string | null {
 }
 
 /**
- * The reminder that was answered, or null if the response is about something else. A pending
- * digest has no habit, so tapping it only opens the app on the current day (RF-37).
+ * The reminder or task alert that was answered, or null if the response is about something
+ * else. A pending digest has neither a habit nor a task, so tapping it only opens the app on the
+ * current day (RF-37).
  */
 export function reminderResponseOf(
   response: Notifications.NotificationResponse,
 ): ReminderResponse | null {
   const { identifier, content } = response.notification.request;
   const habitId = textIn(content.data, "habitId");
+  const taskId = textIn(content.data, "taskId");
   const date = parseLocalDate(textIn(content.data, "date") ?? "");
   const time = parseLocalTime(textIn(content.data, "time") ?? "");
-  if (habitId === null || date === null || time === null) return null;
+  if (habitId === null && taskId === null) return null;
+  if (date === null || time === null) return null;
 
   const notification: PlannedNotification = {
     id: identifier,
@@ -52,6 +56,7 @@ export function reminderResponseOf(
     title: content.title ?? "",
     body: content.body,
     habitId,
+    ...(taskId === null ? {} : { taskId }),
     category: content.categoryIdentifier ?? null,
   };
   const buttonId =
@@ -73,6 +78,9 @@ export const expoNotifier: Notifier = {
   async schedule(notification, signature) {
     const data: ReminderData = {
       habitId: notification.habitId,
+      ...(notification.taskId === undefined
+        ? {}
+        : { taskId: notification.taskId }),
       date: notification.at.date,
       time: notification.at.time,
       signature,

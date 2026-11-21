@@ -1,7 +1,7 @@
 // Times of day, with minute precision and no time zone: "08:30".
 // Like dates, they are local to the device and the domain never reads the clock.
 
-import type { LocalDate } from "./dates";
+import { addDays, type LocalDate } from "./dates";
 
 /** A valid time of day in 24-hour `HH:MM` format. Times compare correctly as strings. */
 export type LocalTime = string & { readonly __brand: "LocalTime" };
@@ -54,4 +54,22 @@ export function minutesOf(time: LocalTime): number {
 export function addMinutes(time: LocalTime, minutes: number): LocalTime | null {
   const total = minutesOf(time) + minutes;
   return total >= 0 && total < MINUTES_PER_DAY ? fromMinutes(total) : null;
+}
+
+/** Whether the minute `a` comes before the minute `b`. */
+export function isBefore(a: LocalDateTime, b: LocalDateTime): boolean {
+  return a.date === b.date ? a.time < b.time : a.date < b.date;
+}
+
+/** The minute `minutes` after `moment` (before it, if negative), also on another day. */
+export function shiftMoment(
+  { date, time }: LocalDateTime,
+  minutes: number,
+): LocalDateTime {
+  const total = minutesOf(time) + minutes;
+  const days = Math.floor(total / MINUTES_PER_DAY);
+  return {
+    date: addDays(date, days),
+    time: fromMinutes(total - days * MINUTES_PER_DAY),
+  };
 }

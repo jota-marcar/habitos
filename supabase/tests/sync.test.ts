@@ -18,7 +18,13 @@ import {
   saveHabit,
 } from "@/data/habits-repository";
 import { listReminders } from "@/data/reminders-repository";
-import { habit, openMigratedDatabase, version } from "@/data/testing/fixtures";
+import { deleteTask, listTasks, saveTask } from "@/data/tasks-repository";
+import {
+  habit,
+  openMigratedDatabase,
+  task,
+  version,
+} from "@/data/testing/fixtures";
 import type { TestDatabase } from "@/data/testing/node-database";
 import { localDate } from "@/domain/dates";
 import { localTime } from "@/domain/times";
@@ -132,6 +138,36 @@ test("the data of a device reach another device of the account (RF-05, RF-38)", 
   expect(await values(tablet.db)).toEqual([1, 1]);
   expect(await listReminders(tablet.db)).toHaveLength(2);
   expect(await sync(phone)).toEqual({ changed: false });
+});
+
+test("a task, its changes and its deletion reach the other device (RF-28, RF-41)", async () => {
+  const water = task(id(), {
+    name: "Water",
+    type: "quantitative",
+    color: "teal",
+    target: 2,
+    unit: "L",
+    increment: 0.25,
+    dueOn: NEXT_DAY,
+    dueTime: localTime("18:30"),
+    value: 0.5,
+  });
+  await saveTask(phone.db, water);
+
+  await sync(phone);
+  await sync(tablet);
+  expect(await listTasks(tablet.db)).toEqual([water]);
+
+  const done = { ...water, value: 2, completedOn: DAY };
+  await saveTask(tablet.db, done);
+  await sync(tablet);
+  await sync(phone);
+  expect(await listTasks(phone.db)).toEqual([done]);
+
+  await deleteTask(phone.db, water.id);
+  await sync(phone);
+  await sync(tablet);
+  expect(await listTasks(tablet.db)).toEqual([]);
 });
 
 test("changes and deletions reach the other device", async () => {

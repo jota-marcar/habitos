@@ -7,7 +7,8 @@
 import { deleteAccountData } from "./account-data";
 import type { Database, SqlValue } from "./database";
 
-export type SyncTable = "habits" | "habit_versions" | "entries" | "reminders";
+export type SyncTable =
+  "habits" | "habit_versions" | "entries" | "reminders" | "tasks";
 
 /** The synchronized tables, parents before their children, as their foreign keys require. */
 export const SYNC_TABLES: readonly SyncTable[] = [
@@ -15,6 +16,7 @@ export const SYNC_TABLES: readonly SyncTable[] = [
   "habit_versions",
   "entries",
   "reminders",
+  "tasks",
 ];
 
 /** The value of a column in the cloud. */
@@ -60,6 +62,20 @@ const COLUMNS: Record<SyncTable, readonly string[]> = {
   ],
   entries: ["id", "habit_id", "date", "value", "deleted"],
   reminders: ["id", "habit_id", "time", "deleted"],
+  tasks: [
+    "id",
+    "name",
+    "type",
+    "color",
+    "target",
+    "unit",
+    "increment",
+    "due_on",
+    "due_time",
+    "value",
+    "completed_on",
+    "deleted",
+  ],
 };
 
 /**
@@ -72,6 +88,7 @@ const NATURAL_KEYS: Record<SyncTable, readonly string[]> = {
   habit_versions: ["habit_id", "effective_from"],
   entries: ["habit_id", "date"],
   reminders: ["habit_id", "time"],
+  tasks: [],
 };
 
 /** The columns of `table` that travel to and from the cloud. */

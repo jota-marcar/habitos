@@ -4,6 +4,7 @@
 import type { LocalDate } from "./dates";
 import { canRecordOn } from "./entries";
 import type { Habit } from "./habits";
+import type { DayTask } from "./tasks";
 
 export type HabitOption =
   "decrement" | "exact_amount" | "edit" | "archive" | "delete";
@@ -28,4 +29,18 @@ export function habitOptions(
   if (habit.archivedOn === null) options.push("edit", "archive");
   options.push("delete");
   return options;
+}
+
+/**
+ * The options of a task (RF-46): a closed one can only be deleted (RF-44). Unlike a habit, it
+ * can be corrected from any day until it is due, and it is not archived.
+ */
+export function taskOptions({
+  habit,
+  closed,
+}: Pick<DayTask, "habit" | "closed">): HabitOption[] {
+  if (closed) return ["delete"];
+  return habit.type === "quantitative"
+    ? ["decrement", "exact_amount", "edit", "delete"]
+    : ["edit", "delete"];
 }

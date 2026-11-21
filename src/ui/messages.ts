@@ -7,6 +7,7 @@ import {
   type HabitError,
 } from "@/domain/habits";
 import type { ReminderError } from "@/domain/reminders";
+import type { TaskError } from "@/domain/tasks";
 
 export const HABIT_ERROR_MESSAGES: Readonly<Record<HabitError, string>> = {
   name_empty: "Escribe un nombre.",
@@ -20,6 +21,12 @@ export const HABIT_ERROR_MESSAGES: Readonly<Record<HabitError, string>> = {
   unit_too_long: `La unidad admite ${MAX_UNIT_LENGTH} caracteres como máximo.`,
   increment_not_positive: "El incremento debe ser un número mayor que 0.",
   increment_too_precise: "El incremento admite 2 decimales como máximo.",
+};
+
+export const TASK_ERROR_MESSAGES: Readonly<Record<TaskError, string>> = {
+  ...HABIT_ERROR_MESSAGES,
+  amounts_not_allowed: "Una tarea de sí o no no tiene meta.",
+  due_passed: "Ese momento ya ha pasado. Elige otro.",
 };
 
 export const REMINDER_ERROR_MESSAGES: Readonly<Record<ReminderError, string>> =

@@ -1,6 +1,12 @@
 import { saveEntry } from "@/data/entries-repository";
 import { addHabit } from "@/data/habits-repository";
-import { habit, openMigratedDatabase, version } from "@/data/testing/fixtures";
+import { saveTask } from "@/data/tasks-repository";
+import {
+  habit,
+  openMigratedDatabase,
+  task,
+  version,
+} from "@/data/testing/fixtures";
 import type { TestDatabase } from "@/data/testing/node-database";
 import { localDate } from "@/domain/dates";
 import type { DayHabit } from "@/domain/day";
@@ -10,6 +16,7 @@ import { localTime, type LocalDateTime } from "@/domain/times";
 import type { PlannedNotification } from "./notifier";
 import {
   REMINDER_PREFIX,
+  TASK_PREFIX,
   categoryOf,
   digestNotification,
   instantOf,
@@ -19,6 +26,8 @@ import {
   signatureOf,
   snoozedNotification,
   syncNotifications,
+  taskAlertNotification,
+  taskCategoryOf,
   windowOf,
   type ReminderPlan,
 } from "./planner";
@@ -219,6 +228,94 @@ describe("planReminders", () => {
   });
 });
 
+describe("task alerts", () => {
+  const dueToday = {
+    dueOn: NOW.date,
+    dueTime: localTime("20:00"),
+  };
+
+  test("plans the two warnings and the one at the due moment", async () => {
+    await saveTask(db, task("pay", { ...dueToday, name: "Pagar" }));
+
+    const { notifications, categories } = await planReminders(db, NOW);
+    const alerts = notifications.filter((n) => n.id.startsWith(TASK_PREFIX));
+
+    expect(alerts.map((n) => [n.id, n.at.time, n.body, n.category])).toEqual([
+      ["task.pay.2h", "18:00", "Vence en 2 horas", "task_boolean"],
+      ["task.pay.1h", "19:00", "Vence en 1 hora", "task_boolean"],
+      ["task.pay.due", "20:00", "No se ha realizado a tiempo", null],
+    ]);
+    expect(alerts[0].taskId).toBe("pay");
+    expect(categories).toEqual([
+      { id: "task_boolean", buttons: [{ id: "done", title: "Hecho" }] },
+    ]);
+  });
+
+  test("a task that is done has no alerts left", async () => {
+    await saveTask(
+      db,
+      task("pay", { ...dueToday, value: 1, completedOn: NOW.date }),
+    );
+
+    const { notifications } = await planReminders(db, NOW);
+
+    expect(notifications.filter((n) => n.id.startsWith(TASK_PREFIX))).toEqual(
+      [],
+    );
+  });
+
+  test("a quantitative task says how it is going and adds its increment", () => {
+    const water = task("a-b", {
+      name: "Agua",
+      type: "quantitative",
+      target: 2,
+      unit: "L",
+      increment: 0.25,
+      value: 1,
+    });
+
+    expect(
+      taskAlertNotification({
+        task: water,
+        moment: "1h",
+        at: { date: NOW.date, time: localTime("19:00") },
+      }),
+    ).toMatchObject({
+      body: "Vence en 1 hora. Llevas 1 de 2 L",
+      category: "task_add_a_b",
+    });
+    expect(taskCategoryOf(water).buttons).toEqual([
+      { id: "add", title: "+0,25 L" },
+    ]);
+  });
+
+  test("two tasks of the same type share their category", async () => {
+    await saveTask(db, task("pay", dueToday));
+    await saveTask(db, task("call", dueToday));
+
+    const { categories } = await planReminders(db, NOW);
+
+    expect(categories).toHaveLength(1);
+  });
+
+  test("refreshing cancels the alerts of a task that has been done", async () => {
+    await saveTask(db, task("pay", dueToday));
+    const { notifier, notifications } = fakeNotifier();
+    await syncNotifications(notifier, await planReminders(db, NOW));
+    expect([...notifications.keys()]).toContain("task.pay.2h");
+
+    await saveTask(
+      db,
+      task("pay", { ...dueToday, value: 1, completedOn: NOW.date }),
+    );
+    await syncNotifications(notifier, await planReminders(db, NOW));
+
+    expect(
+      [...notifications.keys()].filter((id) => id.startsWith(TASK_PREFIX)),
+    ).toEqual([]);
+  });
+});
+
 describe("digestNotification", () => {
   function digest(...names: string[]): PendingDigest {
     const habits = names.map((name, index): DayHabit => ({
@@ -227,8 +324,32 @@ describe("digestNotification", () => {
       value: 0,
       done: false,
     }));
-    return { date: NOW.date, time: localTime("22:00"), habits };
+    return { date: NOW.date, time: localTime("22:00"), habits, tasks: [] };
   }
+
+  test("counts the tasks and names them before the habits", () => {
+    const notification = digestNotification({
+      ...digest("Leer", "Correr"),
+      tasks: [task("t1", { name: "Pagar" })],
+    });
+
+    expect(notification.title).toBe("Te quedan 2 hábitos y 1 tarea");
+    expect(notification.body).toBe("Pagar, Leer y Correr");
+  });
+
+  test("says how many tasks are left when there are no habits", () => {
+    const one = digestNotification({
+      ...digest(),
+      tasks: [task("t1", { name: "Pagar" })],
+    });
+    const two = digestNotification({
+      ...digest(),
+      tasks: [task("t1"), task("t2")],
+    });
+
+    expect(one.title).toBe("Te queda 1 tarea");
+    expect(two.title).toBe("Te quedan 2 tareas");
+  });
 
   test("names the only habit left", () => {
     const notification = digestNotification(digest("Leer"));

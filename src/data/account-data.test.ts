@@ -10,15 +10,17 @@ import {
   saveHabitVersion,
 } from "./habits-repository";
 import { addReminder } from "./reminders-repository";
+import { saveTask } from "./tasks-repository";
 import {
   habit,
   markSynced,
   openMigratedDatabase,
+  task,
   version,
 } from "./testing/fixtures";
 import type { TestDatabase } from "./testing/node-database";
 
-const TABLES = ["habits", "habit_versions", "entries", "reminders"];
+const TABLES = ["habits", "habit_versions", "entries", "reminders", "tasks"];
 
 let db: TestDatabase;
 
@@ -117,6 +119,12 @@ describe("hasPendingChanges", () => {
     expect(await hasPendingChanges(db)).toBe(true);
   });
 
+  test("a task that has not been uploaded is pending", async () => {
+    await saveTask(db, task("pay"));
+
+    expect(await hasPendingChanges(db)).toBe(true);
+  });
+
   test("a habit created and deleted before being uploaded is not pending", async () => {
     await addFullHabit("water");
 
@@ -130,6 +138,7 @@ describe("deleteAccountData", () => {
   test("leaves no row in any table of the database", async () => {
     await addFullHabit("water");
     await addFullHabit("read");
+    await saveTask(db, task("pay"));
     await markSynced(db, "habits");
     await deleteHabit(db, "read");
     await db.run(

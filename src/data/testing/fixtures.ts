@@ -3,6 +3,8 @@
 import { localDate } from "@/domain/dates";
 import type { Habit, HabitVersion } from "@/domain/habits";
 import { EVERY_DAY } from "@/domain/schedule";
+import type { Task } from "@/domain/tasks";
+import { localTime } from "@/domain/times";
 
 import { migrate } from "../migrations";
 import { openTestDatabase, type TestDatabase } from "./node-database";
@@ -38,6 +40,23 @@ export function version(
     target: null,
     unit: null,
     increment: null,
+    ...overrides,
+  };
+}
+
+export function task(id: string, overrides: Partial<Task> = {}): Task {
+  return {
+    id,
+    name: id,
+    type: "boolean",
+    color: null,
+    target: null,
+    unit: null,
+    increment: null,
+    dueOn: localDate("2026-11-20"),
+    dueTime: localTime("22:00"),
+    value: 0,
+    completedOn: null,
     ...overrides,
   };
 }
