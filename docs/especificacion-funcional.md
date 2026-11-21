@@ -4,15 +4,15 @@ Qué hace la aplicación y cómo se comporta, desde el punto de vista de quien l
 
 ## 1. Visión
 
-Una aplicación móvil para registrar cada día qué hábitos se han cumplido.
+Una aplicación móvil para registrar cada día qué hábitos se han cumplido y para no olvidar las tareas puntuales que tienen una fecha límite.
 
 El problema que resuelve no es la falta de motivación, sino el **olvido**: con el ajetreo diario se pasan cosas que uno quiere hacer. Apuntar lo que se hace genera conciencia, y los recordatorios evitan que se olvide.
 
-A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo (ver [6. Visión a futuro](#6-visión-a-futuro-tres-horizontes)). El MVP se centra solo en los hábitos diarios.
+A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo (ver [6. Visión a futuro](#6-visión-a-futuro-tres-horizontes)). El MVP se centra en los hábitos diarios y las tareas puntuales.
 
 ### Principios
 
-1. **Minimalismo.** Solo lo imprescindible. Cada funcionalidad nueva debe justificar su presencia. La pantalla principal no tiene botones fijos ni textos de ayuda: se maneja tocando el contenido y deslizando (ver [3.1](#31-estructura-de-la-interfaz)). La estética es oscura, sobria y moderna, con un único color de acento; el único otro color es el que el usuario da a sus hábitos para distinguirlos (RF-06).
+1. **Minimalismo.** Solo lo imprescindible. Cada funcionalidad nueva debe justificar su presencia. La pantalla principal no tiene botones fijos ni textos de ayuda: se maneja tocando el contenido y deslizando (ver [3.1](#31-estructura-de-la-interfaz)). La estética es oscura, sobria y moderna, con un único color de acento. Los otros colores son el que el usuario da a sus hábitos y tareas para distinguirlos (RF-06, RF-40) y el rojo que señala una tarea no realizada (RF-44).
 2. **Usabilidad directa.** Las acciones frecuentes (marcar un hábito, atender un recordatorio) se hacen con un solo toque.
 3. **El seguimiento es el centro y el recordatorio, su punto fuerte.** Lo esencial es seguir los hábitos: crearlos, apuntar el progreso y consultar cualquier día. Los recordatorios son lo que distingue a la aplicación: si no avisan bien, lo que se quiere hacer se vuelve a olvidar.
 4. **El registro es fiable.** Lo que se apunta no se pierde y está disponible siempre, también sin conexión.
@@ -33,14 +33,18 @@ A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo
 | **Meta** | `target` | Cantidad que hay que alcanzar en un día para cumplir un hábito cuantitativo. |
 | **Incremento** | `increment` | Cantidad que se suma con cada toque en un hábito cuantitativo (por ejemplo, 250 ml). |
 | **Unidad** | `unit` | Texto corto que acompaña a las cantidades de un hábito cuantitativo (por ejemplo, "L" o "páginas"). |
+| **Tarea** | `Task` | Algo que el usuario quiere hacer una sola vez, antes de un vencimiento (por ejemplo, "Pagar la matrícula"). Puede ser booleana o cuantitativa, como un hábito. |
+| **Vencimiento** | `due` | Día (`dueOn`) y hora (`dueTime`) límite para cumplir una tarea. |
+| **Tarea no realizada** | `missed` | Tarea que ha llegado a su vencimiento sin cumplirse. Queda en ese día, señalada como fracaso. |
+| **Aviso de tarea** | `TaskAlert` | Aviso de una tarea pendiente: 2 horas antes de su vencimiento, 1 hora antes y al vencer sin haberse cumplido. |
 | **Días programados** | `scheduledDays` | Días de la semana en los que toca un hábito. |
 | **Registro** | `Entry` | Lo que se ha apuntado de un hábito en un día concreto: cumplido o no, o la cantidad acumulada. |
 | **Día** | `day` | Periodo de 00:00 a 23:59 en la hora local del dispositivo. |
 | **Recordatorio** | `Reminder` | Aviso a una hora concreta para que el usuario no olvide un hábito. |
 | **Posponer** | `snooze` | Aplazar un recordatorio para recibirlo de nuevo más tarde. |
 | **Ayuda del gesto** | `gestureHint` | Línea de los primeros recordatorios que explica que, al mantenerlos pulsados, aparecen sus botones. |
-| **Aviso de pendientes** | `PendingDigest` | Aviso a una hora fija del día que nombra los hábitos de ese día que siguen sin cumplir. |
-| **Color** | `color` | Color que el usuario da a un hábito, de entre los de una paleta, para agruparlo con otros o distinguirlo de ellos. |
+| **Aviso de pendientes** | `PendingDigest` | Aviso a una hora fija del día que nombra los hábitos de ese día que siguen sin cumplir y, a las 17:00, las tareas pendientes. |
+| **Color** | `color` | Color que el usuario da a un hábito o una tarea, de entre los de una paleta, para agruparlo con otros o distinguirlo de ellos. |
 | **Archivar** | `archive` | Retirar un hábito de uso sin borrar su historial. |
 | **Calendario** | `calendar` | Cuadrícula de un mes con la que se elige el día que se quiere ver. |
 | **Cuenta** | `account` | Identidad del usuario en la aplicación, a la que pertenecen sus datos. Se crea al iniciar sesión por primera vez con Apple o Google. |
@@ -50,7 +54,7 @@ A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo
 | **Eliminar la cuenta** | `deleteAccount` | Borrar para siempre la cuenta y todos sus datos, en la cuenta y en el dispositivo, y desconectar la aplicación de Apple o de Google. |
 | **Cambios pendientes** | `pendingChanges` | Cambios hechos en el dispositivo que aún no se han copiado en la cuenta. |
 | **Ajustes** | `settings` | Pantalla con las opciones de la cuenta, que se abre desde el menú. |
-| **Opciones** | `options` | Acciones sobre un hábito que se abren al mantenerlo pulsado: corregir la cantidad, editar, archivar y eliminar. |
+| **Opciones** | `options` | Acciones sobre un hábito o una tarea que se abren al mantenerlo pulsado: corregir la cantidad, editar, archivar (solo hábitos) y eliminar. |
 
 La columna "En el código" es el nombre en inglés con el que cada término aparece en el código y en el modelo de datos ([ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)). Cada término se traduce siempre igual; uno nuevo se añade aquí antes de usarlo en el código. `goal` queda reservado para los objetivos de la [visión a futuro](#6-visión-a-futuro-tres-horizontes), y `Record` se evita porque ya tiene otro significado en el lenguaje de programación.
 
@@ -79,9 +83,12 @@ La aplicación tiene una sola pantalla principal: la vista de un día (3.4). Tod
   - **Un recuadro con la lista de hábitos** de ese día, que ocupa casi toda la pantalla.
   - **Una franja fina** justo debajo del recuadro, que indica que desde ahí se despliega el menú. Queda bien separada del borde inferior de la pantalla, para no confundirse con los gestos del propio teléfono.
 - **RF-31.** Al deslizar hacia abajo desde la fecha, o desde la lista cuando ya está arriba del todo, se despliega el **calendario** desde arriba (RF-18). Se cierra deslizándolo hacia arriba o tocando fuera de él.
-- **RF-32.** Al deslizar hacia arriba desde la franja se despliega el **menú** desde abajo. Se cierra deslizándolo hacia abajo o tocando fuera de él. Tiene dos opciones, cada una con su icono:
-  - **Crear**, que en el MVP crea un hábito (RF-06). Cuando haya más horizontes ([sección 6](#6-visión-a-futuro-tres-horizontes)), creará un elemento del horizonte que se esté viendo.
+- **RF-32.** Al deslizar hacia arriba desde la franja se despliega el **menú** desde abajo. Se cierra deslizándolo hacia abajo o tocando fuera de él. Tiene tres opciones, cada una con su icono:
+  - **Crear hábito** (RF-06).
+  - **Crear tarea** (RF-40).
   - **Ajustes**, con las opciones de la cuenta (RF-03, RF-04).
+
+  Cuando haya más horizontes ([sección 6](#6-visión-a-futuro-tres-horizontes)), habrá que revisar qué se puede crear desde cada uno.
 - **RF-33.** Deslizar hacia la izquierda o hacia la derecha en la pantalla principal queda reservado para cambiar de horizonte ([sección 6](#6-visión-a-futuro-tres-horizontes)). En el MVP no hace nada.
 
 ### 3.2 Cuenta de usuario
@@ -175,8 +182,8 @@ Es la pantalla principal de la aplicación (ver 3.1).
   - Al tocar un día, el calendario se cierra y la pantalla principal muestra ese día. Se puede elegir cualquier día, pasado o futuro.
 
   No hay otra forma de pasar al día anterior o al siguiente: consultar otros días es algo puntual, y lo habitual es el día actual.
-- **RF-19.** Los **días pasados** se pueden consultar y editar sin límite de antigüedad, con las mismas acciones que el día actual.
-- **RF-20.** Los **días futuros** se pueden consultar (qué hábitos tocarán), pero no se pueden marcar.
+- **RF-19.** Los **días pasados** se pueden consultar y editar sin límite de antigüedad, con las mismas acciones que el día actual. Las tareas son la excepción: al llegar su vencimiento se cierran (RF-44).
+- **RF-20.** Los **días futuros** se pueden consultar (qué hábitos y tareas tocarán), pero sus hábitos no se pueden marcar. Las tareas sí, porque se pueden hacer antes de su vencimiento (RF-43).
 - **RF-21.** Al tocar la fecha mientras se está viendo otro día, se vuelve al día actual.
 
 ### 3.6 Recordatorios
@@ -193,9 +200,10 @@ Es la pantalla principal de la aplicación (ver 3.1).
 - **RF-26.** Al tocar el recordatorio (fuera de sus botones), se abre la aplicación en el día actual.
 - **RF-27.** Los recordatorios funcionan sin conexión.
 - **RF-37.** Además de los recordatorios de cada hábito, la aplicación envía cada día dos avisos de pendientes, a las 17:00 y a las 22:00. Así el usuario no se olvida de registrar lo que ya ha hecho, y se le recuerda lo que aún no ha hecho, también los hábitos que no tienen recordatorios.
-  - Un aviso solo se envía si a esa hora quedan hábitos del día sin cumplir. Cuentan todos los pendientes, también los cuantitativos a medias y los que aún tienen un recordatorio más tarde.
-  - El aviso dice cuántos hábitos quedan y los nombra en el orden de la vista del día (RF-12). Si son muchos o tienen nombres largos, la lista se recorta (por ejemplo, "Leer, Beber agua, Correr y 2 más").
-  - Al tocarlo se abre la aplicación en el día actual, como un recordatorio (RF-26). No tiene botones, porque reúne varios hábitos.
+  - Un aviso solo se envía si a esa hora queda algo pendiente. Cuentan todos los hábitos del día sin cumplir, también los cuantitativos a medias y los que aún tienen un recordatorio más tarde.
+  - El aviso de las 17:00 cuenta además, todos los días, las tareas pendientes cuyo vencimiento aún no ha llegado, aunque venzan otro día. El de las 22:00 no incluye tareas.
+  - El aviso dice cuánto queda ("Te quedan 2 hábitos y 1 tarea") y lo nombra: primero las tareas, de la que vence antes a la que vence después, y luego los hábitos en el orden de la vista del día (RF-12). Si son muchos o tienen nombres largos, la lista se recorta (por ejemplo, "Leer, Beber agua, Correr y 2 más").
+  - Al tocarlo se abre la aplicación en el día actual, como un recordatorio (RF-26). No tiene botones, porque reúne varios elementos.
   - Las horas son fijas y los avisos no se pueden desactivar (ver sección 4).
 - **RF-35.** La aplicación pide permiso para enviar recordatorios la primera vez que se abre. Si el usuario lo deniega, no se le vuelve a pedir al abrirla.
 - **RF-36.** Si los recordatorios no están permitidos, al guardar un hábito con recordatorios (al crearlo o al editarlo) se avisa al usuario con un diálogo del sistema, que explica que no los recibirá y ofrece abrir los ajustes del teléfono para activarlos. El hábito se guarda igualmente, con sus recordatorios, y estos empiezan a funcionar en cuanto se da el permiso, sin tener que volver a editarlo.
@@ -206,6 +214,47 @@ Es la pantalla principal de la aplicación (ver 3.1).
 
 - **RF-28.** Todas las funciones de registro (marcar, sumar, consultar días) funcionan sin conexión. Los cambios se sincronizan con la cuenta cuando vuelve la conexión.
 - **RF-29.** Se conserva el historial completo de registros desde el primer día, aunque en el MVP no se muestren estadísticas.
+
+### 3.8 Tareas
+
+Una tarea es algo puntual: se hace una vez, antes de un vencimiento. Si no se hace a tiempo, queda registrada como no realizada y no se repite.
+
+- **RF-40.** El usuario puede crear una tarea desde el menú (RF-32), en un formulario como el de un hábito, con estos datos:
+
+  | Dato | Obligatorio | Notas |
+  |------|-------------|-------|
+  | Nombre | Sí | Texto corto, de 40 caracteres como máximo. |
+  | Color | No | Como en un hábito (RF-06). |
+  | Tipo | Sí | Booleano o cuantitativo. No se puede cambiar después de crearla. |
+  | Meta, unidad e incremento | Solo cuantitativo | Como en un hábito (RF-06). |
+  | Vencimiento | Sí | Día y hora, con precisión de minuto. Siempre posterior al momento actual. |
+
+  El vencimiento parte de las 22:00 del día que se está viendo o, si ese día ya ha pasado, del día actual. Si ese momento ya ha pasado, parte de la siguiente hora en punto. El selector no permite elegir un momento pasado. Si el formulario se queda abierto hasta que el vencimiento elegido pasa, al guardar se indica y se pide elegir otro.
+- **RF-41.** Hasta su vencimiento, el usuario puede editar cualquier dato de una tarea salvo el tipo, desde sus opciones (RF-46). Si al cambiar la meta la cantidad acumulada deja de alcanzarla o pasa a alcanzarla, la tarea cambia de estado en consecuencia. El usuario puede eliminar una tarea de forma permanente, en cualquier momento y tras una confirmación explícita.
+- **RF-42.** Las tareas aparecen en la misma lista que los hábitos, con el mismo aspecto y en sus mismos grupos (RF-12, RF-13):
+  - Una tarea pendiente aparece solo en el día de su vencimiento.
+  - Una tarea cumplida aparece en el día en que se cumplió, aunque sea anterior a su vencimiento.
+  - Una tarea no realizada aparece en el día de su vencimiento, en el grupo inferior, junto a los cumplidos.
+  - Dentro de su grupo se ordena como un hábito cuyo único recordatorio fuera la hora de vencimiento.
+  - Muestra de forma discreta la hora de vencimiento mientras está pendiente.
+- **RF-43.** Una tarea se marca o suma su incremento con un toque, como un hábito (RF-14, RF-15, RF-16). Se puede hacer desde el día de su vencimiento aunque sea futuro: cuenta como cumplida el día actual y pasa a aparecer en él. Hasta el vencimiento también se puede desmarcar, y vuelve a estar pendiente en su día.
+- **RF-44.** Al llegar el vencimiento, la tarea se cierra:
+  - Si no se ha cumplido, pasa a **no realizada**: se queda en ese día, con el nombre en rojo y tachado y una X en lugar de la circunferencia de progreso. No se repite en los días siguientes.
+  - Una tarea cerrada, cumplida o no, ya no se puede marcar, corregir ni editar. Solo se puede eliminar.
+  - Si la pantalla está abierta al llegar el vencimiento, la tarea cambia de aspecto en ese momento.
+- **RF-45.** Una tarea pendiente envía estos avisos, además de aparecer en el aviso de las 17:00 (RF-37):
+  - **2 horas antes** de su vencimiento y **1 hora antes**, con su nombre y el tiempo que falta. Tienen un botón "Hecho" o "+incremento", como un recordatorio (RF-25), pero no se pueden posponer. Un aviso cuya hora ya ha pasado al crear o editar la tarea no se envía.
+  - **Al vencer**, si sigue sin cumplirse, un aviso que indica que no se ha realizado. No tiene botones.
+  - Al cumplir la tarea se cancelan los avisos que le queden. Al tocar cualquiera de ellos se abre la aplicación en el día actual (RF-26).
+  - Si los recordatorios no están permitidos, al guardar la tarea se avisa como en un hábito (RF-36).
+- **RF-46.** Al mantener pulsada una tarea se abren sus opciones, como en un hábito (RF-34). Las que aparecen dependen de su estado:
+
+  | Opción | Antes del vencimiento | Cerrada (RF-44) |
+  |--------|-----------------------|-----------------|
+  | Restar el incremento (solo cuantitativa) | Sí | No |
+  | Escribir la cantidad exacta (solo cuantitativa) | Sí | No |
+  | Editar (RF-41) | Sí | No |
+  | Eliminar (RF-41) | Sí | Sí |
 
 ## 4. Fuera del alcance del MVP
 
@@ -224,6 +273,8 @@ Funcionalidades descartadas por ahora, en orden aproximado de interés:
 11. Pasar al día anterior o al siguiente sin abrir el calendario.
 12. Accesibilidad con lector de pantalla (VoiceOver): acciones equivalentes a los gestos para quien no puede verlos.
 13. Cambiar las horas de los avisos de pendientes (RF-37) o desactivarlos, desde los ajustes (RF-32).
+14. Una presentación propia de las tareas en la pantalla principal. De momento comparten la lista con los hábitos (RF-42), a la espera de rediseñarla.
+15. Elegir los avisos de cada tarea. Hoy son siempre los de RF-45.
 
 ## 5. Preguntas abiertas
 

@@ -105,6 +105,7 @@ Los nombres del modelo están en inglés ([ADR-0007](adr/0007-codigo-en-ingles-y
 ```mermaid
 erDiagram
     USER ||--o{ HABIT : tiene
+    USER ||--o{ TASK : tiene
     HABIT ||--|{ HABIT_VERSION : "se configura con"
     HABIT ||--o{ ENTRY : "se registra en"
     HABIT ||--o{ REMINDER : "avisa con"
@@ -138,6 +139,20 @@ erDiagram
         uuid habit_id
         time time "hora local, sin segundos"
     }
+    TASK {
+        uuid id
+        uuid user_id
+        text name
+        text type "boolean | quantitative"
+        text color "nullable, clave de paleta"
+        numeric target "nullable"
+        text unit "nullable"
+        numeric increment "nullable"
+        date due_on "día local del vencimiento"
+        text due_time "hora local del vencimiento"
+        numeric value "1/0 en booleanas"
+        date completed_on "nullable, día en que se cumplió"
+    }
 ```
 
 Decisiones del modelo:
@@ -155,7 +170,8 @@ Decisiones del modelo:
 - **Los recordatorios no tienen versiones**: solo afectan al futuro. Un hábito no puede tener dos a la misma hora (clave única `habit_id + time`).
 - **Qué recordatorios se programan:** a partir de ahora y por cercanía, los de cada hábito en sus días programados, salvo que el hábito esté cumplido ese día o archivado. Como mucho 60 ([ADR-0005](adr/0005-recordatorios-locales-en-ventana-deslizante.md)). Cada aviso lleva el progreso del hábito ese día para poder mostrarlo.
 - **Ayuda del gesto:** si ya se ha usado un botón y desde qué día se explica se guardan en el almacén clave-valor de `expo-sqlite`, solo en el dispositivo (RF-25). Va fuera de la base a propósito: el arranque se niega a abrir una base con un esquema más nuevo que la app, así que una migración impediría deshacer con seguridad la actualización OTA que la añadiera.
-- **Avisos de pendientes:** dos al día a horas fijas (17:00 y 22:00), los días en que queda algún hábito sin cumplir (RF-37). No se guardan en la base: se calculan, como los recordatorios. Comparten la ventana de 60 con ellos (ver "Programar los recordatorios").
+- **Avisos de pendientes:** dos al día a horas fijas (17:00 y 22:00), si a esa hora queda algo pendiente (RF-37). El de las 17:00 cuenta los hábitos del día y todas las tareas pendientes; el de las 22:00, solo los hábitos. No se guardan en la base: se calculan, como los recordatorios. Comparten la ventana de 60 con ellos (ver "Programar los recordatorios").
+- **Tareas:** tabla propia, sin versiones ni registros por día ([ADR-0021](adr/0021-tareas-puntuales-en-una-tabla-propia-con-vencimiento-en-fecha-y-hora-locales.md)). El estado no se guarda: con `completed_on` está cumplida; sin él, pendiente hasta su vencimiento y no realizada desde ese momento (RF-44). Aparece el día de `completed_on` o, si no se ha cumplido, el de `due_on` (RF-42).
 - **Campos de sincronización** en todas las tablas: identificador generado en el dispositivo (UUID), `updated_at` asignado por el servidor y `deleted` (borrado lógico) para propagar eliminaciones.
 - **En la base local** no existe `user_id` (es de un solo usuario) y cada tabla añade `pending_sync`, que marca las filas con cambios sin subir. Las claves únicas ignoran las filas borradas. Dos tablas solo existen en el dispositivo y guardan el estado de la sincronización: `sync_cursors`, hasta dónde ha bajado cada tabla, y `sync_account`, de qué cuenta son los datos ([ADR-0018](adr/0018-sincronizacion-con-pull-antes-que-push-y-union-por-clave-natural.md)).
 - **Migraciones locales:** lista ordenada en `src/data/migrations.ts`; la base guarda su versión y al abrir se aplican las que faltan. Una migración publicada no se edita.
@@ -193,9 +209,10 @@ Decisiones del modelo:
 2. El planificador (`src/notifications`) se ejecuta al abrir la app, al volver a primer plano, tras cada cambio en hábitos, registros o recordatorios y, con la app cerrada, en una tarea en segundo plano (`expo-background-task`). Esa tarea se pide a iOS cada 12 horas como mínimo, pero iOS decide si la ejecuta y cuándo; sirve para que la ventana no se agote si la app no se abre en días. El dominio calcula los próximos 60 avisos (recordatorios y avisos de pendientes), y el planificador los compara con las notificaciones ya programadas: solo cancela las que ya no tocan o han cambiado y solo programa las que faltan. Así, refrescar tras cada toque es barato.
 3. Cada aviso tiene un identificador estable (`reminder.<recordatorio>.<fecha>`) y guarda en sus datos el día, la hora y una firma con la hora, el texto y la categoría. Al leerla de vuelta, iOS devuelve la fecha programada como un intervalo, así que la comparación se hace con la firma. Las pospuestas se tratan aparte (ver "Acción desde un recordatorio").
 4. Los avisos de pendientes (RF-37) van en la misma ventana. El dominio calcula los próximos de cada día con hábitos sin cumplir, y nombra esos hábitos en el orden en que la vista del día los mostraría a esa hora (RF-12). Como no se puede ejecutar código justo antes de que iOS muestre una notificación, el aviso de hoy se cancela al refrescar en cuanto ya no queda nada pendiente, y su texto cambia con cada registro. Los de días futuros nombran todos los hábitos de ese día y se corrigen al refrescar ese día. Tienen su propio identificador (`digest.<fecha>.<hora>`), no tienen categoría ni botones, porque reúnen varios hábitos, y no llevan hábito en sus datos. Por eso, al tocarlos solo se abre la app en el día actual. La ventana junta recordatorios y avisos por cercanía y se queda con los 60 primeros. A la misma hora va antes el recordatorio. Los dos avisos diarios acortan los días que cubre la ventana: con 5 recordatorios al día, pasa de unos 12 días a unos 8.
-5. Las ejecuciones van una detrás de otra, y las peticiones que llegan mientras otra espera se agrupan en una sola. Si una falla, se reintenta en la siguiente.
-6. Al guardar un hábito con recordatorios sin permiso, un diálogo lo avisa y ofrece abrir los ajustes (RF-36). El hábito se guarda igualmente: como la app refresca al volver a primer plano, los recordatorios se programan en cuanto el usuario da el permiso.
-7. Los recordatorios que llegan con la app abierta también se muestran.
+5. Los avisos de tarea (RF-45) van en la misma ventana, con identificador `task.<tarea>.<momento>` (`2h`, `1h` o `due`). Solo se planifican los de tareas pendientes cuyo momento aún no ha llegado, así que al cumplir una tarea el siguiente refresco cancela los que le quedan. Los de 2 h y 1 h tienen el botón de la tarea, sin posponer; el del vencimiento no tiene botones.
+6. Las ejecuciones van una detrás de otra, y las peticiones que llegan mientras otra espera se agrupan en una sola. Si una falla, se reintenta en la siguiente.
+7. Al guardar un hábito o una tarea con avisos sin permiso, un diálogo lo avisa y ofrece abrir los ajustes (RF-36). El hábito se guarda igualmente: como la app refresca al volver a primer plano, los recordatorios se programan en cuanto el usuario da el permiso.
+8. Los recordatorios que llegan con la app abierta también se muestran.
 
 El planificador usa el dominio, la capa de datos y, de la interfaz, solo el reloj y el formato de cantidades. Su lógica depende de la interfaz `Notifier`, y no de `expo-notifications`, para que los tests se ejecuten sin iOS.
 
