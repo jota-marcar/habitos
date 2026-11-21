@@ -178,6 +178,19 @@ jest.mock("@react-native-community/datetimepicker", () => {
   };
 });
 
+// The height of the home indicator, which the tests have none of unless they set it.
+let mockBottomInset = 0;
+jest.mock("react-native-safe-area-context", () => {
+  const actual = jest.requireActual("react-native-safe-area-context");
+  return {
+    ...actual,
+    useSafeAreaInsets: () => ({
+      ...actual.useSafeAreaInsets(),
+      bottom: mockBottomInset,
+    }),
+  };
+});
+
 // The notifications of the device: the permission and what is scheduled, by identifier.
 // The haptics played, in order.
 const mockHaptics: string[] = [];
@@ -493,12 +506,12 @@ describe("day view", () => {
     await renderApp();
     const row = await screen.findByTestId("habit-walk");
     expect(row).not.toBeChecked();
-    expect(row).not.toHaveStyle({ opacity: 0.4 });
+    expect(screen.getByTestId("fade-walk")).toHaveStyle({ opacity: 1 });
 
     await fireEvent.press(row);
 
     expect(await screen.findByRole("checkbox", { checked: true })).toBeTruthy();
-    expect(screen.getByTestId("habit-walk")).toHaveStyle({ opacity: 0.4 });
+    expect(screen.getByTestId("fade-walk")).toHaveStyle({ opacity: 0.4 });
     expect(await listEntries(db, TODAY, TODAY)).toEqual([
       expect.objectContaining({ habitId: "walk", value: 1 }),
     ]);
@@ -508,7 +521,7 @@ describe("day view", () => {
     expect(
       await screen.findByRole("checkbox", { checked: false }),
     ).toBeTruthy();
-    expect(screen.getByTestId("habit-walk")).not.toHaveStyle({ opacity: 0.4 });
+    expect(screen.getByTestId("fade-walk")).toHaveStyle({ opacity: 1 });
     expect(await listEntries(db, TODAY, TODAY)).toEqual([
       expect.objectContaining({ habitId: "walk", value: 0 }),
     ]);
@@ -524,13 +537,11 @@ describe("day view", () => {
 
     await fireEvent.press(await screen.findByTestId("habit-water"));
     expect(await screen.findByText("0,25 / 0,5 L")).toBeTruthy();
-    expect(screen.getByTestId("habit-water")).not.toHaveStyle({
-      opacity: 0.4,
-    });
+    expect(screen.getByTestId("fade-water")).toHaveStyle({ opacity: 1 });
 
     await fireEvent.press(screen.getByTestId("habit-water"));
     expect(await screen.findByText("0,5 / 0,5 L")).toBeTruthy();
-    expect(screen.getByTestId("habit-water")).toHaveStyle({ opacity: 0.4 });
+    expect(screen.getByTestId("fade-water")).toHaveStyle({ opacity: 0.4 });
 
     await fireEvent.press(screen.getByTestId("habit-water"));
     expect(await screen.findByText("0,75 / 0,5 L")).toBeTruthy();
@@ -850,6 +861,10 @@ describe("new habit", () => {
   });
 
   describe("opening the reminder picker", () => {
+    afterEach(() => {
+      mockBottomInset = 0;
+    });
+
     const layoutOf = (height: number) => ({
       nativeEvent: { layout: { x: 0, y: 0, width: 390, height } },
     });
@@ -895,6 +910,18 @@ describe("new habit", () => {
       await fireEvent(form, "contentSizeChange", 390, 1300);
       await nextFrame();
       expect(scrollTo).toHaveBeenCalledTimes(1);
+    });
+
+    test("leaves a margin under the last buttons, above the home indicator", async () => {
+      mockBottomInset = 34;
+      const { form } = await openPicker();
+
+      const { paddingBottom } = StyleSheet.flatten(
+        form.props.contentContainerStyle,
+      );
+
+      // The home indicator and 16 pt more.
+      expect(paddingBottom).toBe(50);
     });
 
     test("does not move the form when the picker is already in view", async () => {

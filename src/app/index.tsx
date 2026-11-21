@@ -20,7 +20,9 @@ import { GestureDetector, ScrollView } from "react-native-gesture-handler";
 import Animated, {
   Easing,
   LinearTransition,
+  useAnimatedStyle,
   useSharedValue,
+  withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -33,9 +35,10 @@ import { playOptionsOpened } from "@/ui/haptics";
 import { PROGRESS_DOT_SIZE, ProgressDot } from "@/ui/progress-dot";
 import { Sheet, SheetOption, useOpenSheetGesture, useSheet } from "@/ui/sheet";
 import { fontSize, radius, spacing, topGap, useColors } from "@/ui/theme";
-import { useDay } from "@/ui/use-day";
+import { SETTLE_DELAY_MS, useDay } from "@/ui/use-day";
 
-// A done habit is dimmed (RF-13).
+// A done habit is dimmed (RF-13), gradually during the pause before it moves to its group
+// (RF-12). With Reduce Motion on, it changes at once.
 const DONE_OPACITY = 0.4;
 
 // How a habit slides to its group, and the others make room for it (RF-12). It is brief, and
@@ -65,42 +68,47 @@ function HabitRow({
   const boolean = habit.type === "boolean";
   const progress = boolean ? null : formatProgress(value, version);
 
+  const targetOpacity = done ? DONE_OPACITY : 1;
+  const opacity = useSharedValue(targetOpacity);
+  useEffect(() => {
+    opacity.set(withTiming(targetOpacity, { duration: SETTLE_DELAY_MS }));
+  }, [opacity, targetOpacity]);
+  const fadeStyle = useAnimatedStyle(() => ({ opacity: opacity.get() }));
+
   return (
-    <Pressable
-      testID={`habit-${habit.id}`}
-      accessibilityRole={boolean ? "checkbox" : "button"}
-      accessibilityState={boolean ? { checked: done } : undefined}
-      accessibilityLabel={habit.name}
-      accessibilityValue={progress === null ? undefined : { text: progress }}
-      onPress={onPress}
-      onLongPress={onLongPress}
-      style={({ pressed }) => [
-        styles.row,
-        done && styles.done,
-        pressed && styles.pressed,
-      ]}
-    >
-      <View style={styles.label}>
-        {/* A habit without a color leaves the room of the dot empty, so that the names line up. */}
-        {!showColor ? null : habit.color === null ? (
-          <View testID={`no-color-${habit.id}`} style={styles.noDot} />
-        ) : (
-          <ProgressDot
-            testID={`color-dot-${habit.id}`}
-            color={colors.habit[habit.color]}
-            progress={progressOf(habit.type, version, value)}
-          />
+    <Animated.View testID={`fade-${habit.id}`} style={fadeStyle}>
+      <Pressable
+        testID={`habit-${habit.id}`}
+        accessibilityRole={boolean ? "checkbox" : "button"}
+        accessibilityState={boolean ? { checked: done } : undefined}
+        accessibilityLabel={habit.name}
+        accessibilityValue={progress === null ? undefined : { text: progress }}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      >
+        <View style={styles.label}>
+          {/* A habit without a color leaves the room of the dot empty, so that the names line up. */}
+          {!showColor ? null : habit.color === null ? (
+            <View testID={`no-color-${habit.id}`} style={styles.noDot} />
+          ) : (
+            <ProgressDot
+              testID={`color-dot-${habit.id}`}
+              color={colors.habit[habit.color]}
+              progress={progressOf(habit.type, version, value)}
+            />
+          )}
+          <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
+            {habit.name}
+          </Text>
+        </View>
+        {progress === null ? null : (
+          <Text style={[styles.progress, { color: colors.textSecondary }]}>
+            {progress}
+          </Text>
         )}
-        <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
-          {habit.name}
-        </Text>
-      </View>
-      {progress === null ? null : (
-        <Text style={[styles.progress, { color: colors.textSecondary }]}>
-          {progress}
-        </Text>
-      )}
-    </Pressable>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -355,7 +363,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md - spacing.xs,
   },
-  done: { opacity: DONE_OPACITY },
   pressed: { opacity: 0.6 },
   label: {
     alignItems: "center",
