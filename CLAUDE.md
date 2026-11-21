@@ -75,7 +75,7 @@ npm run update:prod          # actualización OTA para producción, desde main a
 - Nunca mezcles valores de desarrollo y de producción: todo lo que dependa del entorno sale de la variante (`APP_VARIANT`) o de variables de entorno de EAS.
 - Los comandos de `eas` reescriben `app.json` con valores que no deben quedarse ahí. Después de cualquiera de ellos, revisa `git diff app.json`; un test lo comprueba (`src/__tests__/app-json.test.ts`).
 - Los builds de EAS son limitados (15 de iOS en el plan gratuito). Solo hace falta uno nuevo cuando cambia algo nativo (una dependencia con código nativo, `app.json`, `app.config.ts`): agrupa esos cambios y propón el build al usuario, que es quien lo lanza.
-- Los cambios solo de JavaScript llegan con una actualización OTA ([ADR-0020](docs/adr/0020-actualizaciones-ota-con-eas-update-primero-en-desarrollo-y-despues-en-produccion.md)): al terminar uno, indica al usuario si basta una actualización o hace falta un build. Publicar en producción afecta a los probadores: nunca lo hagas por tu cuenta.
+- Los cambios solo de JavaScript llegan con una actualización OTA ([ADR-0020](docs/adr/0020-actualizaciones-ota-con-eas-update-primero-en-desarrollo-y-despues-en-produccion.md)): al terminar uno, indica al usuario si basta una actualización o hace falta un build ([docs/despliegue.md](docs/despliegue.md)). Publicar en producción afecta a los probadores: nunca lo hagas por tu cuenta.
 - Tras cada edición, un hook formatea el fichero y pasa ESLint (ver `docs/ecosistema-ia.md`). Si te devuelve errores, corrígelos.
 
 ## Arquitectura
