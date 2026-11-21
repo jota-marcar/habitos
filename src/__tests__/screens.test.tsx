@@ -167,10 +167,12 @@ jest.mock("@react-native-community/datetimepicker", () => {
   const { Pressable } = jest.requireActual("react-native");
   return function MockDateTimePicker(props: {
     testID: string;
+    onLayout?: (event: unknown) => void;
     onValueChange: (event: unknown, date: Date) => void;
   }) {
     return createElement(Pressable, {
       testID: props.testID,
+      onLayout: props.onLayout,
       onPress: () => props.onValueChange({}, new Date(2026, 10, 12, 8, 30)),
     });
   };
@@ -830,29 +832,66 @@ describe("new habit", () => {
     ]);
   });
 
-  test("opening the reminder picker scrolls the form down to show it whole", async () => {
-    // The ScrollView of the tests is a class whose methods are mocks.
-    const { prototype } = ScrollView as unknown as {
-      prototype: { scrollToEnd: () => void };
-    };
-    const scrollToEnd = jest.spyOn(prototype, "scrollToEnd");
-    await renderApp("/habits/new");
-    const form = screen.getByTestId("habit-form");
+  describe("opening the reminder picker", () => {
+    const layoutOf = (height: number) => ({
+      nativeEvent: { layout: { x: 0, y: 0, width: 390, height } },
+    });
+    const nextFrame = () =>
+      act(async () => {
+        jest.advanceTimersByTime(100);
+      });
 
-    // Typing does not move the form.
-    await fireEvent(form, "contentSizeChange", 390, 900);
-    expect(scrollToEnd).not.toHaveBeenCalled();
+    /** Renders a form that is 700 pt tall on screen and 900 pt long, with the picker open. */
+    async function openPicker() {
+      // The ScrollView of the tests is a class whose methods are mocks.
+      const { prototype } = ScrollView as unknown as {
+        prototype: { scrollTo: () => void };
+      };
+      const scrollTo = jest.spyOn(prototype, "scrollTo");
+      scrollTo.mockClear();
+      await renderApp("/habits/new");
+      const form = screen.getByTestId("habit-form");
+      await fireEvent(form, "layout", layoutOf(700));
+      await fireEvent(form, "contentSizeChange", 390, 900);
+      await fireEvent.press(screen.getByText("Añadir recordatorio"));
+      return { form, picker: screen.getByTestId("reminder-picker"), scrollTo };
+    }
 
-    // The form scrolls once it has grown to hold the picker.
-    await fireEvent.press(screen.getByText("Añadir recordatorio"));
-    expect(scrollToEnd).not.toHaveBeenCalled();
-    await fireEvent(form, "contentSizeChange", 390, 1200);
-    expect(scrollToEnd).toHaveBeenCalledTimes(1);
-    expect(scrollToEnd).toHaveBeenCalledWith({ animated: true });
+    test("scrolls the form to its end once the picker has its real height", async () => {
+      const { form, picker, scrollTo } = await openPicker();
 
-    // Only then: other changes leave the form where the user puts it.
-    await fireEvent(form, "contentSizeChange", 390, 1300);
-    expect(scrollToEnd).toHaveBeenCalledTimes(1);
+      // Its first layout has no height yet: scrolling now would stop short.
+      await fireEvent(picker, "layout", layoutOf(0));
+      await fireEvent(form, "contentSizeChange", 390, 960);
+      await nextFrame();
+      expect(scrollTo).not.toHaveBeenCalled();
+
+      // The size of the form may arrive just after the height of the picker.
+      await fireEvent(picker, "layout", layoutOf(216));
+      await fireEvent(form, "contentSizeChange", 390, 1176);
+      await nextFrame();
+      expect(scrollTo).toHaveBeenCalledTimes(1);
+      expect(scrollTo).toHaveBeenCalledWith({ y: 476, animated: true });
+
+      // Only then: other changes leave the form where the user puts it.
+      await fireEvent(picker, "layout", layoutOf(220));
+      await fireEvent(form, "contentSizeChange", 390, 1300);
+      await nextFrame();
+      expect(scrollTo).toHaveBeenCalledTimes(1);
+    });
+
+    test("does not move the form when the picker is already in view", async () => {
+      const { form, picker, scrollTo } = await openPicker();
+      await fireEvent.scroll(form, {
+        nativeEvent: { contentOffset: { x: 0, y: 500 } },
+      });
+
+      await fireEvent(picker, "layout", layoutOf(216));
+      await fireEvent(form, "contentSizeChange", 390, 1176);
+      await nextFrame();
+
+      expect(scrollTo).not.toHaveBeenCalled();
+    });
   });
 
   test("touching an amount selects it, so that typing replaces it", async () => {
