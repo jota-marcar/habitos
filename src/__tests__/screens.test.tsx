@@ -178,6 +178,19 @@ jest.mock("@react-native-community/datetimepicker", () => {
   };
 });
 
+// The height of the home indicator, which the tests have none of unless they set it.
+let mockBottomInset = 0;
+jest.mock("react-native-safe-area-context", () => {
+  const actual = jest.requireActual("react-native-safe-area-context");
+  return {
+    ...actual,
+    useSafeAreaInsets: () => ({
+      ...actual.useSafeAreaInsets(),
+      bottom: mockBottomInset,
+    }),
+  };
+});
+
 // The notifications of the device: the permission and what is scheduled, by identifier.
 // The haptics played, in order.
 const mockHaptics: string[] = [];
@@ -850,6 +863,10 @@ describe("new habit", () => {
   });
 
   describe("opening the reminder picker", () => {
+    afterEach(() => {
+      mockBottomInset = 0;
+    });
+
     const layoutOf = (height: number) => ({
       nativeEvent: { layout: { x: 0, y: 0, width: 390, height } },
     });
@@ -895,6 +912,18 @@ describe("new habit", () => {
       await fireEvent(form, "contentSizeChange", 390, 1300);
       await nextFrame();
       expect(scrollTo).toHaveBeenCalledTimes(1);
+    });
+
+    test("leaves a margin under the last buttons, above the home indicator", async () => {
+      mockBottomInset = 34;
+      const { form } = await openPicker();
+
+      const { paddingBottom } = StyleSheet.flatten(
+        form.props.contentContainerStyle,
+      );
+
+      // The home indicator and 16 pt more.
+      expect(paddingBottom).toBe(50);
     });
 
     test("does not move the form when the picker is already in view", async () => {

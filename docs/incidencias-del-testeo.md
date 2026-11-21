@@ -25,13 +25,14 @@ Una incidencia que cambia el comportamiento descrito en la [especificación func
 ## INC-03. El selector de hora del recordatorio se abre fuera de la vista
 
 - **Encontrada:** 2026-11-19, en producción (TestFlight).
-- **Estado:** resuelta (reabierta el 2026-11-21 y corregida de nuevo; falta confirmarlo en el iPhone).
+- **Estado:** resuelta (reabierta y corregida el 2026-11-21; el desplazamiento está confirmado en el iPhone y falta probar el margen).
 - **Qué pasa:** al pulsar "Añadir recordatorio", el selector de horas y minutos se despliega hacia abajo y queda en parte fuera de la pantalla: hay que desplazarse a mano para verlo y confirmar.
 - **Qué se espera:** el formulario se desplaza solo, lo justo para que el selector y sus botones se vean enteros.
 - **Primer intento (no basta):** al abrir el selector se cierra el teclado, si estaba abierto (lo taparía), y en cuanto el formulario crece para hacerle sitio se desplaza con animación hasta el final, donde quedan el selector y sus botones. Los recordatorios son la última sección del formulario, así que el final es justo lo que hay que mostrar. Solo se desplaza esa vez: el resto de cambios deja el formulario donde lo ponga el usuario.
 - **Por qué se reabre:** al probar en el iPhone la versión con este arreglo (Hábitos Dev, 2026-11-21), al crear un hábito el selector sigue abriéndose fuera de la pantalla. El test automático solo comprueba que se pide el desplazamiento, con un selector simulado.
 - **Causa (según el código de las librerías, sin reproducirla en el iPhone):** el selector nativo se coloca primero sin altura y se mide en una pasada posterior. El desplazamiento se lanzaba una sola vez, con el primer cambio de tamaño del formulario, así que podía quedarse corto por casi toda la altura del selector. Además, tenía en cuenta el teclado, que al crear un hábito está abierto y cerrándose en ese momento.
 - **Cómo se resuelve:** el formulario espera a que el propio selector tenga su altura real y a un fotograma más, para conocer ya su tamaño final. Entonces se desplaza con animación justo hasta su final, donde acaban el selector y sus botones, sin contar el teclado. Si ya se ve entero, no se mueve.
+- **Ajuste tras probarlo:** los botones quedaban casi pegados al borde inferior. El final del formulario deja ahora libre la zona del indicador de inicio de iOS y 16 pt más, así que el desplazamiento llega algo más abajo y los botones quedan con un margen.
 
 ## INC-04. El mensaje inicial no explica cómo abrir el calendario
 

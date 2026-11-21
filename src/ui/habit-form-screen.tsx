@@ -14,6 +14,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { Weekday } from "@/domain/dates";
 import {
@@ -98,6 +99,7 @@ export function HabitFormScreen({
   onSubmit: (values: HabitFormValues) => Promise<readonly HabitError[]>;
 }) {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const db = useDatabase();
   const [values, setValues] = useState<HabitFormValues>(initialValues);
@@ -226,7 +228,12 @@ export function HabitFormScreen({
       scrollEventThrottle={16}
       automaticallyAdjustKeyboardInsets
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={styles.content}
+      // The end of the form clears the home indicator, so that the last buttons, which the
+      // form scrolls to, are not against the edge of the screen.
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: insets.bottom + spacing.md },
+      ]}
     >
       <Stack.Screen
         options={{
