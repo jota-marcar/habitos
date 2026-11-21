@@ -348,6 +348,7 @@ describe("syncNotifications", () => {
       categories: [],
       today: NOW.date,
       pendingToday: new Set(),
+      gestureHintStartedOn: null,
       ...changes,
     };
   }
@@ -378,7 +379,8 @@ describe("syncNotifications", () => {
 
     await syncNotifications(notifier, plan([planned("a", "09:00")]));
 
-    expect(log).toEqual(["cancel reminder.a", "schedule reminder.a"]);
+    // Replaced without cancelling: if iOS suspends the app, no reminder is lost.
+    expect(log).toEqual(["schedule reminder.a"]);
     expect(scheduled.get("reminder.a")).toBe(
       signatureOf(planned("a", "09:00")),
     );
@@ -497,6 +499,111 @@ describe("snoozedNotification", () => {
       id: "snooze.read.2026-11-12.11:00",
       at,
     });
+  });
+
+  test("no longer explains the gesture, because a button has just been used", () => {
+    const original: PlannedNotification = {
+      id: "reminder.r1.2026-11-12",
+      at: NOW,
+      title: "Beber agua",
+      body: "Llevas 1 de 2 L\nMantén pulsado para sumar o posponerlo",
+      habitId: "water",
+      category: "reminder_add_water",
+    };
+    const hintOnly = {
+      ...original,
+      body: "Mantén pulsado para marcarlo o posponerlo",
+    };
+    const at = { date: NOW.date, time: localTime("11:00") };
+
+    expect(snoozedNotification(original, at).body).toBe("Llevas 1 de 2 L");
+    expect(snoozedNotification(hintOnly, at).body).toBeNull();
+  });
+});
+
+describe("gesture hint (RF-25)", () => {
+  const NEW_HINT = { startedOn: null, learned: false };
+
+  async function addRead() {
+    await addHabit(db, habit("read", { name: "Leer" }), version("read"), [
+      reminder("read", "21:00"),
+    ]);
+  }
+
+  function reminderBodies(plan: ReminderPlan) {
+    return plan.notifications
+      .filter((n) => n.id.startsWith(REMINDER_PREFIX))
+      .map((n) => n.body);
+  }
+
+  test("a boolean reminder explains the gesture from its first day", async () => {
+    await addRead();
+
+    const plan = await planReminders(db, NOW, NEW_HINT);
+
+    expect(plan.gestureHintStartedOn).toBe("2026-11-12");
+    expect(reminderBodies(plan)[0]).toBe(
+      "Mantén pulsado para marcarlo o posponerlo",
+    );
+  });
+
+  test("a quantitative reminder explains it after its progress", async () => {
+    await addWater();
+
+    const plan = await planReminders(db, NOW, NEW_HINT);
+
+    expect(reminderBodies(plan)[0]).toBe(
+      "Llevas 0 de 2 L\nMantén pulsado para sumar o posponerlo",
+    );
+  });
+
+  test("stops after seven days, counted from the first reminder", async () => {
+    await addRead();
+
+    const plan = await planReminders(db, NOW, NEW_HINT);
+    const bodies = reminderBodies(plan);
+
+    expect(bodies.slice(0, 7).every((body) => body !== null)).toBe(true);
+    expect(bodies[7]).toBeNull();
+  });
+
+  test("keeps the day it started on", async () => {
+    await addRead();
+
+    const plan = await planReminders(db, NOW, {
+      startedOn: localDate("2026-11-06"),
+      learned: false,
+    });
+
+    expect(plan.gestureHintStartedOn).toBe("2026-11-06");
+    expect(reminderBodies(plan)[0]).not.toBeNull();
+    expect(reminderBodies(plan)[1]).toBeNull();
+  });
+
+  test("does not start without reminders", async () => {
+    const plan = await planReminders(db, NOW, NEW_HINT);
+
+    expect(plan.gestureHintStartedOn).toBeNull();
+  });
+
+  test("disappears once a button has been used", async () => {
+    await addRead();
+
+    const plan = await planReminders(db, NOW, {
+      startedOn: NOW.date,
+      learned: true,
+    });
+
+    expect(reminderBodies(plan).every((body) => body === null)).toBe(true);
+  });
+
+  test("the digests never explain it, because they have no buttons", async () => {
+    await addRead();
+
+    const plan = await planReminders(db, NOW, NEW_HINT);
+    const digest = plan.notifications.find((n) => n.habitId === null);
+
+    expect(digest?.body).toBe("Leer");
   });
 });
 

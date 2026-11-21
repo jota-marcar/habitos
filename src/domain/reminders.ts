@@ -31,6 +31,29 @@ export const SNOOZE_MINUTES = 60;
  */
 export const MAX_UPCOMING_REMINDERS = 60;
 
+/** For how many days, at most, reminders explain how to reach their buttons (RF-25). */
+export const GESTURE_HINT_DAYS = 7;
+
+/** What the device knows about teaching the gesture that shows the buttons (RF-25). */
+export interface GestureHint {
+  /** The day of the first reminder that explained it, or null if none has yet. */
+  readonly startedOn: LocalDate | null;
+  /** Whether the user has already used a button of a reminder. */
+  readonly learned: boolean;
+}
+
+/**
+ * Whether a reminder on `date` explains the gesture: until the user first uses a button, and
+ * for a few days at most, so that nobody keeps reading it forever (RF-25).
+ */
+export function showsGestureHint(
+  { startedOn, learned }: GestureHint,
+  date: LocalDate,
+): boolean {
+  if (learned) return false;
+  return startedOn === null || date < addDays(startedOn, GESTURE_HINT_DAYS);
+}
+
 const DAYS_PER_WEEK = 7;
 
 /**

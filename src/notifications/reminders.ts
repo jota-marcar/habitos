@@ -10,6 +10,11 @@ import { newId, now } from "@/ui/clock";
 import { answerReminder, notifyReminderRecorded } from "./actions";
 import { expoNotifier, reminderResponseOf } from "./expo-notifier";
 import {
+  markGestureLearned,
+  readGestureHint,
+  startGestureHint,
+} from "./gesture-hint-store";
+import {
   localDateTimeOf,
   planReminders,
   serialized,
@@ -23,7 +28,18 @@ const knownCategories = new Map<string, string>();
 
 const refresh = serialized(async () => {
   if (database === null) return;
-  const plan = await planReminders(database, localDateTimeOf(now()));
+  const gestureHint = await readGestureHint();
+  const plan = await planReminders(
+    database,
+    localDateTimeOf(now()),
+    gestureHint,
+  );
+  if (
+    plan.gestureHintStartedOn !== null &&
+    plan.gestureHintStartedOn !== gestureHint.startedOn
+  ) {
+    await startGestureHint(plan.gestureHintStartedOn);
+  }
   await syncNotifications(expoNotifier, plan, knownCategories);
 });
 
@@ -61,6 +77,7 @@ export function listenToReminders(openDatabase: () => Promise<Database>) {
 
     const reminder = reminderResponseOf(response);
     if (reminder === null) return;
+    if (reminder.buttonId !== null) await markGestureLearned();
     const db = await openDatabase();
     const recorded = await answerReminder(
       db,

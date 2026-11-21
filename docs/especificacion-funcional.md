@@ -38,6 +38,7 @@ A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo
 | **Día** | `day` | Periodo de 00:00 a 23:59 en la hora local del dispositivo. |
 | **Recordatorio** | `Reminder` | Aviso a una hora concreta para que el usuario no olvide un hábito. |
 | **Posponer** | `snooze` | Aplazar un recordatorio para recibirlo de nuevo más tarde. |
+| **Ayuda del gesto** | `gestureHint` | Línea de los primeros recordatorios que explica que, al mantenerlos pulsados, aparecen sus botones. |
 | **Aviso de pendientes** | `PendingDigest` | Aviso a una hora fija del día que nombra los hábitos de ese día que siguen sin cumplir. |
 | **Color** | `color` | Color que el usuario da a un hábito, de entre los de una paleta, para agruparlo con otros o distinguirlo de ellos. |
 | **Archivar** | `archive` | Retirar un hábito de uso sin borrar su historial. |
@@ -187,6 +188,8 @@ Es la pantalla principal de la aplicación (ver 3.1).
   - **Booleano:** marcarlo como cumplido.
   - **Cuantitativo:** sumar el incremento.
   - **Ambos:** posponerlo 1 hora. El tiempo es el mismo para todos los hábitos. Un recordatorio no sale del día de su hábito: si al posponerlo caería en el día siguiente, no se vuelve a enviar.
+
+  iOS solo muestra estos botones al mantener pulsada la notificación, así que los recordatorios lo explican con una línea ("Mantén pulsado para marcarlo o posponerlo", o "para sumar o posponerlo" en un cuantitativo). La línea deja de aparecer en cuanto el usuario usa un botón por primera vez y, si no llega a usarlo, a los 7 días del primer recordatorio. Es una ayuda del dispositivo: no se sincroniza con la cuenta.
 - **RF-26.** Al tocar el recordatorio (fuera de sus botones), se abre la aplicación en el día actual.
 - **RF-27.** Los recordatorios funcionan sin conexión.
 - **RF-37.** Además de los recordatorios de cada hábito, la aplicación envía cada día dos avisos de pendientes, a las 17:00 y a las 22:00. Así el usuario no se olvida de registrar lo que ya ha hecho, y se le recuerda lo que aún no ha hecho, también los hábitos que no tienen recordatorios.
