@@ -1,6 +1,6 @@
 # Build de producción y TestFlight
 
-Guía para compilar la variante de producción, Hábitos (`com.jotamarcar.habitos`), y publicarla en TestFlight. Los pasos que se hacen fuera del repositorio los lanza el usuario. Lo técnico está en [arquitectura.md](arquitectura.md#8-entornos-y-publicación) y en los ADR [0002](adr/0002-expo-como-plataforma.md) y [0008](adr/0008-variantes-de-desarrollo-y-produccion.md).
+Guía para compilar la variante de producción, Hábitos (`com.jotamarcar.habitos`), y publicarla en TestFlight. Para saber qué comando corresponde a cada cambio, empieza por [despliegue.md](despliegue.md). Los pasos que se hacen fuera del repositorio los lanza el usuario. Lo técnico está en [arquitectura.md](arquitectura.md#8-entornos-y-publicación) y en los ADR [0002](adr/0002-expo-como-plataforma.md) y [0008](adr/0008-variantes-de-desarrollo-y-produccion.md).
 
 ## Qué hay en el repositorio
 

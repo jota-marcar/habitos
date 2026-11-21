@@ -43,7 +43,7 @@ Contexto del proyecto, comandos de desarrollo, reglas de arquitectura y de git. 
 Definidos en [.claude/settings.json](../.claude/settings.json):
 
 - **Permitido sin preguntar:** comandos de git de consulta y de trabajo local (`status`, `log`, `diff`, `switch`, `add`, `commit`, `pull`, `merge`…), consultas de `gh` (`pr view`, `pr checks`, `run view`…), consultas de `npm` y de `eas` (`npm ls`, `npm view`, `eas whoami`, `eas build:view`…), los scripts de las skills y las herramientas de verificación del proyecto (`npm run …`, `npm test`, `npx expo lint`, `npx expo-doctor`, `npx expo config`, `npx tsc`, `npx jest`, `npx prettier`, `npx eslint`).
-- **Siempre pregunta:** todo lo que sale del equipo o es difícil de deshacer (`git push`, `gh pr create`, `gh pr merge`, `git reset --hard`, `git clean`) los cambios de dependencias (`npm install`, `npm uninstall`, `npx expo install`), porque ejecutan scripts de paquetes de terceros, y los builds de EAS (`eas build`, `npm run build:dev`, `npm run build:prod`), porque son limitados.
+- **Siempre pregunta:** todo lo que sale del equipo o es difícil de deshacer (`git push`, `gh pr create`, `gh pr merge`, `git reset --hard`, `git clean`) los cambios de dependencias (`npm install`, `npm uninstall`, `npx expo install`), porque ejecutan scripts de paquetes de terceros, los builds de EAS (`eas build`, `npm run build:dev`, `npm run build:prod`), porque son limitados, y las actualizaciones OTA (`eas update`, `eas update:rollback`, `eas channel:…`, `npm run update:dev`, `npm run update:prod`, `node scripts/update.mjs`), porque las de producción llegan directamente a los probadores.
 - **Prohibido:** leer ficheros `.env`, que contendrán secretos.
 
 En el mismo fichero, `attribution.commit` vacío hace que los commits no lleven la línea `Co-Authored-By` de Claude. Los PR sí indican que se han generado con Claude Code.
@@ -87,7 +87,7 @@ No es una pieza de Claude Code, pero cumple el mismo principio de imponer lo det
 Los comandos de EAS reescriben `app.json` con valores ya resueltos para una variante (el bundle identifier de desarrollo, por ejemplo), que no deben llegar al repositorio ([ADR-0008](adr/0008-variantes-de-desarrollo-y-produccion.md)). Dos piezas lo vigilan:
 
 - El test [app-json.test.ts](../src/__tests__/app-json.test.ts) falla si `app.json` contiene `name`, `scheme`, el bundle identifier o el bloque que genera Expo Router.
-- [scripts/build.mjs](../scripts/build.mjs) (`npm run build:dev` y `npm run build:prod`) no lanza el build si hay cambios sin commit, y avisa si EAS ha tocado `app.json`. El de producción, además, solo compila `main` al día con GitHub.
+- [scripts/build.mjs](../scripts/build.mjs) (`npm run build:dev` y `npm run build:prod`) no lanza el build si hay cambios sin commit, y avisa si EAS ha tocado `app.json`. El de producción, además, solo compila `main` al día con GitHub. [scripts/update.mjs](../scripts/update.mjs) (`npm run update:dev` y `npm run update:prod`) aplica las mismas comprobaciones a las actualizaciones OTA.
 
 ### CI con GitHub Actions
 
