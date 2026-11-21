@@ -14,7 +14,9 @@ import type { Habit } from "@/domain/habits";
 import {
   MAX_UPCOMING_REMINDERS,
   SNOOZE_MINUTES,
+  showsGestureHint,
   upcomingReminders,
+  type GestureHint,
   type UpcomingReminder,
 } from "@/domain/reminders";
 import { localTimeOf, type LocalDateTime } from "@/domain/times";
@@ -68,6 +70,25 @@ export function reminderBody({ dayHabit }: UpcomingReminder): string | null {
   return `Llevas ${formatAmount(value)} de ${target} ${version.unit ?? ""}`.trim();
 }
 
+// iOS only shows the buttons of a notification after pressing and holding it (RF-25).
+const GESTURE_HINTS: Readonly<Record<Habit["type"], string>> = {
+  boolean: "Mantén pulsado para marcarlo o posponerlo",
+  quantitative: "Mantén pulsado para sumar o posponerlo",
+};
+
+/** The gesture hint is not being shown: nothing to explain and nothing to remember. */
+export const NO_GESTURE_HINT: GestureHint = { startedOn: null, learned: true };
+
+function withoutGestureHint(body: string | null): string | null {
+  if (body === null) return null;
+  const hints = Object.values(GESTURE_HINTS);
+  const text = body
+    .split("\n")
+    .filter((line) => !hints.includes(line))
+    .join("\n");
+  return text === "" ? null : text;
+}
+
 /**
  * The category of the reminders of a habit. A boolean habit is marked done; a quantitative
  * one adds its increment, which the button shows, so each one has a category of its own.
@@ -102,13 +123,18 @@ export function categoryOfDay({
 /** The notification of a reminder on a specific day. */
 export function notificationOf(
   upcoming: UpcomingReminder,
+  gestureHint: GestureHint = NO_GESTURE_HINT,
 ): PlannedNotification {
   const { reminder, date, dayHabit } = upcoming;
+  const body = reminderBody(upcoming);
+  const hint = showsGestureHint(gestureHint, date)
+    ? GESTURE_HINTS[dayHabit.habit.type]
+    : null;
   return {
     id: `${REMINDER_PREFIX}${reminder.id}.${date}`,
     at: { date, time: reminder.time },
     title: dayHabit.habit.name,
-    body: reminderBody(upcoming),
+    body: hint === null ? body : body === null ? hint : `${body}\n${hint}`,
     habitId: dayHabit.habit.id,
     category: categoryOf(dayHabit.habit),
   };
@@ -175,7 +201,10 @@ export function windowOf(
     .slice(0, MAX_UPCOMING_REMINDERS);
 }
 
-/** The notification of a reminder snoozed until `at` (RF-25). */
+/**
+ * The notification of a reminder snoozed until `at` (RF-25). Whoever snoozes it has just used
+ * a button, so it no longer explains how to reach them.
+ */
 export function snoozedNotification(
   original: PlannedNotification,
   at: LocalDateTime,
@@ -184,6 +213,7 @@ export function snoozedNotification(
     ...original,
     id: `${SNOOZE_PREFIX}${original.habitId}.${at.date}.${at.time}`,
     at,
+    body: withoutGestureHint(original.body),
   };
 }
 
@@ -202,11 +232,14 @@ export interface ReminderPlan {
   readonly today: LocalDate;
   /** The habits still pending today: their snoozed reminders still have to warn (RF-24). */
   readonly pendingToday: ReadonlySet<string>;
+  /** The day the gesture hint starts counting from, to remember it (RF-25). */
+  readonly gestureHintStartedOn: LocalDate | null;
 }
 
 export async function planReminders(
   db: Database,
   now: LocalDateTime,
+  gestureHint: GestureHint = NO_GESTURE_HINT,
 ): Promise<ReminderPlan> {
   const [habits, versions, entries, reminders] = await Promise.all([
     listHabits(db),
@@ -227,14 +260,21 @@ export async function planReminders(
     .filter((dayHabit) => !dayHabit.done)
     .map((dayHabit) => dayHabit.habit.id);
 
+  // It starts counting with the first reminder, not on installing the app.
+  const gestureHintStartedOn = gestureHint.learned
+    ? gestureHint.startedOn
+    : (gestureHint.startedOn ?? upcoming[0]?.date ?? null);
+  const hint = { ...gestureHint, startedOn: gestureHintStartedOn };
+
   return {
     notifications: windowOf(
-      upcoming.map(notificationOf),
+      upcoming.map((reminder) => notificationOf(reminder, hint)),
       digests.map(digestNotification),
     ),
     categories: [...categories.values()],
     today: now.date,
     pendingToday: new Set(pendingToday),
+    gestureHintStartedOn,
   };
 }
 
@@ -249,8 +289,9 @@ function snoozedHabitAndDay(id: string): { habitId: string; date: string } {
  * - Registers the categories that are new or have changed. `knownCategories` remembers those
  *   already registered, by identifier, across calls.
  * - Cancels the snoozed reminders of habits no longer pending, and those of other days.
- * - Cancels the reminders and digests of the window that no longer warn or have changed, and
- *   schedules the missing ones.
+ * - Cancels the reminders and digests that have left the window, and schedules those that are
+ *   missing or have changed. A changed one is replaced without cancelling it first: iOS may
+ *   suspend the app halfway through, and it must not be left without its reminders.
  */
 export async function syncNotifications(
   notifier: Notifier,
@@ -282,10 +323,10 @@ export async function syncNotifications(
     if (!id.startsWith(REMINDER_PREFIX) && !id.startsWith(DIGEST_PREFIX)) {
       continue;
     }
-    if (wanted.get(notification.id) === notification.signature) {
-      kept.add(notification.id);
-    } else {
-      await notifier.cancel(notification.id);
+    if (wanted.get(id) === notification.signature) {
+      kept.add(id);
+    } else if (!wanted.has(id)) {
+      await notifier.cancel(id);
     }
   }
   for (const notification of plan.notifications) {

@@ -85,3 +85,12 @@ Una incidencia que cambia el comportamiento descrito en la [especificación func
 - **Qué pasa:** el menú inferior tiene una franja que indica que se puede deslizar para abrirlo, pero el calendario de arriba no tiene ninguna señal.
 - **Qué se espera:** a valorar una franja arriba, idéntica a la de abajo, que indique que se puede deslizar para abrir el calendario. Antes de decidir, hay que comprobar que no recarga la pantalla ni le resta minimalismo. Relacionada con INC-04.
 - **Por qué se cancela:** de momento basta con el mensaje inicial de INC-04, que ya explica que deslizando desde arriba se abre el calendario. Se evita añadir otra franja a la pantalla. Si los probadores siguen sin encontrar el calendario, se puede retomar.
+
+## INC-10. Los botones del recordatorio no se ven sin mantenerlo pulsado
+
+- **Encontrada:** 2026-11-21, en producción (TestFlight).
+- **Estado:** resuelta.
+- **Qué pasa:** los botones para marcar o posponer un hábito solo aparecen al mantener pulsada la notificación, y nada lo indica.
+- **Qué se espera:** poder usar los botones directamente desde la notificación.
+- **Por qué no se hace así:** iOS no permite mostrar los botones de una notificación normal sin mantenerla pulsada. Las alternativas con botones visibles (Live Activity, AlarmKit) se descartan de momento por su coste, su riesgo para los datos o porque resultarían intrusivas.
+- **Cómo se resuelve:** los recordatorios explican el gesto con una línea ("Mantén pulsado para marcarlo o posponerlo", o "para sumar o posponerlo" en un cuantitativo). Deja de aparecer al usar un botón por primera vez y, como mucho, a los 7 días del primer recordatorio. Se guarda solo en el dispositivo, fuera de la base de datos, para que la actualización OTA se pueda deshacer sin riesgo. Además, un recordatorio que cambia se sustituye sin cancelarlo antes, para que iOS no pueda dejarlo sin programar si suspende la app a mitad. Se actualiza RF-25.

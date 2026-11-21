@@ -6,6 +6,7 @@ import {
   SNOOZE_MINUTES,
   addReminder,
   removeReminder,
+  showsGestureHint,
   snoozedTime,
   upcomingReminders,
   type Reminder,
@@ -127,6 +128,33 @@ describe("snoozedTime", () => {
   test("does not snooze into the next day", () => {
     expect(snoozedTime(localTime("23:00"))).toBeNull();
     expect(snoozedTime(localTime("23:30"))).toBeNull();
+  });
+});
+
+describe("showsGestureHint", () => {
+  const startedOn = localDate("2026-11-12");
+
+  test("shows it before it has started", () => {
+    expect(
+      showsGestureHint({ startedOn: null, learned: false }, startedOn),
+    ).toBe(true);
+  });
+
+  test("shows it for seven days, counting the first", () => {
+    const hint = { startedOn, learned: false };
+
+    expect(showsGestureHint(hint, startedOn)).toBe(true);
+    expect(showsGestureHint(hint, localDate("2026-11-18"))).toBe(true);
+    expect(showsGestureHint(hint, localDate("2026-11-19"))).toBe(false);
+  });
+
+  test("never shows it once a button has been used", () => {
+    expect(showsGestureHint({ startedOn, learned: true }, startedOn)).toBe(
+      false,
+    );
+    expect(
+      showsGestureHint({ startedOn: null, learned: true }, startedOn),
+    ).toBe(false);
   });
 });
 
