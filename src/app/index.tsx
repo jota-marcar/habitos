@@ -198,6 +198,17 @@ export default function Today() {
     options.open();
   };
 
+  const renderRow = (item: DayHabit, index: number) => (
+    <MovingHabitRow
+      key={item.habit.id}
+      first={index === 0}
+      item={item}
+      showColor={showColor}
+      onPress={() => void record(item.habit.id)}
+      onLongPress={() => openOptions(item)}
+    />
+  );
+
   // The form is told the day it was opened from, to say when the changes apply (RF-09).
   const edit = (habitId: string) =>
     router.push({
@@ -265,27 +276,17 @@ export default function Today() {
               // which pushes the done group to the bottom.
               contentContainerStyle={styles.groups}
             >
-              {habits.pending.map((item, index) => (
-                <MovingHabitRow
-                  key={item.habit.id}
-                  first={index === 0}
-                  item={item}
-                  showColor={showColor}
-                  onPress={() => void record(item.habit.id)}
-                  onLongPress={() => openOptions(item)}
-                />
-              ))}
-              <View key="gap" testID="day-habits-gap" style={styles.groupGap} />
-              {habits.done.map((item, index) => (
-                <MovingHabitRow
-                  key={item.habit.id}
-                  first={index === 0}
-                  item={item}
-                  showColor={showColor}
-                  onPress={() => void record(item.habit.id)}
-                  onLongPress={() => openOptions(item)}
-                />
-              ))}
+              {/* A single list: with one per group, a row that changes group would be a new
+                  view, which appears in its place instead of sliding there. */}
+              {[
+                ...habits.pending.map(renderRow),
+                <View
+                  key="gap"
+                  testID="day-habits-gap"
+                  style={styles.groupGap}
+                />,
+                ...habits.done.map(renderRow),
+              ]}
             </ScrollView>
           )}
         </View>

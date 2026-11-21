@@ -599,6 +599,23 @@ describe("day view", () => {
     expect(doneNames()).toEqual(["Pasear"]);
   });
 
+  test("keeps the view of a habit that changes group, so that it can slide (RF-12)", async () => {
+    await addBoolean("read", "Leer", "22:00");
+    await addBoolean("walk", "Pasear", "08:00");
+    await renderApp();
+    const row = await screen.findByTestId("habit-walk");
+
+    await fireEvent.press(row);
+    await waitForTheMove();
+    expect(doneNames()).toEqual(["Pasear"]);
+    expect(screen.getByTestId("habit-walk")).toBe(row);
+
+    await fireEvent.press(screen.getByTestId("habit-walk"));
+    await waitForTheMove();
+    expect(doneNames()).toEqual([]);
+    expect(screen.getByTestId("habit-walk")).toBe(row);
+  });
+
   test("keeps every habit in its place while the taps go on (RF-12)", async () => {
     await addBoolean("read", "Leer", "22:00");
     await addBoolean("walk", "Pasear", "08:00");
