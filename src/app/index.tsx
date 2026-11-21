@@ -29,6 +29,7 @@ import { progressOf, type DayHabit } from "@/domain/day";
 import { CalendarSheet } from "@/ui/calendar-sheet";
 import { formatDayTitle, formatProgress } from "@/ui/format";
 import { HabitOptionsSheet } from "@/ui/habit-options-sheet";
+import { playOptionsOpened } from "@/ui/haptics";
 import { PROGRESS_DOT_SIZE, ProgressDot } from "@/ui/progress-dot";
 import { Sheet, SheetOption, useOpenSheetGesture, useSheet } from "@/ui/sheet";
 import { fontSize, radius, spacing, topGap, useColors } from "@/ui/theme";
@@ -192,6 +193,7 @@ export default function Today() {
     allHabits?.some((item) => item.habit.color !== null) ?? false;
 
   const openOptions = (item: DayHabit) => {
+    playOptionsOpened();
     setHeld(item);
     options.open();
   };

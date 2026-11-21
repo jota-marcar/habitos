@@ -144,6 +144,11 @@ Es la pantalla principal de la aplicación (ver 3.1).
 - **RF-14.** Un hábito booleano se marca y desmarca con un toque.
 - **RF-15.** Un hábito cuantitativo suma su incremento con un toque. Desde sus opciones (RF-34) también se puede restar el incremento o escribir la cantidad exacta. La cantidad nunca baja de 0 y admite 2 decimales como máximo.
 - **RF-16.** Un hábito cuantitativo cuenta como cumplido cuando la cantidad acumulada alcanza la meta. Se puede superar la meta.
+- **RF-39.** Los toques sobre la lista se notan en la mano, con las mismas vibraciones que usa el propio sistema del teléfono:
+  - El toque que cumple un hábito (marcar uno booleano o alcanzar la meta de uno cuantitativo) da la vibración de tarea terminada.
+  - Cualquier otro toque que apunta algo (sumar sin llegar a la meta, superarla o desmarcar) da un toque sutil.
+  - Mantener pulsado un hábito para abrir sus opciones (RF-34) da un golpe ligero, como los menús del sistema.
+  - Nada más vibra: ni el menú, ni el calendario, ni lo que se hace desde las opciones. Si el usuario ha desactivado las vibraciones del sistema, la aplicación tampoco vibra.
 - **RF-17.** Un hábito aparece en los días programados a partir de la fecha en que se creó, nunca en días anteriores.
 - **RF-34.** Al mantener pulsado un hábito se abren sus opciones. Las que aparecen dependen del día y del hábito:
 

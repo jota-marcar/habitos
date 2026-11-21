@@ -21,7 +21,7 @@ import {
 } from "@/data/habits-repository";
 import { listReminders } from "@/data/reminders-repository";
 import type { LocalDate } from "@/domain/dates";
-import { habitsForDay, type DayHabit } from "@/domain/day";
+import { habitsForDay, isDone, type DayHabit } from "@/domain/day";
 import {
   canRecordOn,
   decremented,
@@ -42,6 +42,7 @@ import { onSyncedChanges, syncSoon } from "@/sync/app-sync";
 
 import { msUntilTomorrow, newId, now, today } from "./clock";
 import { useDatabase } from "./database";
+import { playRecorded, recordedFeedback } from "./haptics";
 
 export interface Day {
   /** The day on screen. */
@@ -234,9 +235,14 @@ export function useDay(): Day {
 
   // Records the value that `next` gives for a habit of the day on screen. Each change holds the
   // habits in their places and starts the pause again, once it is written; when the pause is
-  // over, the day is read again and they move to their group.
+  // over, the day is read again and they move to their group. A tap on the list (`withHaptics`)
+  // is felt as soon as its value is known, before it is written.
   const setValue = useCallback(
-    (habitId: string, next: (dayHabit: DayHabit) => number): Promise<void> => {
+    (
+      habitId: string,
+      next: (dayHabit: DayHabit) => number,
+      withHaptics = false,
+    ): Promise<void> => {
       holdSettling();
       const write = change(async () => {
         if (!canRecordOn(date, today())) return;
@@ -251,12 +257,19 @@ export function useDay(): Day {
         ).find((d) => d.habit.id === habitId);
         if (dayHabit === undefined) return;
 
+        const value = next(dayHabit);
+        if (withHaptics) {
+          const { habit, version } = dayHabit;
+          playRecorded(
+            recordedFeedback(dayHabit.done, isDone(habit.type, version, value)),
+          );
+        }
         const existing = entries.find((e) => e.habitId === habitId);
         await saveEntry(db, {
           id: existing?.id ?? newId(),
           habitId,
           date,
-          value: next(dayHabit),
+          value,
         });
       });
       void write.then(() => {
@@ -273,10 +286,13 @@ export function useDay(): Day {
 
   const record = useCallback(
     (habitId: string) =>
-      setValue(habitId, ({ habit, version, value }) =>
-        habit.type === "boolean"
-          ? toggled(value)
-          : incremented(value, version.increment ?? 0),
+      setValue(
+        habitId,
+        ({ habit, version, value }) =>
+          habit.type === "boolean"
+            ? toggled(value)
+            : incremented(value, version.increment ?? 0),
+        true,
       ),
     [setValue],
   );
