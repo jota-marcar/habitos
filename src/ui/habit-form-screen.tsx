@@ -6,6 +6,7 @@ import { Stack, useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import {
   Keyboard,
+  type LayoutChangeEvent,
   Pressable,
   ScrollView,
   type ScrollViewInstance,
@@ -105,8 +106,12 @@ export function HabitFormScreen({
   const [reminderError, setReminderError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const scroll = useRef<ScrollViewInstance>(null);
-  // Set when the reminder picker opens, until the form has grown to hold it.
+  // Set when the reminder picker opens, until it has its real height.
   const revealPicker = useRef(false);
+  // The size and position of the form, to scroll it just enough to show the picker.
+  const viewportHeight = useRef(0);
+  const contentHeight = useRef(0);
+  const scrollY = useRef(0);
 
   const messages = messagesByField(errors);
   const quantitative = values.type === "quantitative";
@@ -141,10 +146,20 @@ export function HabitFormScreen({
     setPickedTime(DEFAULT_REMINDER_TIME);
   };
 
-  const revealOpenedPicker = () => {
-    if (!revealPicker.current) return;
+  // The native picker first lays out with no height and measures itself in a later pass, so the
+  // form waits for that height. It waits one more frame for the new size of the form to arrive
+  // and reach the native view, which limits the scroll to the size it knows. The target leaves
+  // the keyboard out, as it is closing. The picker and its buttons end the form, so its end is
+  // what has to be shown.
+  const revealOpenedPicker = (event: LayoutChangeEvent) => {
+    if (!revealPicker.current || event.nativeEvent.layout.height === 0) return;
     revealPicker.current = false;
-    scroll.current?.scrollToEnd({ animated: true });
+    requestAnimationFrame(() => {
+      const end = contentHeight.current - viewportHeight.current;
+      if (end > scrollY.current) {
+        scroll.current?.scrollTo({ y: end, animated: true });
+      }
+    });
   };
 
   const removeReminder = (time: LocalTime) =>
@@ -199,7 +214,16 @@ export function HabitFormScreen({
     <ScrollView
       ref={scroll}
       testID="habit-form"
-      onContentSizeChange={revealOpenedPicker}
+      onLayout={(event) => {
+        viewportHeight.current = event.nativeEvent.layout.height;
+      }}
+      onContentSizeChange={(_width, height) => {
+        contentHeight.current = height;
+      }}
+      onScroll={(event) => {
+        scrollY.current = event.nativeEvent.contentOffset.y;
+      }}
+      scrollEventThrottle={16}
       automaticallyAdjustKeyboardInsets
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={styles.content}
@@ -314,6 +338,7 @@ export function HabitFormScreen({
               display="spinner"
               locale="es-ES"
               value={dateAt(pickedTime)}
+              onLayout={revealOpenedPicker}
               onValueChange={(_event, date) => setPickedTime(localTimeOf(date))}
             />
             <View style={styles.pickerActions}>
