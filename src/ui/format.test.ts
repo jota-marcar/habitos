@@ -1,5 +1,6 @@
 import { localDate } from "@/domain/dates";
 import { EVERY_DAY } from "@/domain/schedule";
+import { weekOf } from "@/domain/weeks";
 
 import {
   formatAmount,
@@ -7,6 +8,7 @@ import {
   formatFullDate,
   formatMonthTitle,
   formatProgress,
+  formatWeekRange,
 } from "./format";
 
 const today = localDate("2026-11-12");
@@ -29,6 +31,17 @@ test("formatDayTitle adds the year to a day of another year", () => {
   expect(formatDayTitle(localDate("2025-12-31"), today)).toBe(
     "Miércoles, 31 dic 2025",
   );
+});
+
+test.each([
+  ["2026-11-16", "16–22 nov"],
+  ["2026-11-30", "30 nov – 6 dic"],
+  ["2027-01-04", "4–10 ene 2027"],
+  ["2027-01-25", "25–31 ene 2027"],
+  ["2027-03-29", "29 mar – 4 abr 2027"],
+  ["2026-12-28", "28 dic 2026 – 3 ene 2027"],
+])("formatWeekRange writes the week of %s as %s (RF-40)", (date, text) => {
+  expect(formatWeekRange(weekOf(localDate(date)), today)).toBe(text);
 });
 
 test("formatMonthTitle says the month and the year (RF-18)", () => {

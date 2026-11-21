@@ -10,6 +10,7 @@ import {
 import {
   Alert,
   AppState,
+  Dimensions,
   ScrollView,
   StyleSheet,
   type AlertButton,
@@ -1466,6 +1467,120 @@ describe("reminders (RF-22 to RF-24, RF-36)", () => {
 
     expect(scheduledIds()).not.toContain("reminder.walk-r.2026-11-12");
     expect(scheduledIds()).toContain("reminder.walk-r.2026-11-13");
+  });
+});
+
+describe("horizons (RF-33, RF-40, RF-41)", () => {
+  const PAGE_WIDTH = Dimensions.get("window").width;
+
+  /** Leaves the carousel at `offset` points from the first page. */
+  async function scrollPager(offset: number) {
+    await fireEvent.scroll(screen.getByTestId("horizon-pager"), {
+      nativeEvent: {
+        contentOffset: { x: offset, y: 0 },
+        contentSize: { width: PAGE_WIDTH * 2, height: 600 },
+        layoutMeasurement: { width: PAGE_WIDTH, height: 600 },
+      },
+    });
+  }
+
+  const showWeek = () => scrollPager(PAGE_WIDTH);
+
+  async function openCalendar() {
+    await layOut("calendar");
+    await drag("day-date", 300, 800);
+  }
+
+  test("starts on the habits and slides to the empty week, with its title", async () => {
+    await renderApp();
+    await screen.findByText("Todavía no tienes hábitos.");
+    expect(screen.getByText("Hoy")).toBeTruthy();
+    expect(screen.queryByText("Esta semana")).toBeNull();
+
+    await showWeek();
+
+    expect(screen.getByText("Esta semana")).toBeTruthy();
+    expect(screen.getByText("9–15 nov")).toBeTruthy();
+    expect(
+      screen.getByText("Todavía no tienes objetivos semanales."),
+    ).toBeTruthy();
+    expect(screen.queryByText("Hoy")).toBeNull();
+    expect(screen.queryByText("Todavía no tienes hábitos.")).toBeNull();
+  });
+
+  test("changes page past the middle of the way, and stays within the ends", async () => {
+    await renderApp();
+    await screen.findByText("Todavía no tienes hábitos.");
+
+    await scrollPager(PAGE_WIDTH * 0.4);
+    expect(screen.getByText("Hoy")).toBeTruthy();
+    await scrollPager(PAGE_WIDTH * 0.6);
+    expect(screen.getByText("Esta semana")).toBeTruthy();
+    await scrollPager(PAGE_WIDTH * 1.2);
+    expect(screen.getByText("Esta semana")).toBeTruthy();
+    await scrollPager(-30);
+    expect(screen.getByText("Hoy")).toBeTruthy();
+  });
+
+  test("the menu of the week has no Crear until its form exists", async () => {
+    await renderApp();
+    await screen.findByText("Todavía no tienes hábitos.");
+    await showWeek();
+
+    await layOutMenu();
+    await drag("menu-strip", -300, -800);
+
+    expect(screen.getByLabelText("Ajustes")).toBeTruthy();
+    expect(screen.queryByLabelText("Crear")).toBeNull();
+  });
+
+  test("the calendar marks the whole week, also where a month cuts it", async () => {
+    await renderApp();
+    await screen.findByText("Todavía no tienes hábitos.");
+    await showWeek();
+    await openCalendar();
+
+    for (const day of [9, 10, 11, 13, 14, 15]) {
+      expect(
+        screen.getByLabelText(`${day} de noviembre de 2026`),
+      ).toBeSelected();
+    }
+    expect(
+      screen.getByLabelText("Hoy, 12 de noviembre de 2026"),
+    ).toBeSelected();
+    expect(screen.getByLabelText("8 de noviembre de 2026")).not.toBeSelected();
+    expect(screen.getByLabelText("16 de noviembre de 2026")).not.toBeSelected();
+    expect(screen.getByTestId("week-band-2026-11-09")).toBeTruthy();
+  });
+
+  test("shares the day: another week shows its dates, and the habits that day", async () => {
+    await renderApp();
+    await screen.findByText("Todavía no tienes hábitos.");
+    await showWeek();
+    await openCalendar();
+
+    await fireEvent.press(screen.getByLabelText("4 de noviembre de 2026"));
+
+    expect(await screen.findByText("2–8 nov")).toBeTruthy();
+    expect(screen.queryByText("Esta semana")).toBeNull();
+
+    await scrollPager(0);
+    expect(await screen.findByText("Miércoles, 4 nov")).toBeTruthy();
+  });
+
+  test("touching the title of another week goes back to this one and to today", async () => {
+    await renderApp();
+    await screen.findByText("Todavía no tienes hábitos.");
+    await showWeek();
+    await openCalendar();
+    await fireEvent.press(screen.getByLabelText("4 de noviembre de 2026"));
+    await screen.findByText("2–8 nov");
+
+    await fireEvent.press(screen.getByText("2–8 nov"));
+
+    expect(await screen.findByText("Esta semana")).toBeTruthy();
+    await scrollPager(0);
+    expect(await screen.findByText("Hoy")).toBeTruthy();
   });
 });
 

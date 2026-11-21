@@ -20,6 +20,7 @@ import { scheduleOnRN } from "react-native-worklets";
 
 import { monthAt, monthIndex, monthOf, monthWeeks } from "@/domain/calendar";
 import type { LocalDate, Weekday } from "@/domain/dates";
+import { isInWeek, weekOf } from "@/domain/weeks";
 
 import { WEEKDAY_INITIALS, formatFullDate, formatMonthTitle } from "./format";
 import { Sheet, type SheetState } from "./sheet";
@@ -38,22 +39,29 @@ function MonthGrid({
   index,
   date,
   today,
+  wholeWeek,
   onSelect,
 }: {
   index: number;
   date: LocalDate;
   today: LocalDate;
+  wholeWeek: boolean;
   onSelect: (date: LocalDate) => void;
 }) {
   const colors = useColors();
+  const shownWeek = weekOf(date);
   return (
     <View>
       {monthWeeks(monthAt(index)).map((week, row) => (
         <View key={row} style={styles.week}>
           {week.map((day, column) => {
             if (day === null) return <View key={column} style={styles.cell} />;
-            const selected = day === date;
+            const inShownWeek = wholeWeek && isInWeek(day, shownWeek);
+            const selected = wholeWeek ? inShownWeek : day === date;
             const isToday = day === today;
+            // The band of the week is rounded where it ends, also at the edge of the month.
+            const startsBand = column === 0 || week[column - 1] === null;
+            const endsBand = column === 6 || week[column + 1] === null;
             return (
               <Pressable
                 key={column}
@@ -65,11 +73,23 @@ function MonthGrid({
                 onPress={() => onSelect(day)}
                 style={styles.cell}
               >
+                {inShownWeek ? (
+                  <View
+                    testID={`week-band-${day}`}
+                    style={[
+                      styles.weekBand,
+                      { backgroundColor: colors.primary },
+                      startsBand && styles.weekBandStart,
+                      endsBand && styles.weekBandEnd,
+                    ]}
+                  />
+                ) : null}
                 {/* The day on screen is a filled circle; the current day, the color of it. */}
                 <View
                   style={[
                     styles.day,
-                    selected && { backgroundColor: colors.primary },
+                    selected &&
+                      !wholeWeek && { backgroundColor: colors.primary },
                   ]}
                 >
                   <Text
@@ -96,12 +116,15 @@ export function CalendarSheet({
   sheet,
   date,
   today,
+  wholeWeek = false,
   onSelect,
 }: {
   sheet: SheetState;
   /** The day on screen. */
   date: LocalDate;
   today: LocalDate;
+  /** Whether what is on screen is the week of that day, which is then marked whole (RF-41). */
+  wholeWeek?: boolean;
   onSelect: (date: LocalDate) => void;
 }) {
   const colors = useColors();
@@ -206,6 +229,7 @@ export function CalendarSheet({
                   index={index}
                   date={date}
                   today={today}
+                  wholeWeek={wholeWeek}
                   onSelect={onSelect}
                 />
               </View>
@@ -247,6 +271,21 @@ const styles = StyleSheet.create({
     height: DAY_SIZE,
     justifyContent: "center",
     width: DAY_SIZE,
+  },
+  weekBand: {
+    height: DAY_SIZE,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: (CELL_HEIGHT - DAY_SIZE) / 2,
+  },
+  weekBandStart: {
+    borderBottomLeftRadius: DAY_SIZE / 2,
+    borderTopLeftRadius: DAY_SIZE / 2,
+  },
+  weekBandEnd: {
+    borderBottomRightRadius: DAY_SIZE / 2,
+    borderTopRightRadius: DAY_SIZE / 2,
   },
   dayNumber: { fontSize: fontSize.body, fontVariant: ["tabular-nums"] },
   today: { fontWeight: "600" },
