@@ -74,7 +74,7 @@ const habitIdOf = (dayHabit: DayHabit) => dayHabit.habit.id;
  * done or undone to their group (RF-12): enough to see the habit marked, and to tap it again
  * without it going away.
  */
-export const SETTLE_DELAY_MS = 1000;
+export const SETTLE_DELAY_MS = 600;
 
 export function useDay(): Day {
   const db = useDatabase();

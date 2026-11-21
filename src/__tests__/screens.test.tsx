@@ -506,12 +506,12 @@ describe("day view", () => {
     await renderApp();
     const row = await screen.findByTestId("habit-walk");
     expect(row).not.toBeChecked();
-    expect(row).not.toHaveStyle({ opacity: 0.4 });
+    expect(screen.getByTestId("fade-walk")).toHaveStyle({ opacity: 1 });
 
     await fireEvent.press(row);
 
     expect(await screen.findByRole("checkbox", { checked: true })).toBeTruthy();
-    expect(screen.getByTestId("habit-walk")).toHaveStyle({ opacity: 0.4 });
+    expect(screen.getByTestId("fade-walk")).toHaveStyle({ opacity: 0.4 });
     expect(await listEntries(db, TODAY, TODAY)).toEqual([
       expect.objectContaining({ habitId: "walk", value: 1 }),
     ]);
@@ -521,7 +521,7 @@ describe("day view", () => {
     expect(
       await screen.findByRole("checkbox", { checked: false }),
     ).toBeTruthy();
-    expect(screen.getByTestId("habit-walk")).not.toHaveStyle({ opacity: 0.4 });
+    expect(screen.getByTestId("fade-walk")).toHaveStyle({ opacity: 1 });
     expect(await listEntries(db, TODAY, TODAY)).toEqual([
       expect.objectContaining({ habitId: "walk", value: 0 }),
     ]);
@@ -537,13 +537,11 @@ describe("day view", () => {
 
     await fireEvent.press(await screen.findByTestId("habit-water"));
     expect(await screen.findByText("0,25 / 0,5 L")).toBeTruthy();
-    expect(screen.getByTestId("habit-water")).not.toHaveStyle({
-      opacity: 0.4,
-    });
+    expect(screen.getByTestId("fade-water")).toHaveStyle({ opacity: 1 });
 
     await fireEvent.press(screen.getByTestId("habit-water"));
     expect(await screen.findByText("0,5 / 0,5 L")).toBeTruthy();
-    expect(screen.getByTestId("habit-water")).toHaveStyle({ opacity: 0.4 });
+    expect(screen.getByTestId("fade-water")).toHaveStyle({ opacity: 0.4 });
 
     await fireEvent.press(screen.getByTestId("habit-water"));
     expect(await screen.findByText("0,75 / 0,5 L")).toBeTruthy();
