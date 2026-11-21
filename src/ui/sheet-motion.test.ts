@@ -3,11 +3,23 @@ import {
   FLING_VELOCITY,
   monthStep,
   settlesOpen,
+  sheetOpacity,
   visibleHeight,
 } from "./sheet-motion";
 
 const height = 200;
 const threshold = height * DRAG_FRACTION;
+
+describe("sheetOpacity", () => {
+  test("does not draw a closed sheet, which cannot peek in when it grows", () => {
+    expect(sheetOpacity(0)).toBe(0);
+  });
+
+  test("draws a sheet as soon as any of it is visible", () => {
+    expect(sheetOpacity(0.5)).toBe(1);
+    expect(sheetOpacity(height)).toBe(1);
+  });
+});
 
 describe("settlesOpen", () => {
   test("opens a closed sheet dragged past the threshold", () => {
