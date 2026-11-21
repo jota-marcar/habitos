@@ -16,6 +16,7 @@ A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo
 2. **Usabilidad directa.** Las acciones frecuentes (marcar un hábito, atender un recordatorio) se hacen con un solo toque.
 3. **El seguimiento es el centro y el recordatorio, su punto fuerte.** Lo esencial es seguir los hábitos: crearlos, apuntar el progreso y consultar cualquier día. Los recordatorios son lo que distingue a la aplicación: si no avisan bien, lo que se quiere hacer se vuelve a olvidar.
 4. **El registro es fiable.** Lo que se apunta no se pierde y está disponible siempre, también sin conexión.
+5. **Prevenir los errores, no deshacerlos.** Es el principio de fondo de todo el diseño. La aplicación está pensada para que el usuario no cometa errores, o casi nunca. Si un usuario se equivoca, no se añade una forma de deshacerlo: se repiensa lo que ya existe para que no vuelva a equivocarse. Un botón o un aviso de "Deshacer" contradiría además el minimalismo. Toda funcionalidad nueva, toda incidencia y toda idea se valoran también con este criterio.
 
 ### Usuarios
 
