@@ -266,10 +266,24 @@ export function snoozedNotification(
   };
 }
 
-/** Two notifications are the same if they would warn at the same moment in the same way. */
-export function signatureOf(notification: PlannedNotification): string {
+/**
+ * Two notifications are the same if they would warn at the same moment in the same way. The
+ * moment includes the instant: iOS keeps a fixed delay, so after a change of time zone a
+ * notification has to be scheduled again to keep warning at its local time.
+ */
+export function signatureOf(
+  notification: PlannedNotification,
+  instant: Date = instantOf(notification.at),
+): string {
   const { at, title, body, category } = notification;
-  return JSON.stringify([at.date, at.time, title, body, category]);
+  return JSON.stringify([
+    instant.getTime(),
+    at.date,
+    at.time,
+    title,
+    body,
+    category,
+  ]);
 }
 
 /** What the device has to have scheduled now. */
