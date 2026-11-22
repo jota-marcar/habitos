@@ -51,10 +51,11 @@ Un cambio es **nativo** si añade o actualiza una dependencia con código nativo
 
 La app no abre una base con un esquema más nuevo que su código: muestra una pantalla de error, sin perder datos, hasta recibir una versión que lo conozca. Por eso, una actualización que añade una migración a `src/data/migrations.ts` no se puede deshacer con seguridad, ni con `eas update:rollback` ni con la vuelta automática de `expo-updates`.
 
-1. Publicar la migración **sola**, sin la funcionalidad que la usa. Así, las actualizaciones siguientes se pueden deshacer, porque la versión anterior ya conoce el esquema.
-2. Si lleva migración de la nube, aplicarla antes en cada entorno. Sin sus tablas, la sincronización falla y deja de subir también el resto de los datos.
-3. Probarla en Hábitos Dev antes de publicarla en producción.
-4. Si falla, no deshacerla: publicar una corrección.
+1. Si lleva migración de la nube, aplicarla antes en cada entorno. Sin sus tablas, la sincronización falla y deja de subir también el resto de los datos.
+2. Probarla en Hábitos Dev antes de publicarla en producción.
+3. Si falla, no deshacerla: publicar una corrección.
+
+Puede ir junto con la funcionalidad que la usa, para no enseñar a los probadores una pantalla a medias. Las actualizaciones siguientes sí se pueden deshacer, porque la versión anterior ya conoce el esquema.
 
 ## Límites
 

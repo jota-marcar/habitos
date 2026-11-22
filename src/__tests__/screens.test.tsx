@@ -25,6 +25,8 @@ import EditHabit from "@/app/habits/[id]/edit";
 import NewHabit from "@/app/habits/new";
 import Settings from "@/app/settings";
 import SignIn from "@/app/sign-in";
+import EditWeeklyGoal from "@/app/weekly-goals/[id]/edit";
+import NewWeeklyGoal from "@/app/weekly-goals/new";
 import { listEntries, saveEntry } from "@/data/entries-repository";
 import {
   addHabit,
@@ -37,12 +39,21 @@ import {
   markSynced,
   openMigratedDatabase,
   version,
+  weeklyGoal,
+  weeklyGoalVersion,
 } from "@/data/testing/fixtures";
+import {
+  addWeeklyGoal,
+  listWeeklyGoalEntries,
+  listWeeklyGoalVersions,
+  listWeeklyGoals,
+} from "@/data/weekly-goals-repository";
 import { notifyReminderRecorded } from "@/notifications/actions";
 import type { TestDatabase } from "@/data/testing/node-database";
 import { localDate, type Weekday } from "@/domain/dates";
 import { scheduledDaysFrom } from "@/domain/schedule";
 import { localTime } from "@/domain/times";
+import type { WeeklyGoal, WeeklyGoalVersion } from "@/domain/weekly-goals";
 import { AppStack, STACK_SETTINGS } from "@/ui/app-stack";
 import { DatabaseContext } from "@/ui/database";
 import { SessionContext } from "@/ui/session";
@@ -293,6 +304,8 @@ async function renderApp(initialUrl = "/") {
       index: Today,
       "habits/new": NewHabit,
       "habits/[id]/edit": EditHabit,
+      "weekly-goals/new": NewWeeklyGoal,
+      "weekly-goals/[id]/edit": EditWeeklyGoal,
       settings: Settings,
       "sign-in": SignIn,
     },
@@ -1522,18 +1535,6 @@ describe("horizons (RF-33, RF-40, RF-41)", () => {
     expect(screen.getByText("Hoy")).toBeTruthy();
   });
 
-  test("the menu of the week has no Crear until its form exists", async () => {
-    await renderApp();
-    await screen.findByText("Todavía no tienes hábitos.");
-    await showWeek();
-
-    await layOutMenu();
-    await drag("menu-strip", -300, -800);
-
-    expect(screen.getByLabelText("Ajustes")).toBeTruthy();
-    expect(screen.queryByLabelText("Crear")).toBeNull();
-  });
-
   test("the calendar marks the whole week, also where a month cuts it", async () => {
     await renderApp();
     await screen.findByText("Todavía no tienes hábitos.");
@@ -1581,6 +1582,340 @@ describe("horizons (RF-33, RF-40, RF-41)", () => {
     expect(await screen.findByText("Esta semana")).toBeTruthy();
     await scrollPager(0);
     expect(await screen.findByText("Hoy")).toBeTruthy();
+  });
+});
+
+describe("weekly goals (RF-42 to RF-50)", () => {
+  const LAST_WEEK = localDate("2026-11-02");
+  const THIS_WEEK = localDate("2026-11-09");
+  const NEXT_WEEK = localDate("2026-11-16");
+
+  async function showWeek() {
+    const width = Dimensions.get("window").width;
+    await fireEvent.scroll(await screen.findByTestId("horizon-pager"), {
+      nativeEvent: {
+        contentOffset: { x: width, y: 0 },
+        contentSize: { width: width * 2, height: 600 },
+        layoutMeasurement: { width, height: 600 },
+      },
+    });
+    await screen.findByText("Esta semana");
+  }
+
+  async function renderWeek() {
+    await renderApp();
+    await showWeek();
+  }
+
+  async function chooseDay(label: string) {
+    await layOut("calendar");
+    await drag("day-date", 300, 800);
+    await fireEvent.press(screen.getByLabelText(label));
+  }
+
+  async function addGoal(
+    id: string,
+    name: string,
+    overrides: Partial<WeeklyGoal> = {},
+    amounts: Partial<WeeklyGoalVersion> = {},
+  ) {
+    const firstWeek = overrides.firstWeek ?? LAST_WEEK;
+    await addWeeklyGoal(
+      db,
+      weeklyGoal(id, { name, ...overrides, firstWeek }),
+      weeklyGoalVersion(id, { effectiveFrom: firstWeek, ...amounts }),
+    );
+  }
+
+  const addHours = (target = 5) =>
+    addGoal(
+      "projects",
+      "Proyectos",
+      { type: "quantitative" },
+      { target, unit: "h", increment: 1 },
+    );
+
+  async function openNewGoal(name: string) {
+    await openMenu();
+    await fireEvent.press(screen.getByLabelText("Crear"));
+    expect(screen).toHavePathname("/weekly-goals/new");
+    await fireEvent.changeText(screen.getByLabelText("Nombre"), name);
+  }
+
+  async function save() {
+    await fireEvent.press(screen.getByLabelText("Guardar"));
+    await waitFor(() => expect(screen).toHavePathname("/"));
+  }
+
+  async function hold(id: string) {
+    await fireEvent(await screen.findByTestId(`goal-${id}`), "longPress");
+  }
+
+  async function pressAlertButton(
+    alert: jest.SpyInstance,
+    label: string,
+    text?: string,
+  ) {
+    const buttons = alert.mock.lastCall?.[2] as AlertButton[];
+    const button = buttons.find((b) => b.text === label);
+    await act(async () => {
+      await button?.onPress?.(text);
+    });
+  }
+
+  /** The names of the goals in the achieved group, after the gap between the groups. */
+  function achievedNames() {
+    const items = screen.getAllByTestId(/^goal-|^week-goals-gap$/);
+    const gap = items.findIndex((i) => i.props.testID === "week-goals-gap");
+    return items.slice(gap + 1).map((i) => i.props.accessibilityLabel);
+  }
+
+  test("creates a recurring goal from the menu of the week, and a tap marks it", async () => {
+    await renderWeek();
+    await screen.findByText("Todavía no tienes objetivos semanales.");
+    expect(
+      screen.getByText("Desliza desde abajo para crear uno."),
+    ).toBeTruthy();
+
+    await openNewGoal("Correr");
+    expect(screen.getByText("Se repite cada semana")).toBeTruthy();
+    await save();
+
+    expect(await screen.findByText("Correr")).toBeTruthy();
+    const [goal] = await listWeeklyGoals(db);
+    expect(goal).toMatchObject({
+      name: "Correr",
+      recurring: true,
+      firstWeek: THIS_WEEK,
+    });
+
+    await fireEvent.press(screen.getByTestId(`goal-${goal.id}`));
+
+    await waitFor(() =>
+      expect(screen.getByTestId(`goal-${goal.id}`)).toBeChecked(),
+    );
+    expect(await listWeeklyGoalEntries(db, THIS_WEEK)).toEqual([
+      expect.objectContaining({ weeklyGoalId: goal.id, value: 1 }),
+    ]);
+  });
+
+  test("a one-off goal says its week and does not appear in the next one", async () => {
+    await renderWeek();
+    await screen.findByText("Todavía no tienes objetivos semanales.");
+
+    await openNewGoal("Declarar la renta");
+    await fireEvent(
+      screen.getByLabelText("Repetir cada semana"),
+      "valueChange",
+      false,
+    );
+    expect(screen.getByText("Solo la semana del 9–15 nov")).toBeTruthy();
+    await save();
+
+    expect(await screen.findByText("Declarar la renta")).toBeTruthy();
+    expect(await listWeeklyGoals(db)).toEqual([
+      expect.objectContaining({ recurring: false, firstWeek: THIS_WEEK }),
+    ]);
+
+    await chooseDay("18 de noviembre de 2026");
+    expect(
+      await screen.findByText("Esa semana no hay objetivos."),
+    ).toBeTruthy();
+  });
+
+  test("a goal created from a past week starts in this one, and the screen goes there (RF-42)", async () => {
+    await renderWeek();
+    await screen.findByText("Todavía no tienes objetivos semanales.");
+    await chooseDay("4 de noviembre de 2026");
+    await screen.findByText("2–8 nov");
+
+    await openNewGoal("Correr");
+    await save();
+
+    expect(await screen.findByText("Esta semana")).toBeTruthy();
+    expect(await screen.findByText("Correr")).toBeTruthy();
+    expect(await listWeeklyGoals(db)).toEqual([
+      expect.objectContaining({ firstWeek: THIS_WEEK }),
+    ]);
+  });
+
+  test("a goal created from a future week starts that week, and the form says so", async () => {
+    await renderWeek();
+    await screen.findByText("Todavía no tienes objetivos semanales.");
+    await chooseDay("18 de noviembre de 2026");
+    await screen.findByText("16–22 nov");
+
+    await openNewGoal("Correr");
+    expect(
+      screen.getByText("Se repite cada semana desde la del 16–22 nov"),
+    ).toBeTruthy();
+    await save();
+
+    expect(screen.getByText("16–22 nov")).toBeTruthy();
+    expect(await screen.findByText("Correr")).toBeTruthy();
+    expect(await listWeeklyGoals(db)).toEqual([
+      expect.objectContaining({ firstWeek: NEXT_WEEK }),
+    ]);
+  });
+
+  test("rejects a goal with an amount and no target, and shows why", async () => {
+    await renderWeek();
+    await screen.findByText("Todavía no tienes objetivos semanales.");
+
+    await openNewGoal("Proyectos");
+    await fireEvent.press(screen.getByText("Cantidad"));
+    await fireEvent.press(screen.getByLabelText("Guardar"));
+
+    expect(
+      await screen.findByText("La meta debe ser un número mayor que 0."),
+    ).toBeTruthy();
+    expect(screen).toHavePathname("/weekly-goals/new");
+    expect(await listWeeklyGoals(db)).toEqual([]);
+  });
+
+  test("a tap adds the increment, and the goal moves to the achieved group after a pause", async () => {
+    await addHours(2);
+    await renderWeek();
+
+    await fireEvent.press(await screen.findByTestId("goal-projects"));
+    await screen.findByText("1 / 2 h");
+    await fireEvent.press(screen.getByTestId("goal-projects"));
+    await screen.findByText("2 / 2 h");
+    expect(achievedNames()).toEqual([]);
+
+    await waitForTheMove();
+
+    await waitFor(() => expect(achievedNames()).toEqual(["Proyectos"]));
+  });
+
+  test("the options subtract the increment and write the exact total", async () => {
+    const prompt = jest.spyOn(Alert, "prompt").mockImplementation(() => {});
+    await addHours();
+    await renderWeek();
+    await fireEvent.press(await screen.findByTestId("goal-projects"));
+    await fireEvent.press(screen.getByTestId("goal-projects"));
+    await screen.findByText("2 / 5 h");
+
+    await hold("projects");
+    await fireEvent.press(screen.getByLabelText("Restar 1 h"));
+    expect(await screen.findAllByText("1 / 5 h")).toHaveLength(2);
+
+    await fireEvent.press(screen.getByLabelText("Escribir la cantidad"));
+    await pressAlertButton(prompt, "Guardar", "3,5");
+
+    expect(await screen.findByText("3,5 / 5 h")).toBeTruthy();
+    expect(await listWeeklyGoalEntries(db, THIS_WEEK)).toEqual([
+      expect.objectContaining({ weeklyGoalId: "projects", value: 3.5 }),
+    ]);
+  });
+
+  test("a future week records nothing and its options cannot correct", async () => {
+    await addHours();
+    await renderWeek();
+    await chooseDay("18 de noviembre de 2026");
+
+    await fireEvent.press(await screen.findByTestId("goal-projects"));
+    await hold("projects");
+
+    expect(screen.queryByLabelText("Restar 1 h")).toBeNull();
+    expect(screen.queryByLabelText("Escribir la cantidad")).toBeNull();
+    expect(screen.getByLabelText("Editar")).toBeTruthy();
+    await waitFor(async () =>
+      expect(await listWeeklyGoalEntries(db, NEXT_WEEK)).toEqual([]),
+    );
+  });
+
+  test("a one-off goal of a past week can only be deleted", async () => {
+    await addGoal("old", "Mudanza", { recurring: false });
+    await renderWeek();
+    await chooseDay("4 de noviembre de 2026");
+
+    await hold("old");
+
+    expect(screen.queryByLabelText("Editar")).toBeNull();
+    expect(screen.queryByLabelText("Archivar")).toBeNull();
+    expect(screen.getByLabelText("Eliminar")).toBeTruthy();
+  });
+
+  test("editing from a past week says when it applies, and that week keeps its target (RF-43)", async () => {
+    await addHours();
+    await renderWeek();
+    await chooseDay("4 de noviembre de 2026");
+    await screen.findByText("2–8 nov");
+
+    await hold("projects");
+    await fireEvent.press(screen.getByLabelText("Editar"));
+    await screen.findByDisplayValue("Proyectos");
+    expect(
+      screen.getByText("Los cambios se aplican desde esta semana"),
+    ).toBeTruthy();
+    expect(screen.queryByLabelText("Repetir cada semana")).toBeNull();
+    await fireEvent.changeText(
+      screen.getByLabelText("Nombre"),
+      "Mis proyectos",
+    );
+    await fireEvent.changeText(screen.getByLabelText("Meta"), "10");
+    await save();
+
+    // The name changes in the whole history, and the target only from this week.
+    expect(await screen.findByText("Mis proyectos")).toBeTruthy();
+    expect(await screen.findByText("0 / 5 h")).toBeTruthy();
+    await fireEvent.press(screen.getByText("2–8 nov"));
+    expect(await screen.findByText("0 / 10 h")).toBeTruthy();
+    expect(await listWeeklyGoalVersions(db)).toEqual([
+      expect.objectContaining({ effectiveFrom: LAST_WEEK, target: 5 }),
+      expect.objectContaining({ effectiveFrom: THIS_WEEK, target: 10 }),
+    ]);
+  });
+
+  test("archiving asks first, and the goal leaves this week but stays in the past ones", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    await addGoal("run", "Correr");
+    await renderWeek();
+
+    await hold("run");
+    await fireEvent.press(screen.getByLabelText("Archivar"));
+    expect(alert.mock.lastCall?.[0]).toBe("¿Archivar «Correr»?");
+    expect(screen.getByText("Correr")).toBeTruthy();
+    await pressAlertButton(alert, "Archivar");
+
+    expect(
+      await screen.findByText("Esta semana no hay objetivos."),
+    ).toBeTruthy();
+    expect(await listWeeklyGoals(db)).toEqual([
+      expect.objectContaining({ archivedWeek: THIS_WEEK }),
+    ]);
+
+    await chooseDay("4 de noviembre de 2026");
+    expect(await screen.findByText("Correr")).toBeTruthy();
+  });
+
+  test("deleting asks first, and the goal disappears from every week", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    await addGoal("run", "Correr");
+    await renderWeek();
+
+    await hold("run");
+    await fireEvent.press(screen.getByLabelText("Eliminar"));
+    expect(alert.mock.lastCall?.[0]).toBe("¿Eliminar «Correr»?");
+    await pressAlertButton(alert, "Eliminar");
+
+    expect(
+      await screen.findByText("Todavía no tienes objetivos semanales."),
+    ).toBeTruthy();
+    expect(await listWeeklyGoals(db)).toEqual([]);
+  });
+
+  test("a change that arrives from another device appears on the page", async () => {
+    await renderWeek();
+    await screen.findByText("Todavía no tienes objetivos semanales.");
+
+    await addGoal("run", "Correr");
+    await act(async () => {
+      mockSync.listeners.forEach((listener) => listener());
+    });
+
+    expect(await screen.findByText("Correr")).toBeTruthy();
   });
 });
 
@@ -1879,7 +2214,7 @@ describe("calendar (RF-18, RF-31)", () => {
     expect(screen.queryByText("Correr")).toBeNull();
   });
 
-  test("a habit created from a past day starts today", async () => {
+  test("a habit created from a past day starts today, and the screen goes there to show it (RF-06)", async () => {
     await renderApp();
     await chooseDay("10 de noviembre de 2026");
 
@@ -1888,6 +2223,8 @@ describe("calendar (RF-18, RF-31)", () => {
     await fireEvent.press(screen.getByLabelText("Guardar"));
 
     await waitFor(() => expect(screen).toHavePathname("/"));
+    expect(await screen.findByText("Hoy")).toBeTruthy();
+    expect(await screen.findByText("Correr")).toBeTruthy();
     expect(await listHabits(db)).toEqual([
       expect.objectContaining({ name: "Correr", createdOn: TODAY }),
     ]);

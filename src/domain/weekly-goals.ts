@@ -151,6 +151,17 @@ function sameAmounts(a: Amounts, b: Amounts): boolean {
 }
 
 /**
+ * The Monday from which a change to the amounts of a goal applies (RF-43): the current week, or
+ * its first week if it has not started.
+ */
+export function weeklyGoalChangesApplyFrom(
+  goal: WeeklyGoal,
+  today: LocalDate,
+): LocalDate {
+  return later(goal.firstWeek, weekOf(today).start);
+}
+
+/**
  * Changes the amounts of a goal from the current week onwards, or from its first week if it has
  * not started (RF-43), and returns all its versions. If there is already a version effective
  * that week it is updated; otherwise a new one is added. Past weeks keep their versions.
@@ -167,7 +178,7 @@ export function changeWeeklyGoalAmounts(
   if (errors.length > 0) return fail(errors);
 
   const next = normalizeAmounts(amounts);
-  const from = later(goal.firstWeek, weekOf(today).start);
+  const from = weeklyGoalChangesApplyFrom(goal, today);
   const current = versionOn(versions, from);
   if (current !== null && sameAmounts(current, next)) return ok(versions);
 

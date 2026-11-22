@@ -8,6 +8,7 @@ import { parseLocalDate } from "@/domain/dates";
 import { startOfNewHabit } from "@/domain/habits";
 import { newId, today } from "@/ui/clock";
 import { useDatabase } from "@/ui/database";
+import { showDayOnReturn } from "@/ui/day-on-return";
 import { formatFullDate } from "@/ui/format";
 import {
   EMPTY_HABIT_FORM,
@@ -28,6 +29,8 @@ export default function NewHabit() {
     const result = buildHabit(values, newId, startsOn);
     if (!result.ok) return result.errors;
     await addHabit(db, result.habit, result.version, result.reminders);
+    // Created from a past day, it is not there: the screen goes to the day it starts.
+    if (startsOn !== shown) showDayOnReturn(startsOn);
     return [];
   };
 
