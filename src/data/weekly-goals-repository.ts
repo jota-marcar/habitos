@@ -172,9 +172,9 @@ export async function addWeeklyGoal(
   goal: WeeklyGoal,
   version: WeeklyGoalVersion,
 ): Promise<void> {
-  await db.transaction(async () => {
-    await saveWeeklyGoal(db, goal);
-    await saveWeeklyGoalVersion(db, version);
+  await db.transaction(async (tx) => {
+    await saveWeeklyGoal(tx, goal);
+    await saveWeeklyGoalVersion(tx, version);
   });
 }
 
@@ -187,9 +187,9 @@ export async function saveWeeklyGoalChanges(
   goal: WeeklyGoal,
   version: WeeklyGoalVersion | null,
 ): Promise<void> {
-  await db.transaction(async () => {
-    await saveWeeklyGoal(db, goal);
-    if (version !== null) await saveWeeklyGoalVersion(db, version);
+  await db.transaction(async (tx) => {
+    await saveWeeklyGoal(tx, goal);
+    if (version !== null) await saveWeeklyGoalVersion(tx, version);
   });
 }
 
@@ -220,10 +220,10 @@ export async function deleteWeeklyGoal(
   goalId: string,
 ): Promise<void> {
   const mark = "SET deleted = 1, pending_sync = 1";
-  await db.transaction(async () => {
-    await db.run(`UPDATE weekly_goals ${mark} WHERE id = ?`, [goalId]);
+  await db.transaction(async (tx) => {
+    await tx.run(`UPDATE weekly_goals ${mark} WHERE id = ?`, [goalId]);
     for (const table of ["weekly_goal_versions", "weekly_goal_entries"]) {
-      await db.run(
+      await tx.run(
         `UPDATE ${table} ${mark} WHERE weekly_goal_id = ? AND deleted = 0`,
         [goalId],
       );

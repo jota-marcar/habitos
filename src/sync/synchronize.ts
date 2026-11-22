@@ -7,8 +7,9 @@
 //
 // The pull goes first so that a row created on two devices with the same natural key (one
 // entry of the same habit and day) is joined on the device before uploading it, instead of
-// clashing in the account. There are no long transactions: every step can be repeated without
-// harm, and a synchronization that fails half way is completed by the next one.
+// clashing in the account. Each page is written in one short transaction, never held across a
+// request: every step can be repeated without harm, and a synchronization that fails half way
+// is completed by the next one.
 
 import type { Database } from "@/data/database";
 import {
@@ -60,11 +61,16 @@ async function pull(
   for (;;) {
     const rows = await remote.pull(table, cursor, pageSize);
     if (rows.length === 0) return changed;
-    if ((await applyPulledRows(db, table, rows)) > 0) changed = true;
-    // Only once the whole page is on the device.
     const last = rows[rows.length - 1];
-    cursor = { updatedAt: last.updated_at, id: last.id };
-    await saveCursor(db, table, cursor);
+    const next = { updatedAt: last.updated_at, id: last.id };
+    let applied = 0;
+    // The page and its cursor together: the cursor never gets ahead of what is on the device.
+    await db.transaction(async (tx) => {
+      applied = await applyPulledRows(tx, table, rows);
+      await saveCursor(tx, table, next);
+    });
+    if (applied > 0) changed = true;
+    cursor = next;
     if (rows.length < pageSize) return changed;
   }
 }
@@ -97,10 +103,12 @@ async function pushRows(
     if (rows.length === 0) return;
     const uploaded = await remote.push(table, rows);
     const updatedAt = new Map(uploaded.map((row) => [row.id, row.updated_at]));
-    for (const row of rows) {
-      const at = updatedAt.get(row.id);
-      if (at !== undefined) await markUploaded(db, table, row, at);
-    }
+    await db.transaction(async (tx) => {
+      for (const row of rows) {
+        const at = updatedAt.get(row.id);
+        if (at !== undefined) await markUploaded(tx, table, row, at);
+      }
+    });
     afterId = rows[rows.length - 1].id;
     if (rows.length < pageSize) return;
   }

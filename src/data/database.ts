@@ -23,6 +23,10 @@ export interface Database {
   /** Returns the first row of a query, or null if there is none. */
   first<Row>(sql: string, params?: readonly SqlValue[]): Promise<Row | null>;
 
-  /** Runs `task` in a transaction: all of its changes are kept, or none if it throws. */
-  transaction(task: () => Promise<void>): Promise<void>;
+  /**
+   * Runs `task` in a transaction: all of its changes are kept, or none if it throws. Nothing
+   * else runs meanwhile, so everything in `task` has to go through `tx`: an operation on the
+   * outer database would wait for the transaction to end, and it never would.
+   */
+  transaction(task: (tx: Database) => Promise<void>): Promise<void>;
 }
