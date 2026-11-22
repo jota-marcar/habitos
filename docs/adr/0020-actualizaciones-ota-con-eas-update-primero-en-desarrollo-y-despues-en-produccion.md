@@ -57,7 +57,7 @@ Se usa EAS Update (`expo-updates`) con estas reglas:
 ## Consecuencias
 
 - ✅ Las correcciones de JavaScript llegan a los probadores en minutos y sin gastar builds.
-- ✅ Hay prueba previa, y una actualización que falla al arrancar vuelve sola a la anterior (recuperación de errores de `expo-updates`, que Expo advierte que puede cambiar). Cualquier actualización se puede deshacer con `eas update:rollback` ([testflight.md](../testflight.md)).
+- ✅ Hay prueba previa, y una actualización que falla al arrancar vuelve sola a la anterior (recuperación de errores de `expo-updates`, que Expo advierte que puede cambiar). Una actualización se puede deshacer con `eas update:rollback`, salvo si añade una migración local ([despliegue.md](../despliegue.md#si-algo-sale-mal)).
 - ❌ Instalarlo es un cambio nativo: hace falta un build de cada variante para que empiecen a recibir actualizaciones. Las anteriores no las reciben nunca.
 - ❌ Los cambios nativos (dependencias con código nativo, `app.json`, `app.config.ts`) siguen necesitando un build. La huella no avisa al publicar: la actualización simplemente no llega a los builds antiguos.
 - ❌ Una actualización que necesita una migración de la nube exige aplicarla antes a producción, igual que con los builds.

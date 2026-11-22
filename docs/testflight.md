@@ -105,7 +105,7 @@ Si algo falla, el registro de la función está en **Edge Functions → delete-a
 
 ## 5. Las versiones siguientes
 
-Un cambio solo de JavaScript llega con una actualización OTA ([sección 6](#6-actualizaciones-ota)), sin build. Un cambio nativo (una dependencia con código nativo, `app.json`, `app.config.ts`) necesita un build:
+Un cambio solo de JavaScript llega con una actualización OTA ([sección 6](#6-actualizaciones-ota)), sin build. Un cambio nativo ([qué cuenta como tal](despliegue.md#qué-comando-usar)) necesita un build:
 
 1. Las migraciones nuevas y los cambios de `delete-account` se aplican a `habitos` antes de que el build que los usa llegue a TestFlight ([supabase.md, secciones 5 y 9.3](supabase.md#5-aplicar-el-esquema)).
 2. Si cambia algo que ve el usuario, sube `version` en `app.json`. El número de build lo sube EAS.
@@ -142,10 +142,4 @@ Comprueba que es `main` al día, pide confirmar que se ha probado en Hábitos De
 
 ### 6.3 Si falla
 
-Si una actualización falla al arrancar, `expo-updates` vuelve sola a la anterior. Para deshacerla en los demás casos:
-
-```powershell
-eas update:rollback
-```
-
-Permite volver a una actualización anterior o al código del propio build. Para dejar de servir actualizaciones sin publicar otra: `eas channel:pause production` (y `eas channel:resume production` para reanudar).
+**No la deshagas sin leer antes [despliegue.md](despliegue.md#si-algo-sale-mal).** Si la actualización añade una migración local, volver atrás deja a los probadores en la pantalla de error: lo que corresponde es publicar una corrección.

@@ -43,7 +43,8 @@ const VARIANTS = {
     askTested: true,
     next: [
       "Hábitos downloads it the next time it is opened and runs it the time after.",
-      "If it fails: `eas update:rollback` (docs/testflight.md).",
+      "If it fails, read docs/despliegue.md before anything else: an update that adds a local",
+      "migration must not be rolled back, because the app would stop opening. Publish a fix.",
     ],
   },
 };

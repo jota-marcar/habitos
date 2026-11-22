@@ -87,7 +87,7 @@ El repositorio queda enlazado con **desarrollo**. `--remote` a secas apunta siem
 supabase db push --remote --dry-run
 ```
 
-Muestra las migraciones que va a aplicar, sin aplicarlas. Debe aparecer `20261117120000_initial_schema.sql`. Si todo cuadra:
+Muestra las migraciones que va a aplicar, sin aplicarlas. Deben aparecer las de `supabase/migrations` que el proyecto aún no tenga. Si todo cuadra:
 
 ```powershell
 supabase db push --remote
@@ -106,7 +106,7 @@ Sustituye `REF_PROD` por el identificador de `habitos` (producción), igual que 
 
 Comprueba que la primera línea dice `Target: project <ref de habitos> (not the linked project)`. Si pide confirmación, escribe `y`. Si nombra la rama `production`, es la rama principal de `habitos`, no el entorno: el proyecto se reconoce por el identificador. Si pide la contraseña de la base de datos, es la de `habitos`, no la de desarrollo.
 
-A partir de ahora, cada migración nueva se aplica **primero a desarrollo**, y a producción solo cuando la versión de la app que la necesita vaya a llegar a TestFlight.
+A partir de ahora, cada migración nueva se aplica **primero a desarrollo**, y a producción justo antes de publicar la versión de la app que la necesita, sea un build o una actualización OTA. Sin sus tablas, la sincronización falla y deja de subir también el resto de los datos ([despliegue.md](despliegue.md#actualizaciones-con-una-migración-local)).
 
 ## 6. Comprobar que ha ido bien
 
@@ -121,7 +121,7 @@ Cada migración de la columna *Local* debe aparecer también en *Remote*. Si *Re
 
 En el panel de cada proyecto:
 
-1. **Table Editor:** aparecen `habits`, `habit_versions`, `entries` y `reminders`, vacías.
+1. **Table Editor:** aparecen las 7 tablas: `habits`, `habit_versions`, `entries`, `reminders`, `weekly_goals`, `weekly_goal_versions` y `weekly_goal_entries`. En un proyecto nuevo están vacías.
 2. Cada tabla muestra que tiene **RLS enabled** y tres políticas (leer, crear y actualizar).
 3. **Advisors → Security Advisor:** no debe haber avisos sobre estas tablas. Si aparece alguno, cópialo en la conversación para analizarlo antes de seguir.
 
@@ -261,7 +261,7 @@ Comprueba los nombres con `supabase secrets list` (y `--remote=REF_PROD`): muest
 supabase functions deploy delete-account --use-api
 ```
 
-`--use-api` empaqueta la función en los servidores de Supabase, sin Docker. Toma `verify_jwt = false` de `supabase/config.toml`: la función comprueba ella misma al usuario. Para producción, cuando la versión de la app que la usa vaya a llegar a TestFlight:
+`--use-api` empaqueta la función en los servidores de Supabase, sin Docker. Toma `verify_jwt = false` de `supabase/config.toml`: la función comprueba ella misma al usuario. Para producción, antes de publicar la versión de la app que la usa, sea un build o una actualización OTA:
 
 ```powershell
 supabase functions deploy delete-account --use-api --remote=REF_PROD

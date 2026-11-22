@@ -21,7 +21,9 @@ El JavaScript solo puede usar lo que el binario trae. Por eso, un cambio nativo 
 | Entregar un cambio solo de JavaScript | `npm run update:prod` | No | **Todos** los que tengan un build compatible, sin hacer nada |
 | Entregar un cambio nativo | `npm run build:prod` | **Sí** | Team (Expo) al procesarse; **Amigos**, cuando lo añado a su grupo y Apple lo aprueba |
 
-Un cambio es **nativo** si añade o actualiza una dependencia con código nativo, o si toca `app.json` o `app.config.ts`. Todo lo demás es solo JavaScript.
+Un cambio es **nativo** si añade o actualiza una dependencia con código nativo, o si toca `app.json`, `app.config.ts` o los iconos. Todo lo demás es solo JavaScript.
+
+**Cuidado con `package.json` y `.gitignore`.** Los `scripts` del primero y el contenido del segundo forman parte de la huella nativa. Aunque no cambien el binario, tocarlos hace que las actualizaciones dejen de llegar a los builds instalados, y entonces hace falta un build nuevo.
 
 ## Los dos caminos
 
@@ -30,14 +32,14 @@ Un cambio es **nativo** si añade o actualiza una dependencia con código nativo
 1. Probarlo con `npm start` en Hábitos Dev.
 2. Con el código en una rama o en `main`, publicar con `npm run update:dev` y probarlo en Hábitos Dev desde el lanzador ([testflight.md, 6.1](testflight.md#61-probarla-en-hábitos-dev)).
 3. Fusionar el PR y poner `main` al día (`/sync`).
-4. Si necesita una migración, aplicarla antes a producción ([supabase.md](supabase.md#5-aplicar-el-esquema)).
+4. Si necesita una migración de la nube o cambia `delete-account`, aplicarlo antes a producción ([supabase.md, secciones 5 y 9.3](supabase.md#5-aplicar-el-esquema)).
 5. `npm run update:prod`. Los probadores la descargan al abrir la aplicación y la usan la siguiente vez que la abren.
 
 ### Cambio nativo
 
 1. Fusionar el PR y poner `main` al día (`/sync`).
 2. `npm run build:dev`, instalarlo y probarlo con `npm start`.
-3. Si necesita una migración, aplicarla antes a producción.
+3. Si necesita una migración de la nube o cambia `delete-account`, aplicarlo antes a producción.
 4. `npm run build:prod`. Se compila y se envía solo a TestFlight.
 5. Cuando App Store Connect lo procese, añadirlo al grupo **Amigos** y esperar la revisión beta si la pide ([testflight.md, 3.1](testflight.md#31-probadores-externos)).
 
@@ -65,10 +67,12 @@ Puede ir junto con la funcionalidad que la usa, para no enseñar a los probadore
 
 ## Si algo sale mal
 
-Si una actualización falla al arrancar, `expo-updates` vuelve sola a la anterior. Para deshacerla en los demás casos, salvo que añada una [migración local](#actualizaciones-con-una-migración-local):
+**Si la actualización añade una [migración local](#actualizaciones-con-una-migración-local), no la deshagas:** la app dejaría de abrirse hasta recibir otra versión. Publica una corrección.
+
+En los demás casos, si falla al arrancar, `expo-updates` vuelve sola a la anterior. Para deshacerla a mano:
 
 ```powershell
 eas update:rollback
 ```
 
-Más opciones en [testflight.md, 6.3](testflight.md#63-si-falla).
+Permite volver a una actualización anterior o al código del propio build. Para dejar de servir actualizaciones sin publicar otra: `eas channel:pause production` (y `eas channel:resume production` para reanudar).
