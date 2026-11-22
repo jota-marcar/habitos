@@ -47,6 +47,15 @@ Un cambio es **nativo** si añade o actualiza una dependencia con código nativo
 - **Sin cambios pendientes.** Los cuatro comandos se detienen si hay cambios sin commit.
 - **Comprobar sin lanzar.** Con `-- --check` solo se hacen las comprobaciones, por ejemplo `npm run build:dev -- --check`.
 
+## Actualizaciones con una migración local
+
+La app no abre una base con un esquema más nuevo que su código: muestra una pantalla de error, sin perder datos, hasta recibir una versión que lo conozca. Por eso, una actualización que añade una migración a `src/data/migrations.ts` no se puede deshacer con seguridad, ni con `eas update:rollback` ni con la vuelta automática de `expo-updates`.
+
+1. Publicar la migración **sola**, sin la funcionalidad que la usa. Así, las actualizaciones siguientes se pueden deshacer, porque la versión anterior ya conoce el esquema.
+2. Si lleva migración de la nube, aplicarla antes en cada entorno. Sin sus tablas, la sincronización falla y deja de subir también el resto de los datos.
+3. Probarla en Hábitos Dev antes de publicarla en producción.
+4. Si falla, no deshacerla: publicar una corrección.
+
 ## Límites
 
 - **Los builds son limitados:** 15 de iOS en el plan gratuito de EAS. Conviene agrupar los cambios nativos.
@@ -55,7 +64,7 @@ Un cambio es **nativo** si añade o actualiza una dependencia con código nativo
 
 ## Si algo sale mal
 
-Si una actualización falla al arrancar, `expo-updates` vuelve sola a la anterior. Para deshacerla en los demás casos:
+Si una actualización falla al arrancar, `expo-updates` vuelve sola a la anterior. Para deshacerla en los demás casos, salvo que añada una [migración local](#actualizaciones-con-una-migración-local):
 
 ```powershell
 eas update:rollback

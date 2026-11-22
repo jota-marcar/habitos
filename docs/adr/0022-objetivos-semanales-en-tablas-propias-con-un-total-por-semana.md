@@ -64,5 +64,5 @@
 
 - La sincronización gana tres tablas, y `recurring` es un segundo campo booleano que viaja entre las dos bases.
 - **Orden de despliegue.** La migración de la nube debe aplicarse antes de publicar la versión que la usa. Sin las tablas, la sincronización fallaría al llegar a ellas y dejaría de subir también los cambios de los hábitos.
-- **Deshacer la actualización.** Es la primera migración local que llegaría por OTA. El arranque se niega a abrir una base con un esquema más nuevo que la app, así que volver a una versión anterior dejaría de abrir la aplicación a quien ya la hubiera recibido. Hay que resolverlo antes de publicarla en producción.
+- **Deshacer la actualización.** Es la primera migración local que llega por OTA. El arranque no abre una base con un esquema más nuevo que la app, así que volver a una versión anterior dejaría en una pantalla de error, sin perder datos, a quien ya la hubiera recibido. Por eso las tablas se publican **solas y antes que la interfaz**: las actualizaciones siguientes ya se pueden deshacer, porque la versión anterior conoce el esquema ([despliegue.md](../despliegue.md#actualizaciones-con-una-migración-local)).
 - El vínculo con los hábitos podrá añadirse después con una columna opcional, sin rehacer estas tablas.
