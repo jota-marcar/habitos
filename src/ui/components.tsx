@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import {
   Pressable,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -138,6 +139,30 @@ export function Field({
           { color: colors.text },
         ]}
         {...props}
+      />
+    </View>
+  );
+}
+
+/** A native switch to place inside a Section, with its label on the left. */
+export function SwitchRow({
+  label,
+  value,
+  onValueChange,
+}: {
+  label: string;
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+}) {
+  const colors = useColors();
+  return (
+    <View style={styles.field}>
+      <Text style={[styles.fieldLabel, { color: colors.text }]}>{label}</Text>
+      <Switch
+        accessibilityLabel={label}
+        trackColor={{ true: colors.primary }}
+        value={value}
+        onValueChange={onValueChange}
       />
     </View>
   );

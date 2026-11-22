@@ -1,15 +1,18 @@
 import { localDate } from "./dates";
 import type { DayHabit } from "./day";
 import {
+  groupWeekGoals,
   keepGroups,
   keepOrder,
   settleGroups,
+  settleWeekGoals,
   sortByReminders,
   sortDayHabits,
 } from "./order";
 import type { Reminder } from "./reminders";
 import { EVERY_DAY } from "./schedule";
 import { localTime } from "./times";
+import type { WeekGoal } from "./weekly-goals";
 
 function reminder(habitId: string, time: string): Reminder {
   return { id: `${habitId}-${time}`, habitId, time: localTime(time) };
@@ -275,6 +278,69 @@ describe("keepGroups", () => {
       pending: ["a"],
       done: [],
     });
+  });
+});
+
+describe("the goals of a week (RF-46)", () => {
+  const monday = localDate("2026-11-09");
+
+  function weekGoal(id: string, done: boolean): WeekGoal {
+    return {
+      goal: {
+        id,
+        name: id,
+        type: "boolean",
+        color: null,
+        recurring: true,
+        firstWeek: monday,
+        archivedWeek: null,
+      },
+      version: {
+        id: `${id}-v1`,
+        weeklyGoalId: id,
+        effectiveFrom: monday,
+        target: null,
+        unit: null,
+        increment: null,
+      },
+      value: done ? 1 : 0,
+      done,
+    };
+  }
+
+  test("groups them into pending and achieved, keeping their order", () => {
+    const groups = groupWeekGoals([
+      weekGoal("a", true),
+      weekGoal("b", false),
+      weekGoal("c", true),
+      weekGoal("d", false),
+    ]);
+
+    expect(groups.pending.map((g) => g.goal.id)).toEqual(["b", "d"]);
+    expect(groups.done.map((g) => g.goal.id)).toEqual(["a", "c"]);
+  });
+
+  test("settling moves each goal to its group, in the place of its order", () => {
+    const settled = settleWeekGoals(
+      [
+        weekGoal("a", true),
+        weekGoal("b", false),
+        weekGoal("c", true),
+        weekGoal("d", false),
+      ],
+      { pending: ["a", "b"], done: ["c", "d"] },
+    );
+
+    expect(settled).toEqual({ pending: ["b", "d"], done: ["a", "c"] });
+  });
+
+  test("settling leaves alone a goal that is no longer in the week", () => {
+    expect(
+      settleWeekGoals([weekGoal("a", false)], {
+        pending: ["a"],
+        done: ["gone"],
+      }),
+    ).toEqual({ pending: ["a"], done: ["gone"] });
   });
 });
 

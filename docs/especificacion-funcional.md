@@ -87,13 +87,13 @@ La aplicación tiene una sola pantalla principal, con una página por horizonte:
   - **Una franja fina** justo debajo del recuadro, que indica que desde ahí se despliega el menú. Queda bien separada del borde inferior de la pantalla, para no confundirse con los gestos del propio teléfono.
 - **RF-31.** Al deslizar hacia abajo desde la fecha, o desde la lista cuando ya está arriba del todo, se despliega el **calendario** desde arriba (RF-18). Se cierra deslizándolo hacia arriba o tocando fuera de él.
 - **RF-32.** Al deslizar hacia arriba desde la franja se despliega el **menú** desde abajo. Se cierra deslizándolo hacia abajo o tocando fuera de él. Tiene dos opciones, cada una con su icono:
-  - **Crear**, que crea un elemento del horizonte que se esté viendo. En Hábitos crea un hábito (RF-06). En Objetivos semanales no aparece hasta que exista el formulario de nuevo objetivo.
+  - **Crear**, que crea un elemento del horizonte que se esté viendo. En Hábitos crea un hábito (RF-06) y en Objetivos semanales, un objetivo (RF-42).
   - **Ajustes**, con las opciones de la cuenta (RF-03, RF-04).
 - **RF-33.** Deslizar el recuadro hacia la izquierda o hacia la derecha cambia de horizonte. El orden es Hábitos, Objetivos semanales y, más adelante, Objetivos a largo plazo, y el carrusel termina en sus extremos.
   - Solo se desplaza el recuadro. El título no se mueve: el anterior desaparece y aparece el nuevo a medida que avanza el desplazamiento.
   - La franja del menú no cambia, y no hay ningún indicador de página.
   - Un deslizamiento que empieza sobre un elemento de la lista no lo registra.
-- **RF-40.** La página de **Objetivos semanales** tiene la misma estructura que la de Hábitos. Su título es "Esta semana" y las fechas de la semana (por ejemplo, "16–22 nov"); en otra semana, solo sus fechas. Mientras no haya objetivos, el recuadro indica que todavía no hay ninguno.
+- **RF-40.** La página de **Objetivos semanales** tiene la misma estructura que la de Hábitos. Su título es "Esta semana" y las fechas de la semana (por ejemplo, "16–22 nov"); en otra semana, solo sus fechas. Mientras no haya objetivos, el recuadro indica que todavía no hay ninguno y cómo crear uno. Si los hay, pero ninguno en esa semana, lo dice.
 - **RF-41.** Todos los horizontes comparten la fecha que se está viendo: la página semanal muestra la semana de ese día.
   - En la página semanal, el calendario (RF-18) resalta la semana entera, y al tocar un día se pasa a su semana.
   - Al tocar el título de otra semana se vuelve a la semana actual y al día actual.
@@ -125,7 +125,7 @@ La aplicación tiene una sola pantalla principal, con una página por horizonte:
   | Recordatorios | No | Cero o más horas del día (ver 3.6). |
   | Color | No | Uno de una paleta de 12 colores, o ninguno. Por defecto, ninguno. Tocar el color elegido lo quita. |
 
-  El hábito empieza el día que se está viendo al crearlo si es un día futuro, para poder planificar hábitos que empiecen un día concreto; el formulario lo indica con una línea discreta: "Empieza el 20 de noviembre de 2026". Creado desde el día actual o desde un día pasado, empieza el día actual. No aparece en los días anteriores a su inicio.
+  El hábito empieza el día que se está viendo al crearlo si es un día futuro, para poder planificar hábitos que empiecen un día concreto; el formulario lo indica con una línea discreta: "Empieza el 20 de noviembre de 2026". Creado desde el día actual o desde un día pasado, empieza el día actual. Si se creó desde un día pasado, al guardarlo la pantalla pasa al día actual, para que se vea el hábito recién creado. No aparece en los días anteriores a su inicio.
 
 - **RF-07.** *Retirado.* Los hábitos se gestionan desde un día en que tocan (RF-08). El listado de todos los hábitos queda fuera del alcance (sección 4).
 - **RF-08.** El usuario puede editar cualquier dato de un hábito salvo el tipo. Se edita desde sus opciones (RF-34), en cualquier día en que aparezca: pasado, actual o futuro.
@@ -237,12 +237,12 @@ Un objetivo semanal se mide por la semana completa, de lunes a domingo: cuenta l
   | Repetir cada semana | Sí | Activado por defecto. No se puede cambiar después de crearlo. |
   | Color | No | Uno de la paleta de los hábitos (RF-06), o ninguno. |
 
-  Con "Repetir cada semana" activado es **recurrente**; desactivado, **puntual**. Va activado por defecto porque, si el usuario lo pasa por alto, el objetivo vuelve a aparecer a la vista en lugar de desaparecer sin avisar. El formulario indica con una línea discreta qué va a pasar: "Se repite cada semana" o "Solo la semana del 16–22 nov".
+  Con "Repetir cada semana" activado es **recurrente**; desactivado, **puntual**. Va activado por defecto porque, si el usuario lo pasa por alto, el objetivo vuelve a aparecer a la vista en lugar de desaparecer sin avisar. El formulario indica con una línea discreta qué va a pasar: "Se repite cada semana" (o "Se repite cada semana desde la del 16–22 nov", si empieza en una semana futura) o "Solo la semana del 16–22 nov".
 
-  El objetivo empieza en la semana que se está viendo si es futura. Creado desde la semana actual o desde una pasada, empieza en la actual.
+  El objetivo empieza en la semana que se está viendo si es futura. Creado desde la semana actual o desde una pasada, empieza en la actual. Si se creó desde una semana pasada, al guardarlo la pantalla pasa a la semana actual, para que se vea el objetivo recién creado.
 - **RF-43.** El usuario puede editar cualquier dato de un objetivo salvo el tipo y la repetición.
   - El nombre y el color cambian también en las semanas pasadas.
-  - La meta, la unidad y el incremento se aplican desde la semana actual, o desde su primera semana si aún no ha empezado. Las semanas pasadas conservan los suyos.
+  - La meta, la unidad y el incremento se aplican desde la semana actual, o desde su primera semana si aún no ha empezado. Las semanas pasadas conservan los suyos. Si se edita desde otra semana, el formulario indica desde cuándo se aplican.
   - Un objetivo puntual de una semana pasada y un objetivo archivado ya no se editan.
 - **RF-44.** El usuario puede archivar un objetivo recurrente para dejar de seguirlo sin perder lo conseguido.
   - Deja de aparecer en las semanas siguientes. La semana en que se archiva solo aparece si ya tenía algo apuntado.
@@ -253,6 +253,15 @@ Un objetivo semanal se mide por la semana completa, de lunes a domingo: cuenta l
 - **RF-47.** Un objetivo de sí o no se marca y desmarca con un toque, y uno de cantidad suma su incremento. Se consigue al alcanzar la meta, que se puede superar.
   - Se guarda un único total por objetivo y semana, sin el día en que se hizo.
   - Se puede apuntar en la semana actual y en las pasadas, no en las futuras.
+- **RF-50.** Al mantener pulsado un objetivo se abren sus opciones, igual que en un hábito (RF-34). Las que aparecen dependen de la semana y del objetivo:
+
+  | Opción | Cuándo aparece |
+  |--------|----------------|
+  | Restar el incremento (solo cantidad) | En la semana actual y en las pasadas |
+  | Escribir la cantidad exacta (solo cantidad) | En la semana actual y en las pasadas |
+  | Editar (RF-43) | Salvo en un objetivo puntual de una semana pasada o en uno archivado |
+  | Archivar (RF-44) | Solo en un objetivo recurrente sin archivar |
+  | Eliminar (RF-45) | Siempre |
 - **RF-48.** Al terminar la semana, un objetivo recurrente empieza la siguiente de cero. Un objetivo puntual sin conseguir se queda en su semana como no conseguido y no pasa a la siguiente.
 - **RF-49.** La aplicación envía un **aviso de progreso** los jueves a las 20:00 y los domingos a las 11:00.
   - Solo se envía si a esa hora quedan objetivos de la semana sin conseguir, y nombra cada uno con lo que lleva (por ejemplo, "Proyectos 2 de 5 h · Correr 1 de 3"). Si son muchos, la lista se recorta como en RF-37.

@@ -42,6 +42,7 @@ import { onSyncedChanges, syncSoon } from "@/sync/app-sync";
 
 import { msUntilTomorrow, newId, now, today } from "./clock";
 import { useDatabase } from "./database";
+import { takeDayOnReturn } from "./day-on-return";
 import { playRecorded, recordedFeedback } from "./haptics";
 
 export interface Day {
@@ -166,8 +167,10 @@ export function useDay(): Day {
   useEffect(() => holdSettling, [holdSettling]);
 
   // Gaining focus is opening the app, which starts on the current day, and coming back from a
-  // form, which keeps the day that was on screen.
-  useFocusEffect(useCallback(() => show(shown.current), [show]));
+  // form, which keeps the day that was on screen unless it asks for another one.
+  useFocusEffect(
+    useCallback(() => show(takeDayOnReturn() ?? shown.current), [show]),
+  );
 
   useEffect(() => {
     // Coming back to the app shows the current day, whatever day was on screen: looking at

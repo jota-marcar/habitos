@@ -9,6 +9,7 @@
 import type { DayHabit } from "./day";
 import type { Reminder } from "./reminders";
 import type { LocalTime } from "./times";
+import type { WeekGoal } from "./weekly-goals";
 
 // Where a habit goes: the habits that are overdue, then those still to warn, then those
 // without reminders. The time orders the habits of each place.
@@ -100,6 +101,46 @@ export function settleGroups(
   const doneIds = new Set(
     dayHabits.filter((d) => d.done).map((d) => d.habit.id),
   );
+  return moveToTheirGroup(sorted, doneIds, groups);
+}
+
+/**
+ * The groups of the weekly page when it is shown (RF-46): pending goals and achieved ones, each
+ * in the order of `weekGoals`.
+ */
+export function groupWeekGoals(
+  weekGoals: readonly WeekGoal[],
+): DayGroups<WeekGoal> {
+  return {
+    pending: weekGoals.filter((g) => !g.done),
+    done: weekGoals.filter((g) => g.done),
+  };
+}
+
+/**
+ * Moves to the other group the goals of `groups` that are in the wrong one, like `settleGroups`
+ * with the habits of a day (RF-46). Goals that are not in `weekGoals` are left as they are.
+ */
+export function settleWeekGoals(
+  weekGoals: readonly WeekGoal[],
+  groups: DayGroups<string>,
+): DayGroups<string> {
+  const doneIds = new Set(
+    weekGoals.filter((g) => g.done).map((g) => g.goal.id),
+  );
+  return moveToTheirGroup(
+    weekGoals.map((g) => g.goal.id),
+    doneIds,
+    groups,
+  );
+}
+
+// `sorted` is the order the items would have if they were sorted again.
+function moveToTheirGroup(
+  sorted: readonly string[],
+  doneIds: ReadonlySet<string>,
+  groups: DayGroups<string>,
+): DayGroups<string> {
   const isPending = (id: string) => sorted.includes(id) && !doneIds.has(id);
 
   const pending = groups.pending.filter((id) => !doneIds.has(id));

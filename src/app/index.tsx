@@ -1,143 +1,67 @@
 // The main screen (RF-30), with a page per horizon that the box slides through (RF-33): the
 // habits of the day and the goals of the week (RF-40). No header and no fixed buttons: the
 // period at the top, the box and, under it, the strip the menu is pulled up from (RF-32).
-// In the box of the day, the pending habits sit at the top and the done ones at the bottom, with
-// the free space between them (RF-12). A habit that was done or undone slides to its group,
-// after a pause in the taps. A tap records a habit (RF-14, RF-15) and holding it down opens its
-// options (RF-34).
+// In each box, what is pending sits at the top and what is done at the bottom (RF-12, RF-46). A
+// tap records a habit or a goal (RF-14, RF-15, RF-47) and holding it down opens its options
+// (RF-34, RF-50).
 // The calendar that changes the day is pulled down from the date or from the list (RF-31).
 
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  Pressable,
   StyleSheet,
   Text,
   View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
-import { GestureDetector, ScrollView } from "react-native-gesture-handler";
-import Animated, {
-  Easing,
-  LinearTransition,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
+import { GestureDetector } from "react-native-gesture-handler";
+import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { LocalDate } from "@/domain/dates";
-import { progressOf, type DayHabit } from "@/domain/day";
+import type { DayHabit } from "@/domain/day";
+import type { WeekGoal } from "@/domain/weekly-goals";
 import { isInWeek, weekOf } from "@/domain/weeks";
 import { CalendarSheet } from "@/ui/calendar-sheet";
-import { formatDayTitle, formatProgress, formatWeekRange } from "@/ui/format";
+import { formatDayTitle, formatWeekRange } from "@/ui/format";
 import { HabitOptionsSheet } from "@/ui/habit-options-sheet";
 import { playOptionsOpened } from "@/ui/haptics";
-import { HorizonPager, HorizonTitles, useHorizons } from "@/ui/horizons";
-import { PROGRESS_DOT_SIZE, ProgressDot } from "@/ui/progress-dot";
+import {
+  HorizonPager,
+  HorizonTitles,
+  useHorizons,
+  type Horizon,
+} from "@/ui/horizons";
 import { Sheet, SheetOption, useOpenSheetGesture, useSheet } from "@/ui/sheet";
 import { fontSize, radius, spacing, topGap, useColors } from "@/ui/theme";
-import { SETTLE_DELAY_MS, useDay } from "@/ui/use-day";
-
-// A done habit is dimmed (RF-13), gradually during the pause before it moves to its group
-// (RF-12). With Reduce Motion on, it changes at once.
-const DONE_OPACITY = 0.4;
-
-// How a habit slides to its group, and the others make room for it (RF-12). It is brief, and
-// with Reduce Motion on, iOS skips it.
-const MOVE = LinearTransition.duration(350).easing(Easing.inOut(Easing.quad));
-
-// The least space between the two groups, when they fill the box and it scrolls (RF-12).
-const GROUP_GAP = spacing.xl;
+import { TrackedList, type TrackedItem } from "@/ui/tracked-list";
+import { useDay } from "@/ui/use-day";
+import { useWeek } from "@/ui/use-week";
+import { WeeklyGoalOptionsSheet } from "@/ui/weekly-goal-options-sheet";
 
 // The strip is thin, but the area that catches the drag is as tall as a button.
 const STRIP_TOUCH_HEIGHT = 44;
 
-function HabitRow({
-  item,
-  showColor,
-  onPress,
-  onLongPress,
-}: {
-  item: DayHabit;
-  /** Whether the rows of the day have a dot with the color and progress of their habit (RF-13). */
-  showColor: boolean;
-  onPress: () => void;
-  onLongPress: () => void;
-}) {
-  const colors = useColors();
-  const { habit, version, value, done } = item;
-  const boolean = habit.type === "boolean";
-  const progress = boolean ? null : formatProgress(value, version);
+const habitItem = ({ habit, version, value, done }: DayHabit): TrackedItem => ({
+  id: habit.id,
+  name: habit.name,
+  type: habit.type,
+  color: habit.color,
+  amounts: version,
+  value,
+  done,
+});
 
-  const targetOpacity = done ? DONE_OPACITY : 1;
-  const opacity = useSharedValue(targetOpacity);
-  useEffect(() => {
-    opacity.set(withTiming(targetOpacity, { duration: SETTLE_DELAY_MS }));
-  }, [opacity, targetOpacity]);
-  const fadeStyle = useAnimatedStyle(() => ({ opacity: opacity.get() }));
-
-  return (
-    <Animated.View testID={`fade-${habit.id}`} style={fadeStyle}>
-      <Pressable
-        testID={`habit-${habit.id}`}
-        accessibilityRole={boolean ? "checkbox" : "button"}
-        accessibilityState={boolean ? { checked: done } : undefined}
-        accessibilityLabel={habit.name}
-        accessibilityValue={progress === null ? undefined : { text: progress }}
-        onPress={onPress}
-        onLongPress={onLongPress}
-        style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-      >
-        <View style={styles.label}>
-          {/* A habit without a color leaves the room of the dot empty, so that the names line up. */}
-          {!showColor ? null : habit.color === null ? (
-            <View testID={`no-color-${habit.id}`} style={styles.noDot} />
-          ) : (
-            <ProgressDot
-              testID={`color-dot-${habit.id}`}
-              color={colors.habit[habit.color]}
-              progress={progressOf(habit.type, version, value)}
-            />
-          )}
-          <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
-            {habit.name}
-          </Text>
-        </View>
-        {progress === null ? null : (
-          <Text style={[styles.progress, { color: colors.textSecondary }]}>
-            {progress}
-          </Text>
-        )}
-      </Pressable>
-    </Animated.View>
-  );
-}
-
-/**
- * A row of the list, with the line that separates it from the one above unless it is the first
- * of its group. The two groups are in the same container, so that a row that changes group
- * keeps its view and slides from one place to the other.
- */
-function MovingHabitRow({
-  first,
-  ...row
-}: Parameters<typeof HabitRow>[0] & { first: boolean }) {
-  return (
-    <Animated.View layout={MOVE}>
-      {first ? null : <Separator />}
-      <HabitRow {...row} />
-    </Animated.View>
-  );
-}
-
-function Separator() {
-  const colors = useColors();
-  return (
-    <View style={[styles.separator, { backgroundColor: colors.border }]} />
-  );
-}
+const goalItem = ({ goal, version, value, done }: WeekGoal): TrackedItem => ({
+  id: goal.id,
+  name: goal.name,
+  type: goal.type,
+  color: goal.color,
+  amounts: version,
+  value,
+  done,
+});
 
 function EmptyDay({
   hasAnyHabit,
@@ -166,13 +90,28 @@ function EmptyDay({
   );
 }
 
-function EmptyWeek() {
+function EmptyWeek({
+  hasAnyGoal,
+  isThisWeek,
+}: {
+  hasAnyGoal: boolean;
+  isThisWeek: boolean;
+}) {
   const colors = useColors();
   return (
     <View style={styles.empty}>
       <Text style={[styles.emptyTitle, { color: colors.text }]}>
-        Todavía no tienes objetivos semanales.
+        {!hasAnyGoal
+          ? "Todavía no tienes objetivos semanales."
+          : isThisWeek
+            ? "Esta semana no hay objetivos."
+            : "Esa semana no hay objetivos."}
       </Text>
+      {hasAnyGoal ? null : (
+        <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+          Desliza desde abajo para crear uno.
+        </Text>
+      )}
     </View>
   );
 }
@@ -190,6 +129,7 @@ export default function Today() {
   const week = weekOf(date);
   const isThisWeek = isInWeek(today, week);
   const weekRange = formatWeekRange(week, today);
+  const weekPage = useWeek(week.start);
 
   const calendar = useSheet("top");
   const openCalendarFromDate = useOpenSheetGesture(calendar, "day-date");
@@ -200,10 +140,25 @@ export default function Today() {
     "day-list",
     listAtTop,
   );
-  const onListScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) =>
-    listAtTop.set(event.nativeEvent.contentOffset.y <= 0);
-  // Each day has its own list, which starts at the top.
-  useEffect(() => listAtTop.set(true), [date, listAtTop]);
+  // Each page has its own list, and what counts is the one on screen.
+  const listOffsets = useRef<Record<Horizon, number>>({ habits: 0, weekly: 0 });
+  const onListScroll =
+    (horizon: Horizon) => (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const offset = event.nativeEvent.contentOffset.y;
+      listOffsets.current[horizon] = offset;
+      if (horizon === horizons.horizon) listAtTop.set(offset <= 0);
+    };
+  // Each day and each week have their own list, which starts at the top.
+  useEffect(() => {
+    listOffsets.current.habits = 0;
+  }, [date]);
+  useEffect(() => {
+    listOffsets.current.weekly = 0;
+  }, [week.start]);
+  useEffect(
+    () => listAtTop.set(listOffsets.current[horizons.horizon] <= 0),
+    [date, week.start, horizons.horizon, listAtTop],
+  );
 
   const menu = useSheet();
   const openMenu = useOpenSheetGesture(menu, "menu-strip");
@@ -216,9 +171,13 @@ export default function Today() {
   const heldNow =
     allHabits?.find((item) => item.habit.id === held?.habit.id) ?? held;
 
-  // The dots only appear on a day with some habit that has a color (RF-13).
-  const showColor =
-    allHabits?.some((item) => item.habit.color !== null) ?? false;
+  const goalOptions = useSheet();
+  // The same for the goal whose options were opened.
+  const [heldGoal, setHeldGoal] = useState<WeekGoal | null>(null);
+  const goals = weekPage.goals;
+  const allGoals = goals === null ? null : [...goals.pending, ...goals.done];
+  const heldGoalNow =
+    allGoals?.find((item) => item.goal.id === heldGoal?.goal.id) ?? heldGoal;
 
   const openOptions = (item: DayHabit) => {
     playOptionsOpened();
@@ -226,16 +185,11 @@ export default function Today() {
     options.open();
   };
 
-  const renderRow = (item: DayHabit, index: number) => (
-    <MovingHabitRow
-      key={item.habit.id}
-      first={index === 0}
-      item={item}
-      showColor={showColor}
-      onPress={() => void record(item.habit.id)}
-      onLongPress={() => openOptions(item)}
-    />
-  );
+  const openGoalOptions = (item: WeekGoal) => {
+    playOptionsOpened();
+    setHeldGoal(item);
+    goalOptions.open();
+  };
 
   // The form is told the day it was opened from, to say when the changes apply (RF-09).
   const edit = (habitId: string) =>
@@ -244,15 +198,25 @@ export default function Today() {
       params: { id: habitId, day: date },
     });
 
+  const editGoal = (goalId: string) =>
+    router.push({
+      pathname: "/weekly-goals/[id]/edit",
+      params: { id: goalId, day: date },
+    });
+
   const showDay = (chosen: LocalDate) => {
     calendar.close();
     day.select(chosen);
   };
 
-  // A habit created from a future day starts that day (RF-06).
+  // Creates an item of the page on screen (RF-32). Created from a future day or week, it starts
+  // then (RF-06, RF-42).
   const create = () => {
     menu.close();
-    router.push({ pathname: "/habits/new", params: { day: date } });
+    router.push({
+      pathname: onHabits ? "/habits/new" : "/weekly-goals/new",
+      params: { day: date },
+    });
   };
 
   const openSettings = () => {
@@ -297,33 +261,37 @@ export default function Today() {
                 habits === null ? null : allHabits?.length === 0 ? (
                   <EmptyDay hasAnyHabit={hasAnyHabit} isToday={isToday} />
                 ) : (
-                  <ScrollView
+                  <TrackedList
                     key={date}
                     testID="day-habits"
-                    // The drag that opens the calendar goes along with the scroll of the list.
+                    rowPrefix="habit"
+                    groups={habits}
+                    itemOf={habitItem}
+                    onPress={(item) => void record(item.habit.id)}
+                    onLongPress={openOptions}
                     simultaneousWith={openCalendarFromList}
-                    // A list that fits does not move, so pulling it down only brings the calendar.
-                    alwaysBounceVertical={false}
-                    onScroll={onListScroll}
-                    scrollEventThrottle={16}
-                    // The list fills the box, and the gap between the groups takes the space
-                    // left, which pushes the done group to the bottom.
-                    contentContainerStyle={styles.groups}
-                  >
-                    {/* A single list: with one per group, a row that changes group would be a
-                        new view, which appears in its place instead of sliding there. */}
-                    {[
-                      ...habits.pending.map(renderRow),
-                      <View
-                        key="gap"
-                        testID="day-habits-gap"
-                        style={styles.groupGap}
-                      />,
-                      ...habits.done.map(renderRow),
-                    ]}
-                  </ScrollView>
+                    onScroll={onListScroll("habits")}
+                  />
                 ),
-              weekly: <EmptyWeek />,
+              weekly:
+                goals === null ? null : allGoals?.length === 0 ? (
+                  <EmptyWeek
+                    hasAnyGoal={weekPage.hasAnyGoal}
+                    isThisWeek={isThisWeek}
+                  />
+                ) : (
+                  <TrackedList
+                    key={week.start}
+                    testID="week-goals"
+                    rowPrefix="goal"
+                    groups={goals}
+                    itemOf={goalItem}
+                    onPress={(item) => void weekPage.record(item.goal.id)}
+                    onLongPress={openGoalOptions}
+                    simultaneousWith={openCalendarFromList}
+                    onScroll={onListScroll("weekly")}
+                  />
+                ),
             }}
           />
         </View>
@@ -347,15 +315,12 @@ export default function Today() {
       />
 
       <Sheet sheet={menu} closeLabel="Cerrar el menú" testID="menu">
-        {/* There is nothing to create on the weekly page until its form exists (RF-32). */}
-        {onHabits ? (
-          <SheetOption
-            icon="plus"
-            fallbackIcon="+"
-            label="Crear"
-            onPress={create}
-          />
-        ) : null}
+        <SheetOption
+          icon="plus"
+          fallbackIcon="+"
+          label="Crear"
+          onPress={create}
+        />
         <SheetOption
           icon="gearshape"
           fallbackIcon="⚙"
@@ -370,6 +335,15 @@ export default function Today() {
         day={day}
         onEdit={edit}
       />
+
+      <WeeklyGoalOptionsSheet
+        sheet={goalOptions}
+        weekGoal={heldGoalNow}
+        week={week}
+        today={today}
+        page={weekPage}
+        onEdit={editGoal}
+      />
     </View>
   );
 }
@@ -382,30 +356,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md + spacing.md,
   },
   pager: { flex: 1 },
-  row: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.md,
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md - spacing.xs,
-  },
-  pressed: { opacity: 0.6 },
-  label: {
-    alignItems: "center",
-    flexDirection: "row",
-    flexShrink: 1,
-    gap: spacing.sm + 2,
-  },
-  noDot: { height: PROGRESS_DOT_SIZE, width: PROGRESS_DOT_SIZE },
-  name: { flexShrink: 1, fontSize: fontSize.list },
-  progress: { fontSize: fontSize.list, fontVariant: ["tabular-nums"] },
-  groups: { flexGrow: 1 },
-  groupGap: { flexGrow: 1, minHeight: GROUP_GAP },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    marginLeft: spacing.md,
-  },
   empty: {
     alignItems: "center",
     flex: 1,

@@ -2,7 +2,7 @@
 
 import type { Month } from "@/domain/calendar";
 import { weekdayOf, type LocalDate, type Weekday } from "@/domain/dates";
-import type { HabitColor, HabitConfig } from "@/domain/habits";
+import type { Amounts, HabitColor } from "@/domain/habits";
 import type { Week } from "@/domain/weeks";
 
 /** Initials of the weekdays, from Monday to Sunday. */
@@ -125,8 +125,8 @@ export function formatAmount(value: number): string {
   return String(value).replace(".", ",");
 }
 
-/** How a quantitative habit is going (RF-13): "1,25 / 2 L". */
-export function formatProgress(value: number, config: HabitConfig): string {
-  const target = formatAmount(config.target ?? 0);
-  return `${formatAmount(value)} / ${target} ${config.unit ?? ""}`.trim();
+/** How a quantitative habit or goal is going (RF-13, RF-46): "1,25 / 2 L". */
+export function formatProgress(value: number, amounts: Amounts): string {
+  const target = formatAmount(amounts.target ?? 0);
+  return `${formatAmount(value)} / ${target} ${amounts.unit ?? ""}`.trim();
 }
