@@ -2,8 +2,11 @@
 // Brings the local repository up to date after a Pull Request has been merged:
 // updates main, moves the branches stacked on a merged Pull Request onto main
 // and deletes the local branches whose Pull Request is merged.
+// It also works from a git worktree: main is updated where it is checked out,
+// and a branch open in another worktree is never rebased or deleted.
 // Usage: node .claude/skills/sync/sync.mjs
-// Exits with code 1, changing nothing, if there are uncommitted changes.
+// Exits with code 1, changing nothing, if there are uncommitted changes here or
+// in the checkout of main.
 
 import { execFileSync, execSync } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -35,38 +38,142 @@ function ghPath() {
   return existsSync(GH_WINDOWS) ? GH_WINDOWS : null;
 }
 
-const uncommitted = git("status", "--porcelain");
-if (uncommitted) {
-  console.log(
-    "BLOCKER: there are uncommitted changes. Commit or discard them first:",
-  );
-  console.log(uncommitted);
+function stop(message, details) {
+  console.log(`BLOCKER: ${message}`);
+  if (details) console.log(details);
   process.exit(1);
 }
 
+const isAncestor = (commit, branch) =>
+  attempt(() => git("merge-base", "--is-ancestor", commit, branch)) !== null;
+
+// git knows every branch a worktree holds, even one in the middle of a rebase or
+// a bisect, and refuses to force-update it. Otherwise, forcing a branch onto
+// itself changes nothing.
+const isInUse = (branch) =>
+  attempt(() => git("branch", "--force", "--no-track", branch, branch)) ===
+  null;
+
+const uncommitted = git("status", "--porcelain");
+if (uncommitted) {
+  stop(
+    "there are uncommitted changes. Commit or discard them first:",
+    uncommitted,
+  );
+}
+
 const startedOn = git("rev-parse", "--abbrev-ref", "HEAD");
+const startCommit = git("rev-parse", "HEAD");
+
+// One block per worktree. The first one is always the primary checkout.
+const worktrees = git("worktree", "list", "--porcelain")
+  .split("\n\n")
+  .map((block) => {
+    const lines = block.split("\n");
+    return {
+      path: lines
+        .find((line) => line.startsWith("worktree "))
+        ?.slice("worktree ".length),
+      branch:
+        lines
+          .find((line) => line.startsWith("branch refs/heads/"))
+          ?.slice("branch refs/heads/".length) ?? null,
+    };
+  });
+const mainCheckout = worktrees.find((tree) => tree.branch === BASE);
+
+if (startedOn !== BASE && mainCheckout) {
+  const pending = attempt(() =>
+    git(
+      "--no-optional-locks",
+      "-C",
+      mainCheckout.path,
+      "status",
+      "--porcelain",
+    ),
+  );
+  if (pending === null) {
+    stop(
+      `${BASE} is checked out at ${mainCheckout.path}, which cannot be read. Nothing was changed.`,
+    );
+  }
+  if (pending) {
+    stop(
+      `the checkout of ${BASE} at ${mainCheckout.path} has uncommitted changes. Nothing was changed. Commit or discard them there first:`,
+      pending,
+    );
+  }
+} else if (startedOn !== BASE && isInUse(BASE)) {
+  stop(
+    `${BASE} is in the middle of a rebase or a bisect in another worktree, or does not exist locally. Nothing was changed.`,
+  );
+}
+
 git("fetch", "--quiet", "--prune", "origin");
 
-if (startedOn !== BASE) git("switch", "--quiet", BASE);
-const before = git("rev-parse", "HEAD");
-git("pull", "--quiet", "--ff-only", "origin", BASE);
-const after = git("rev-parse", "HEAD");
+const before = git("rev-parse", `refs/heads/${BASE}`);
+if (!isAncestor(before, `origin/${BASE}`)) {
+  stop(
+    `${BASE} has commits that are not in origin/${BASE}. Nothing was changed.`,
+  );
+}
 
-console.log(`Branch: ${BASE} (was on ${startedOn})`);
+// Only the primary checkout moves to main, and only if main is free. A linked
+// worktree belongs to its own branch and stays on it.
+const switchesToMain =
+  startedOn !== BASE && !mainCheckout && worktrees[0].branch === startedOn;
+const home = switchesToMain ? BASE : startedOn;
+if (switchesToMain) git("switch", "--quiet", BASE);
+
+const mainPath = switchesToMain ? worktrees[0].path : mainCheckout?.path;
+if (mainPath) {
+  git("-C", mainPath, "merge", "--quiet", "--ff-only", `origin/${BASE}`);
+} else {
+  // Not checked out anywhere: the ref moves without touching any working tree.
+  git(
+    "fetch",
+    "--quiet",
+    ".",
+    `refs/remotes/origin/${BASE}:refs/heads/${BASE}`,
+  );
+}
+const after = git("rev-parse", `refs/heads/${BASE}`);
+
+console.log(
+  home === startedOn
+    ? `Branch: ${home}`
+    : `Branch: ${home} (was on ${startedOn})`,
+);
 if (before === after) {
   console.log(`${BASE} was already up to date.`);
 } else {
   console.log(`${BASE} updated with:`);
   console.log(git("log", "--format=  - %s", `${before}..${after}`));
+  if (home !== BASE && mainPath) {
+    console.log(`${BASE} is open at ${mainPath} and was updated there.`);
+  }
+}
+
+// The branch of this worktree follows main while it has no commits of its own.
+if (home !== BASE && home !== "HEAD") {
+  if (!isAncestor(home, `origin/${BASE}`)) {
+    console.log(`${home} has commits of its own: not fast-forwarded.`);
+  } else if (git("rev-parse", home) !== after) {
+    git("merge", "--quiet", "--ff-only", `origin/${BASE}`);
+    console.log(`${home} had no commits of its own: moved to ${BASE}.`);
+  }
 }
 
 // A squash merge leaves no trace in git that the branch was merged, so GitHub is asked.
 const gh = GH_STUB ?? ghPath();
 const runGh = (args) =>
   GH_STUB ? run(process.execPath, [GH_STUB, ...args]) : run(gh, args);
-const branches = git("branch", "--format=%(refname:short)")
+const branches = git("for-each-ref", "--format=%(refname:short)", "refs/heads")
   .split("\n")
   .filter((branch) => branch && branch !== BASE);
+const openElsewhere = new Set(
+  branches.filter((branch) => branch !== home && isInUse(branch)),
+);
 
 // The latest Pull Request of a branch, with its state and the commit it ended on.
 const pullRequest = (branch) => {
@@ -86,8 +193,6 @@ const pullRequest = (branch) => {
   return output === null ? null : (JSON.parse(output)[0] ?? null);
 };
 
-const isAncestor = (commit, branch) =>
-  attempt(() => git("merge-base", "--is-ancestor", commit, branch)) !== null;
 const countCommits = (range) => Number(git("rev-list", "--count", range));
 
 // Whether every commit of the branch is in its Pull Request, so deleting it loses nothing.
@@ -131,7 +236,10 @@ const moves = new Map(mergedTips.map((tip) => [tip, `origin/${BASE}`]));
 // Stacked branches have more history than the branch below them, so sorting by
 // history length restacks the lower branch first.
 const candidates = branches
-  .filter((branch) => pullRequest(branch)?.state !== "MERGED")
+  .filter(
+    (branch) =>
+      !openElsewhere.has(branch) && pullRequest(branch)?.state !== "MERGED",
+  )
   .sort((a, b) => countCommits(a) - countCommits(b));
 
 for (const branch of candidates) {
@@ -145,6 +253,20 @@ for (const branch of candidates) {
     countCommits(b) > countCommits(a) ? b : a,
   );
   const newBase = moves.get(oldBase);
+
+  // Replaying it would copy the commits of the branch below, which cannot move.
+  const heldBelow = [...openElsewhere].find(
+    (open) =>
+      git("rev-parse", open) !== oldBase &&
+      isAncestor(oldBase, open) &&
+      isAncestor(open, branch),
+  );
+  if (heldBelow) {
+    restackProblems.push(
+      `${branch}: stacked on ${heldBelow}, which is open in another worktree; left untouched`,
+    );
+    continue;
+  }
 
   if (
     attempt(() => git("rebase", "--onto", newBase, oldBase, branch)) === null
@@ -193,13 +315,20 @@ for (const branch of candidates) {
     restacked.push(`${branch} (${ownCommits} own commit(s), no remote branch)`);
   }
 }
-if (git("rev-parse", "--abbrev-ref", "HEAD") !== BASE) {
-  git("switch", "--quiet", BASE);
+// Rebasing a branch checks it out here, so this worktree goes back to its own.
+if (git("rev-parse", "--abbrev-ref", "HEAD") !== home) {
+  if (home === "HEAD") git("switch", "--quiet", "--detach", startCommit);
+  else git("switch", "--quiet", home);
 }
 
 const deleted = [];
 const kept = [];
 for (const branch of branches) {
+  if (openElsewhere.has(branch) || branch === home) {
+    const where = branch === home ? "this" : "another";
+    kept.push(`${branch} (open in ${where} worktree)`);
+    continue;
+  }
   const pr = pullRequest(branch);
   const merged = pr?.state === "MERGED";
   const pushed = attempt(() => git("rev-parse", `origin/${branch}`)) !== null;
