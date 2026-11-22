@@ -277,6 +277,7 @@ Cada sincronización (`src/sync/synchronize.ts`) hace primero el pull y después
 
    Nunca hay dos a la vez: las peticiones que llegan mientras una se ejecuta se juntan en una ejecución más. No hay detector de conexión, que necesitaría un módulo nativo. Una sincronización que falla, por ejemplo sin conexión, se reintenta a los 30 s, 1 min, 2 min y después cada 5 min mientras la app está abierta, y volver a la app la lanza de nuevo.
 7. **Después de una bajada que cambia algo,** se refrescan los recordatorios y la pantalla vuelve a leer el día sin reordenarlo, como tras un botón de un recordatorio.
+8. **Estado de la copia (RF-53):** cada ejecución guarda cómo terminó (`src/sync/sync-record.ts`): la última que acabó bien y desde cuándo falla. Va en el almacén clave-valor de `expo-sqlite`, solo en el dispositivo y sin migración, y se borra al cerrar sesión o eliminar la cuenta. El dominio lo combina con los cambios pendientes (`syncStatusOf`): un fallo sin nada pendiente no pierde nada y no se avisa, y solo tras 3 días fallando con cambios por copiar aparece el aviso en la pantalla principal, para no alarmar por un corte breve. Los errores no salen del dispositivo: un servicio de informes de errores queda para el siguiente build, porque añade una dependencia nativa.
 
 El motor depende de la interfaz `Remote`, no de Supabase. En los tests, la implementa una cuenta en memoria. En la app, `supabase-remote.ts`, que se prueba de punta a punta en la CI contra un Supabase local con dos dispositivos.
 

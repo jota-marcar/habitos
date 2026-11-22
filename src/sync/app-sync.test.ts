@@ -1,6 +1,7 @@
 import type { Database } from "@/data/database";
 
 import {
+  onSyncFinished,
   onSyncedChanges,
   resumeSync,
   suspendSync,
@@ -8,6 +9,7 @@ import {
   syncSoon,
 } from "./app-sync";
 import { CHANGE_DELAY_MS } from "./scheduler";
+import { recordSyncFailure, recordSyncSuccess } from "./sync-record";
 import { synchronize } from "./synchronize";
 
 const mockGetSession = jest.fn();
@@ -16,6 +18,10 @@ jest.mock("@/auth/supabase", () => ({
 }));
 jest.mock("./supabase-remote", () => ({ supabaseRemote: () => "remote" }));
 jest.mock("./synchronize", () => ({ synchronize: jest.fn() }));
+jest.mock("./sync-record", () => ({
+  recordSyncSuccess: jest.fn(async () => {}),
+  recordSyncFailure: jest.fn(async () => {}),
+}));
 
 const mockSynchronize = jest.mocked(synchronize);
 const db = {} as Database;
@@ -33,6 +39,8 @@ beforeEach(() => {
   mockGetSession.mockReset();
   mockSynchronize.mockReset();
   mockSynchronize.mockResolvedValue({ changed: false });
+  jest.mocked(recordSyncSuccess).mockClear();
+  jest.mocked(recordSyncFailure).mockClear();
   warn = jest.spyOn(console, "warn").mockImplementation(() => {});
 });
 
@@ -93,6 +101,55 @@ test("a session that cannot be read is reported, and never fails", async () => {
   } finally {
     jest.useRealTimers();
   }
+});
+
+describe("the state of the copy (RF-53)", () => {
+  test("a synchronization that ends well is recorded and announced", async () => {
+    signedIn("user-1");
+    const listener = jest.fn();
+    const stop = onSyncFinished(listener);
+
+    await syncNow(db);
+
+    expect(recordSyncSuccess).toHaveBeenCalledTimes(1);
+    expect(recordSyncFailure).not.toHaveBeenCalled();
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    stop();
+    await syncNow(db);
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  test("one that fails is recorded and announced too", async () => {
+    jest.useFakeTimers();
+    const listener = jest.fn();
+    const stop = onSyncFinished(listener);
+    try {
+      signedIn("user-1");
+      mockSynchronize.mockRejectedValueOnce(new Error("offline"));
+
+      await syncNow(db);
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(recordSyncFailure).toHaveBeenCalledTimes(1);
+      expect(recordSyncSuccess).not.toHaveBeenCalled();
+      expect(listener).toHaveBeenCalledTimes(1);
+      // Its retry waits until the next test, which resets the timers.
+      await syncNow(db);
+    } finally {
+      stop();
+      jest.useRealTimers();
+    }
+  });
+
+  test("without a session, nothing is recorded", async () => {
+    mockGetSession.mockResolvedValue({ data: { session: null }, error: null });
+
+    await syncNow(db);
+
+    expect(recordSyncSuccess).not.toHaveBeenCalled();
+    expect(recordSyncFailure).not.toHaveBeenCalled();
+  });
 });
 
 test("a local change synchronizes in a moment", async () => {
