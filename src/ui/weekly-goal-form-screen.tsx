@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { LocalDate } from "@/domain/dates";
 import type { WeeklyGoalError } from "@/domain/weekly-goals";
+import { refreshReminders } from "@/notifications/reminders";
 import { syncSoon } from "@/sync/app-sync";
 
 import { today } from "./clock";
@@ -61,6 +62,8 @@ export function WeeklyGoalFormScreen({
       const rejected = await onSubmit(values);
       setErrors(rejected);
       if (rejected.length > 0) return;
+      // The goal may change what the progress digests name or how they say it (RF-49).
+      void refreshReminders(db);
       syncSoon(db);
       router.back();
     } finally {

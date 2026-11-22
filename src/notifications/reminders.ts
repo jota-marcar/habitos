@@ -6,9 +6,14 @@ import * as Notifications from "expo-notifications";
 import type { Database } from "@/data/database";
 import { syncNow } from "@/sync/app-sync";
 import { newId, now } from "@/ui/clock";
+import { requestHorizon } from "@/ui/horizon-request";
 
 import { answerReminder, notifyReminderRecorded } from "./actions";
-import { expoNotifier, reminderResponseOf } from "./expo-notifier";
+import {
+  expoNotifier,
+  reminderResponseOf,
+  tappedHorizon,
+} from "./expo-notifier";
 import {
   markGestureLearned,
   readGestureHint,
@@ -74,6 +79,9 @@ export function listenToReminders(openDatabase: () => Promise<Database>) {
     answered.add(key);
     // Otherwise the next start of the app would answer it again.
     Notifications.clearLastNotificationResponse();
+
+    const horizon = tappedHorizon(response);
+    if (horizon !== null) requestHorizon(horizon);
 
     const reminder = reminderResponseOf(response);
     if (reminder === null) return;

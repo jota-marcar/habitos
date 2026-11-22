@@ -34,6 +34,7 @@ import {
   type WeekGoal,
 } from "@/domain/weekly-goals";
 import { weekOf } from "@/domain/weeks";
+import { refreshReminders } from "@/notifications/reminders";
 import { onSyncedChanges, syncSoon } from "@/sync/app-sync";
 
 import { newId, today } from "./clock";
@@ -138,6 +139,9 @@ export function useWeek(monday: LocalDate): WeekPage {
     (make: () => Promise<void>): Promise<void> => {
       const write = writes.current.then(async () => {
         await make();
+        // The progress digests say how the goals are going, and stop once all are achieved
+        // (RF-49).
+        void refreshReminders(db);
         syncSoon(db);
         await load(shown.current, false);
       });

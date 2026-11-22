@@ -204,7 +204,7 @@ Es la pantalla principal de la aplicación (ver 3.1).
   - **Ambos:** posponerlo 1 hora. El tiempo es el mismo para todos los hábitos. Un recordatorio no sale del día de su hábito: si al posponerlo caería en el día siguiente, no se vuelve a enviar.
 
   iOS solo muestra estos botones al mantener pulsada la notificación, así que los recordatorios lo explican con una línea ("Mantén pulsado para marcarlo o posponerlo", o "para sumar o posponerlo" en un cuantitativo). La línea deja de aparecer en cuanto el usuario usa un botón por primera vez y, si no llega a usarlo, a los 7 días del primer recordatorio. Es una ayuda del dispositivo: no se sincroniza con la cuenta.
-- **RF-26.** Al tocar el recordatorio (fuera de sus botones), se abre la aplicación en el día actual.
+- **RF-26.** Al tocar el recordatorio (fuera de sus botones), se abre la aplicación en el día actual, en la página de Hábitos, aunque se hubiera dejado en otra.
 - **RF-27.** Los recordatorios funcionan sin conexión.
 - **RF-37.** Además de los recordatorios de cada hábito, la aplicación envía cada día dos avisos de pendientes, a las 17:00 y a las 22:00. Así el usuario no se olvida de registrar lo que ya ha hecho, y se le recuerda lo que aún no ha hecho, también los hábitos que no tienen recordatorios.
   - Un aviso solo se envía si a esa hora quedan hábitos del día sin cumplir. Cuentan todos los pendientes, también los cuantitativos a medias y los que aún tienen un recordatorio más tarde.
@@ -264,8 +264,9 @@ Un objetivo semanal se mide por la semana completa, de lunes a domingo: cuenta l
   | Eliminar (RF-45) | Siempre |
 - **RF-48.** Al terminar la semana, un objetivo recurrente empieza la siguiente de cero. Un objetivo puntual sin conseguir se queda en su semana como no conseguido y no pasa a la siguiente.
 - **RF-49.** La aplicación envía un **aviso de progreso** los jueves a las 20:00 y los domingos a las 11:00.
-  - Solo se envía si a esa hora quedan objetivos de la semana sin conseguir, y nombra cada uno con lo que lleva (por ejemplo, "Proyectos 2 de 5 h · Correr 1 de 3"). Si son muchos, la lista se recorta como en RF-37.
-  - Al tocarlo se abre la aplicación en la página semanal de la semana actual. No tiene botones, porque reúne varios objetivos.
+  - Solo se envía si a esa hora quedan objetivos de la semana sin conseguir. Un objetivo archivado no cuenta, aunque siga a la vista esa semana por tener algo apuntado (RF-44).
+  - El título dice cuántos quedan ("Te quedan 3 objetivos") y el texto los nombra en el orden de la página semanal, los de cantidad con lo que llevan y los de sí o no solo con su nombre (por ejemplo, "Proyectos 2 de 5 h · Correr 1 de 3 · Llamar a casa"). Si son muchos, la lista se recorta como en RF-37 ("… y 2 más").
+  - Al tocarlo se abre la aplicación en la página semanal de la semana actual, aunque se toque más tarde y la semana del aviso ya haya terminado. No tiene botones, porque reúne varios objetivos.
   - Las horas son fijas.
 
 ## 4. Fuera del alcance del MVP

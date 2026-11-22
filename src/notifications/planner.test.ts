@@ -1,20 +1,34 @@
 import { saveEntry } from "@/data/entries-repository";
 import { addHabit } from "@/data/habits-repository";
-import { habit, openMigratedDatabase, version } from "@/data/testing/fixtures";
+import {
+  habit,
+  openMigratedDatabase,
+  version,
+  weeklyGoal,
+  weeklyGoalVersion,
+} from "@/data/testing/fixtures";
 import type { TestDatabase } from "@/data/testing/node-database";
+import {
+  addWeeklyGoal,
+  saveWeeklyGoalEntry,
+} from "@/data/weekly-goals-repository";
 import { localDate } from "@/domain/dates";
 import type { DayHabit } from "@/domain/day";
 import type { PendingDigest } from "@/domain/digests";
+import type { ProgressDigest } from "@/domain/progress-digests";
 import { localTime, type LocalDateTime } from "@/domain/times";
+import type { WeekGoal } from "@/domain/weekly-goals";
 
 import type { PlannedNotification } from "./notifier";
 import {
   REMINDER_PREFIX,
   categoryOf,
   digestNotification,
+  horizonOfNotification,
   instantOf,
   localDateTimeOf,
   planReminders,
+  progressDigestNotification,
   serialized,
   signatureOf,
   snoozedNotification,
@@ -217,6 +231,165 @@ describe("planReminders", () => {
 
     expect(notifications[0].id).toBe("digest.2026-11-13.17:00");
   });
+
+  describe("progress digests (RF-49)", () => {
+    const MONDAY = localDate("2026-11-09");
+    const progressIds = (notifications: readonly PlannedNotification[]) =>
+      notifications.filter((n) => n.id.startsWith("progress."));
+
+    function addHours() {
+      return addWeeklyGoal(
+        db,
+        weeklyGoal("hours", {
+          name: "Proyectos",
+          type: "quantitative",
+          firstWeek: MONDAY,
+        }),
+        weeklyGoalVersion("hours", {
+          effectiveFrom: MONDAY,
+          target: 5,
+          unit: "h",
+          increment: 1,
+        }),
+      );
+    }
+
+    test("go in the window, saying how this week is going", async () => {
+      await addHours();
+      await saveWeeklyGoalEntry(db, {
+        id: "e1",
+        weeklyGoalId: "hours",
+        week: MONDAY,
+        value: 2,
+      });
+
+      const { notifications } = await planReminders(db, NOW);
+
+      const progress = progressIds(notifications);
+      expect(progress.map((n) => n.id)).toEqual([
+        "progress.2026-11-12.20:00",
+        "progress.2026-11-15.11:00",
+        "progress.2026-11-19.20:00",
+        "progress.2026-11-22.11:00",
+      ]);
+      expect(progress[0].body).toBe("Proyectos 2 de 5 h");
+      // The next week starts from zero (RF-48).
+      expect(progress[2].body).toBe("Proyectos 0 de 5 h");
+    });
+
+    test("stop this week once the goal is achieved", async () => {
+      await addHours();
+      await saveWeeklyGoalEntry(db, {
+        id: "e1",
+        weeklyGoalId: "hours",
+        week: MONDAY,
+        value: 5,
+      });
+
+      const { notifications } = await planReminders(db, NOW);
+
+      expect(progressIds(notifications).map((n) => n.id)).toEqual([
+        "progress.2026-11-19.20:00",
+        "progress.2026-11-22.11:00",
+      ]);
+    });
+  });
+});
+
+describe("horizonOfNotification", () => {
+  test("a progress digest opens the weekly page (RF-49)", () => {
+    expect(horizonOfNotification("progress.2026-11-12.20:00")).toBe("weekly");
+  });
+
+  test("everything else is about habits (RF-26, RF-37)", () => {
+    for (const id of [
+      "reminder.r1.2026-11-12",
+      "digest.2026-11-12.17:00",
+      "snooze.h1.2026-11-12.18:00",
+    ]) {
+      expect(horizonOfNotification(id)).toBe("habits");
+    }
+  });
+});
+
+describe("progressDigestNotification", () => {
+  function goal(
+    name: string,
+    amounts?: { target: number; unit: string | null; value: number },
+  ): WeekGoal {
+    const quantitative = amounts !== undefined;
+    return {
+      goal: weeklyGoal(name, {
+        name,
+        type: quantitative ? "quantitative" : "boolean",
+      }),
+      version: weeklyGoalVersion(name, {
+        target: amounts?.target ?? null,
+        unit: amounts?.unit ?? null,
+        increment: quantitative ? 1 : null,
+      }),
+      value: amounts?.value ?? 0,
+      done: false,
+    };
+  }
+
+  function digest(...goals: WeekGoal[]): ProgressDigest {
+    return { date: NOW.date, time: localTime("20:00"), goals };
+  }
+
+  test("has no buttons and no habit, and an identifier of its own", () => {
+    const notification = progressDigestNotification(digest(goal("Leer")));
+
+    expect(notification).toMatchObject({
+      id: `progress.${NOW.date}.20:00`,
+      at: { date: NOW.date, time: "20:00" },
+      habitId: null,
+      category: null,
+    });
+  });
+
+  test("counts one goal in the singular", () => {
+    const { title, body } = progressDigestNotification(digest(goal("Leer")));
+
+    expect(title).toBe("Te queda 1 objetivo");
+    expect(body).toBe("Leer");
+  });
+
+  test("names amounts with what they have, and yes-or-no goals alone", () => {
+    const { title, body } = progressDigestNotification(
+      digest(
+        goal("Proyectos", { target: 5, unit: "h", value: 2 }),
+        goal("Correr", { target: 3, unit: null, value: 1 }),
+        goal("Llamar a casa"),
+      ),
+    );
+
+    expect(title).toBe("Te quedan 3 objetivos");
+    expect(body).toBe("Proyectos 2 de 5 h · Correr 1 de 3 · Llamar a casa");
+  });
+
+  test("names three goals at most, and counts the rest", () => {
+    const { title, body } = progressDigestNotification(
+      digest(goal("A"), goal("B"), goal("C"), goal("D"), goal("E")),
+    );
+
+    expect(title).toBe("Te quedan 5 objetivos");
+    expect(body).toBe("A · B · C y 2 más");
+  });
+
+  test("shortens a long name, keeping its progress", () => {
+    const { body } = progressDigestNotification(
+      digest(
+        goal("Un objetivo con un nombre muy largo", {
+          target: 5,
+          unit: "h",
+          value: 1.5,
+        }),
+      ),
+    );
+
+    expect(body).toBe("Un objetivo con un nombr… 1,5 de 5 h");
+  });
 });
 
 describe("digestNotification", () => {
@@ -400,6 +573,16 @@ describe("syncNotifications", () => {
   test("cancels the pending digests that no longer warn (RF-37)", async () => {
     const { notifier, scheduled } = fakeNotifier([
       { id: "digest.2026-11-12.17:00", signature: null },
+    ]);
+
+    await syncNotifications(notifier, plan([]));
+
+    expect(scheduled.size).toBe(0);
+  });
+
+  test("cancels the progress digests that no longer warn (RF-49)", async () => {
+    const { notifier, scheduled } = fakeNotifier([
+      { id: "progress.2026-11-12.20:00", signature: null },
     ]);
 
     await syncNotifications(notifier, plan([]));
