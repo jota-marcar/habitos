@@ -215,3 +215,16 @@ export function addReminderTime(
   if (!result.ok) return result;
   return { ok: true, value: result.value.map((r) => r.time).sort() };
 }
+
+/**
+ * The form as it is saved: the time still open in the picker counts as chosen, so that what the
+ * user sees is what is saved (RF-22). If the habit already has that time, nothing changes.
+ */
+export function withPickedTime(
+  values: HabitFormValues,
+  picked: LocalTime | null,
+): HabitFormValues {
+  if (picked === null) return values;
+  const result = addReminderTime(values.reminderTimes, picked);
+  return result.ok ? { ...values, reminderTimes: result.value } : values;
+}

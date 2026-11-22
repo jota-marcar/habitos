@@ -545,6 +545,19 @@ describe("syncNotifications", () => {
     expect(log).toEqual([]);
   });
 
+  test("schedules again those whose instant moved with the time zone", async () => {
+    const { notifier, log } = fakeNotifier([
+      {
+        id: "reminder.a",
+        signature: signatureOf(planned("a"), new Date(0)),
+      },
+    ]);
+
+    await syncNotifications(notifier, plan([planned("a")]));
+
+    expect(log).toEqual(["schedule reminder.a"]);
+  });
+
   test("schedules again those that have changed", async () => {
     const { notifier, scheduled, log } = fakeNotifier([
       { id: "reminder.a", signature: signatureOf(planned("a", "08:00")) },

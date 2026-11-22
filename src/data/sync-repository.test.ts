@@ -96,7 +96,7 @@ describe("pendingRows", () => {
   test("returns the rows with changes, in the format of the cloud", async () => {
     await addHabit(db, habit("water", { color: "teal" }), version("water"));
 
-    expect(await pendingRows(db, "habits", "", 10)).toEqual([
+    expect(await pendingRows(db, "habits", false, "", 10)).toEqual([
       {
         id: "water",
         name: "water",
@@ -109,22 +109,27 @@ describe("pendingRows", () => {
     ]);
   });
 
-  test("includes deleted rows and leaves out those already uploaded", async () => {
+  test("gives the deleted rows apart and leaves out those already uploaded", async () => {
     await addHabit(db, habit("read"), version("read"));
     await addHabit(db, habit("water"), version("water"));
     await markSynced(db, "habits");
     await deleteHabit(db, "water");
+    await saveHabit(db, habit("run"));
 
-    const rows = await pendingRows(db, "habits", "", 10);
+    const removed = await pendingRows(db, "habits", true, "", 10);
+    const live = await pendingRows(db, "habits", false, "", 10);
 
-    expect(rows.map((row) => [row.id, row.deleted])).toEqual([["water", true]]);
+    expect(removed.map((row) => [row.id, row.deleted])).toEqual([
+      ["water", true],
+    ]);
+    expect(live.map((row) => [row.id, row.deleted])).toEqual([["run", false]]);
   });
 
   test("goes in pages of ids", async () => {
     for (const id of ["a", "b", "c"]) await saveHabit(db, habit(id));
 
-    const first = await pendingRows(db, "habits", "", 2);
-    const second = await pendingRows(db, "habits", "b", 2);
+    const first = await pendingRows(db, "habits", false, "", 2);
+    const second = await pendingRows(db, "habits", false, "b", 2);
 
     expect(first.map((row) => row.id)).toEqual(["a", "b"]);
     expect(second.map((row) => row.id)).toEqual(["c"]);
@@ -134,7 +139,7 @@ describe("pendingRows", () => {
 describe("markUploaded", () => {
   test("the row is no longer pending and keeps the time of the server", async () => {
     await saveHabit(db, habit("water"));
-    const [row] = await pendingRows(db, "habits", "", 10);
+    const [row] = await pendingRows(db, "habits", false, "", 10);
 
     await markUploaded(db, "habits", row, T1);
 
@@ -145,7 +150,7 @@ describe("markUploaded", () => {
 
   test("a row changed while it was uploading stays pending", async () => {
     await saveHabit(db, habit("water"));
-    const [row] = await pendingRows(db, "habits", "", 10);
+    const [row] = await pendingRows(db, "habits", false, "", 10);
     await saveHabit(db, habit("water", { name: "Drink water" }));
 
     await markUploaded(db, "habits", row, T1);
@@ -158,7 +163,7 @@ describe("markUploaded", () => {
 
   test("a row deleted while it was uploading stays pending", async () => {
     await addHabit(db, habit("water"), version("water"));
-    const [row] = await pendingRows(db, "habits", "", 10);
+    const [row] = await pendingRows(db, "habits", false, "", 10);
     await deleteHabit(db, "water");
 
     await markUploaded(db, "habits", row, T1);
@@ -215,7 +220,7 @@ describe("applyPulledRows", () => {
 
   test("a row uploaded from this device comes back without changing anything", async () => {
     await saveHabit(db, habit("water"));
-    const [row] = await pendingRows(db, "habits", "", 10);
+    const [row] = await pendingRows(db, "habits", false, "", 10);
     await markUploaded(db, "habits", row, T1);
 
     expect(await applyPulledRows(db, "habits", [cloudHabit("water")])).toBe(0);
@@ -353,7 +358,7 @@ describe("adoptSyncAccount", () => {
     expect(await adoptSyncAccount(db, "user-1")).toBe(false);
 
     expect(await readSyncAccount(db)).toBe("user-1");
-    expect(await pendingRows(db, "habits", "", 10)).toHaveLength(1);
+    expect(await pendingRows(db, "habits", false, "", 10)).toHaveLength(1);
   });
 
   test("the same account keeps its data", async () => {
@@ -362,7 +367,7 @@ describe("adoptSyncAccount", () => {
 
     expect(await adoptSyncAccount(db, "user-1")).toBe(false);
 
-    expect(await pendingRows(db, "habits", "", 10)).toHaveLength(1);
+    expect(await pendingRows(db, "habits", false, "", 10)).toHaveLength(1);
   });
 
   test("the data of another account are removed first", async () => {

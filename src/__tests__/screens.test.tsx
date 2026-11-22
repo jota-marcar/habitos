@@ -823,6 +823,32 @@ describe("new habit", () => {
     expect(await screen.findByText("Meditar")).toBeTruthy();
   });
 
+  test("saves the time of the picker left open (RF-22)", async () => {
+    await openForm();
+
+    await fireEvent.changeText(screen.getByLabelText("Nombre"), "Meditar");
+    await fireEvent.press(screen.getByText("Añadir recordatorio"));
+    await fireEvent.press(screen.getByTestId("reminder-picker"));
+    await save();
+
+    expect(await listReminders(db)).toEqual([
+      expect.objectContaining({ time: "08:30" }),
+    ]);
+  });
+
+  test("does not save the time of a discarded picker (RF-22)", async () => {
+    await openForm();
+
+    await fireEvent.changeText(screen.getByLabelText("Nombre"), "Meditar");
+    await fireEvent.press(screen.getByText("Añadir recordatorio"));
+    await fireEvent.press(screen.getByTestId("reminder-picker"));
+    await fireEvent.press(screen.getByText("Descartar"));
+    await save();
+
+    expect(await listHabits(db)).toHaveLength(1);
+    expect(await listReminders(db)).toEqual([]);
+  });
+
   test("gives the habit the color chosen last (RF-06)", async () => {
     await openForm();
 

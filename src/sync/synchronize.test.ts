@@ -7,7 +7,11 @@ import {
   listHabits,
   saveHabit,
 } from "@/data/habits-repository";
-import { listReminders } from "@/data/reminders-repository";
+import {
+  addReminder,
+  deleteReminder,
+  listReminders,
+} from "@/data/reminders-repository";
 import { SYNC_TABLES, adoptSyncAccount } from "@/data/sync-repository";
 import {
   habit,
@@ -156,6 +160,30 @@ describe("synchronize weekly goals", () => {
 });
 
 describe("synchronize", () => {
+  test.each([
+    ["before", "a-new"],
+    ["after", "z-new"],
+  ])(
+    "uploads a reminder set again at the same time, with its id %s the old one",
+    async (_order, added) => {
+      const time = localTime("08:00");
+      await addHabit(phone, habit("water"), version("water"), [
+        { id: "m-old", habitId: "water", time },
+      ]);
+      await synchronize(phone, remote, USER);
+      await synchronize(tablet, remote, USER);
+
+      await deleteReminder(phone, "m-old");
+      await addReminder(phone, { id: added, habitId: "water", time });
+      await synchronize(phone, remote, USER);
+      await synchronize(tablet, remote, USER);
+
+      expect(await listReminders(tablet)).toEqual([
+        { id: added, habitId: "water", time },
+      ]);
+    },
+  );
+
   test("uploads every local row on the first synchronization (RF-38)", async () => {
     await addFullHabit(phone, "water");
 

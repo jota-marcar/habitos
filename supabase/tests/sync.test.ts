@@ -17,7 +17,11 @@ import {
   listHabits,
   saveHabit,
 } from "@/data/habits-repository";
-import { listReminders } from "@/data/reminders-repository";
+import {
+  addReminder,
+  deleteReminder,
+  listReminders,
+} from "@/data/reminders-repository";
 import {
   habit,
   openMigratedDatabase,
@@ -230,6 +234,29 @@ test("the account rejects a second live row with the same natural key", async ()
 
   await expect(clash).rejects.toBeInstanceOf(RemoteError);
   await expect(clash).rejects.toMatchObject({ code: "23505" });
+});
+
+test("a reminder removed and added again at the same time reaches the other device", async () => {
+  const habitId = id();
+  // Rows are uploaded in order of id: the new one comes before the one it replaces.
+  const removed = `f${id().slice(1)}`;
+  const added = `0${id().slice(1)}`;
+  const time = localTime("08:00");
+  await addHabit(phone.db, habit(habitId), version(habitId, { id: id() }), [
+    { id: removed, habitId, time },
+  ]);
+  await sync(phone);
+  await sync(tablet);
+
+  // Both changes wait for the connection.
+  await deleteReminder(phone.db, removed);
+  await addReminder(phone.db, { id: added, habitId, time });
+  await sync(phone);
+  await sync(tablet);
+
+  expect(await listReminders(tablet.db)).toEqual([
+    { id: added, habitId, time },
+  ]);
 });
 
 test("another account sees nothing", async () => {
