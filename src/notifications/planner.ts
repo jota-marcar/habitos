@@ -7,10 +7,19 @@ import type { Database } from "@/data/database";
 import { listEntries } from "@/data/entries-repository";
 import { listHabitVersions, listHabits } from "@/data/habits-repository";
 import { listReminders } from "@/data/reminders-repository";
+import {
+  listWeeklyGoalEntries,
+  listWeeklyGoalVersions,
+  listWeeklyGoals,
+} from "@/data/weekly-goals-repository";
 import { localDate, localDateOf, type LocalDate } from "@/domain/dates";
 import { habitsForDay, type DayHabit } from "@/domain/day";
 import { upcomingPendingDigests, type PendingDigest } from "@/domain/digests";
 import type { Habit } from "@/domain/habits";
+import {
+  upcomingProgressDigests,
+  type ProgressDigest,
+} from "@/domain/progress-digests";
 import {
   MAX_UPCOMING_REMINDERS,
   SNOOZE_MINUTES,
@@ -20,7 +29,10 @@ import {
   type UpcomingReminder,
 } from "@/domain/reminders";
 import { localTimeOf, type LocalDateTime } from "@/domain/times";
+import type { WeekGoal } from "@/domain/weekly-goals";
+import { weekOf } from "@/domain/weeks";
 import { formatAmount } from "@/ui/format";
+import type { Horizon } from "@/ui/horizons";
 
 import type {
   NotificationButton,
@@ -35,8 +47,19 @@ export const REMINDER_PREFIX = "reminder.";
 /** Every pending digest of the window has an identifier that starts like this (RF-37). */
 export const DIGEST_PREFIX = "digest.";
 
+/** Every progress digest of the window has an identifier that starts like this (RF-49). */
+export const PROGRESS_PREFIX = "progress.";
+
 /** Every snoozed notification has an identifier that starts like this. */
 export const SNOOZE_PREFIX = "snooze.";
+
+// The notifications the window owns: the snoozed ones are handled apart.
+const WINDOW_PREFIXES = [REMINDER_PREFIX, DIGEST_PREFIX, PROGRESS_PREFIX];
+
+/** The page that tapping a notification opens: its own horizon (RF-26, RF-37, RF-49). */
+export function horizonOfNotification(id: string): Horizon {
+  return id.startsWith(PROGRESS_PREFIX) ? "weekly" : "habits";
+}
 
 /** The buttons of the reminders (RF-25). */
 export const BUTTONS = { done: "done", add: "add", snooze: "snooze" } as const;
@@ -184,6 +207,32 @@ export function digestNotification(digest: PendingDigest): PlannedNotification {
   };
 }
 
+/** A goal in a progress digest: its name and, if it has an amount, how it is going (RF-49). */
+function goalProgress({ goal, version, value }: WeekGoal): string {
+  const name = shortened(goal.name);
+  if (goal.type !== "quantitative") return name;
+  const target = formatAmount(version.target ?? 0);
+  return `${name} ${formatAmount(value)} de ${target} ${version.unit ?? ""}`.trim();
+}
+
+/** The notification of a progress digest: how many goals are left, and how they go (RF-49). */
+export function progressDigestNotification(
+  digest: ProgressDigest,
+): PlannedNotification {
+  const { date, time, goals } = digest;
+  const count = goals.length;
+  const shown = goals.slice(0, DIGEST_NAMES).map(goalProgress).join(" · ");
+  const rest = count - DIGEST_NAMES;
+  return {
+    id: `${PROGRESS_PREFIX}${date}.${time}`,
+    at: { date, time },
+    title: count === 1 ? "Te queda 1 objetivo" : `Te quedan ${count} objetivos`,
+    body: rest > 0 ? `${shown} y ${rest} más` : shown,
+    habitId: null,
+    category: null,
+  };
+}
+
 /**
  * The window of notifications (ADR-0005): the reminders and the digests together, soonest
  * first and as many as fit. At the same minute, reminders go first.
@@ -225,7 +274,7 @@ export function signatureOf(notification: PlannedNotification): string {
 
 /** What the device has to have scheduled now. */
 export interface ReminderPlan {
-  /** The reminders and pending digests of the window, soonest first (ADR-0005, RF-37). */
+  /** The reminders and digests of the window, soonest first (ADR-0005, RF-37, RF-49). */
   readonly notifications: readonly PlannedNotification[];
   /** The categories those reminders use. */
   readonly categories: readonly NotificationCategory[];
@@ -241,15 +290,31 @@ export async function planReminders(
   now: LocalDateTime,
   gestureHint: GestureHint = NO_GESTURE_HINT,
 ): Promise<ReminderPlan> {
-  const [habits, versions, entries, reminders] = await Promise.all([
+  const [
+    habits,
+    versions,
+    entries,
+    reminders,
+    goals,
+    goalVersions,
+    goalEntries,
+  ] = await Promise.all([
     listHabits(db),
     listHabitVersions(db),
     listEntries(db, now.date, LAST_DATE),
     listReminders(db),
+    listWeeklyGoals(db),
+    listWeeklyGoalVersions(db),
+    // Future weeks cannot be recorded (RF-47), so the current one is all there is to read.
+    listWeeklyGoalEntries(db, weekOf(now.date).start),
   ]);
   const data = { habits, versions, entries, reminders };
   const upcoming = upcomingReminders(data, now);
   const digests = upcomingPendingDigests(data, now);
+  const progressDigests = upcomingProgressDigests(
+    { goals, versions: goalVersions, entries: goalEntries },
+    now,
+  );
 
   const categories = new Map<string, NotificationCategory>();
   for (const { dayHabit } of upcoming) {
@@ -269,7 +334,10 @@ export async function planReminders(
   return {
     notifications: windowOf(
       upcoming.map((reminder) => notificationOf(reminder, hint)),
-      digests.map(digestNotification),
+      [
+        ...digests.map(digestNotification),
+        ...progressDigests.map(progressDigestNotification),
+      ],
     ),
     categories: [...categories.values()],
     today: now.date,
@@ -320,9 +388,7 @@ export async function syncNotifications(
   const kept = new Set<string>();
   for (const notification of scheduled) {
     const { id } = notification;
-    if (!id.startsWith(REMINDER_PREFIX) && !id.startsWith(DIGEST_PREFIX)) {
-      continue;
-    }
+    if (!WINDOW_PREFIXES.some((prefix) => id.startsWith(prefix))) continue;
     if (wanted.get(id) === notification.signature) {
       kept.add(id);
     } else if (!wanted.has(id)) {

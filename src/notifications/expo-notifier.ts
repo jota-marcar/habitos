@@ -6,8 +6,9 @@ import { IosAuthorizationStatus } from "expo-notifications";
 
 import { parseLocalDate } from "@/domain/dates";
 import { parseLocalTime } from "@/domain/times";
+import type { Horizon } from "@/ui/horizons";
 
-import { instantOf } from "./planner";
+import { horizonOfNotification, instantOf } from "./planner";
 import type {
   Notifier,
   PlannedNotification,
@@ -34,8 +35,21 @@ function signatureIn(data: Record<string, unknown> | undefined): string | null {
 }
 
 /**
- * The reminder that was answered, or null if the response is about something else. A pending
- * digest has no habit, so tapping it only opens the app on the current day (RF-37).
+ * The page to show because the notification itself was tapped, or null if it was one of its
+ * buttons, which act without opening the app (RF-25, RF-26, RF-37, RF-49).
+ */
+export function tappedHorizon(
+  response: Notifications.NotificationResponse,
+): Horizon | null {
+  if (response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) {
+    return null;
+  }
+  return horizonOfNotification(response.notification.request.identifier);
+}
+
+/**
+ * The reminder that was answered, or null if the response is about something else. A digest
+ * has no habit, so tapping it only opens the app on its page (RF-37, RF-49).
  */
 export function reminderResponseOf(
   response: Notifications.NotificationResponse,

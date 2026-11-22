@@ -56,6 +56,8 @@ import { localTime } from "@/domain/times";
 import type { WeeklyGoal, WeeklyGoalVersion } from "@/domain/weekly-goals";
 import { AppStack, STACK_SETTINGS } from "@/ui/app-stack";
 import { DatabaseContext } from "@/ui/database";
+import { requestHorizon } from "@/ui/horizon-request";
+import type { Horizon } from "@/ui/horizons";
 import { SessionContext } from "@/ui/session";
 import { SETTLE_DELAY_MS } from "@/ui/use-day";
 
@@ -1583,6 +1585,64 @@ describe("horizons (RF-33, RF-40, RF-41)", () => {
     await scrollPager(0);
     expect(await screen.findByText("Hoy")).toBeTruthy();
   });
+
+  describe("tapping a notification (RF-26, RF-37, RF-49)", () => {
+    const tap = (horizon: Horizon) => act(async () => requestHorizon(horizon));
+
+    test("a progress digest opens this week, from the habits of another day", async () => {
+      await renderApp();
+      await screen.findByText("Todavía no tienes hábitos.");
+      await openCalendar();
+      await fireEvent.press(screen.getByLabelText("4 de noviembre de 2026"));
+      await screen.findByText("Miércoles, 4 nov");
+      // The ScrollView of the tests is a class whose methods are mocks.
+      const { prototype } = ScrollView as unknown as {
+        prototype: { scrollTo: () => void };
+      };
+      const scrollTo = jest.spyOn(prototype, "scrollTo");
+      scrollTo.mockClear();
+
+      await tap("weekly");
+
+      expect(await screen.findByText("Esta semana")).toBeTruthy();
+      expect(screen.getByText("9–15 nov")).toBeTruthy();
+      expect(scrollTo).toHaveBeenCalledWith({
+        x: PAGE_WIDTH,
+        animated: false,
+      });
+    });
+
+    test("a reminder goes back to today's habits, from the weekly page", async () => {
+      await renderApp();
+      await screen.findByText("Todavía no tienes hábitos.");
+      await showWeek();
+
+      await tap("habits");
+
+      expect(await screen.findByText("Hoy")).toBeTruthy();
+      expect(screen.queryByText("Esta semana")).toBeNull();
+    });
+
+    test("a notification that starts the app opens its page", async () => {
+      requestHorizon("weekly");
+
+      await renderApp();
+
+      expect(await screen.findByText("Esta semana")).toBeTruthy();
+      expect(screen.queryByText("Hoy")).toBeNull();
+    });
+
+    test("a form that is open stays on top, with what was typed", async () => {
+      await renderApp("/habits/new");
+      const name = await screen.findByLabelText("Nombre");
+      await fireEvent.changeText(name, "Meditar");
+
+      await tap("weekly");
+
+      expect(screen).toHavePathname("/habits/new");
+      expect(screen.getByLabelText("Nombre").props.value).toBe("Meditar");
+    });
+  });
 });
 
 describe("weekly goals (RF-42 to RF-50)", () => {
@@ -1669,6 +1729,47 @@ describe("weekly goals (RF-42 to RF-50)", () => {
     const gap = items.findIndex((i) => i.props.testID === "week-goals-gap");
     return items.slice(gap + 1).map((i) => i.props.accessibilityLabel);
   }
+
+  test("saving a goal schedules its progress digests (RF-49)", async () => {
+    await renderWeek();
+    await screen.findByText("Todavía no tienes objetivos semanales.");
+
+    await openNewGoal("Correr");
+    await save();
+
+    await waitFor(() =>
+      expect(mockScheduled.get("progress.2026-11-12.20:00")).toMatchObject({
+        title: "Te queda 1 objetivo",
+        body: "Correr",
+      }),
+    );
+  });
+
+  test("recording a goal updates what its progress digest says (RF-49)", async () => {
+    await addHours();
+    await renderWeek();
+
+    await fireEvent.press(await screen.findByTestId("goal-projects"));
+
+    await waitFor(() =>
+      expect(mockScheduled.get("progress.2026-11-12.20:00")).toMatchObject({
+        body: "Proyectos 1 de 5 h",
+      }),
+    );
+  });
+
+  test("achieving the last goal cancels this week's progress digests (RF-49)", async () => {
+    await addHours(1);
+    await renderWeek();
+
+    await fireEvent.press(await screen.findByTestId("goal-projects"));
+
+    await waitFor(() =>
+      expect(mockScheduled.has("progress.2026-11-19.20:00")).toBe(true),
+    );
+    expect(mockScheduled.has("progress.2026-11-12.20:00")).toBe(false);
+    expect(mockScheduled.has("progress.2026-11-15.11:00")).toBe(false);
+  });
 
   test("creates a recurring goal from the menu of the week, and a tap marks it", async () => {
     await renderWeek();

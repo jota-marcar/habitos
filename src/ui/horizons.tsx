@@ -1,7 +1,12 @@
 // The carousel of the main screen, with a page per horizon (RF-33, ADR-0021). Only the box
 // slides: the title stays in its place, fading into the title of the next page along the way.
 
-import { useCallback, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useState,
+  type ComponentRef,
+  type ReactNode,
+} from "react";
 import {
   Pressable,
   StyleSheet,
@@ -10,6 +15,7 @@ import {
   useWindowDimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  type ScrollView as NativeScrollView,
 } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import Animated, {
@@ -18,6 +24,7 @@ import Animated, {
   type SharedValue,
 } from "react-native-reanimated";
 
+import { requestedHorizon } from "./horizon-request";
 import { fontSize, radius, spacing, useColors } from "./theme";
 
 /** The pages of the main screen, in the order they are swiped through. */
@@ -33,11 +40,26 @@ export interface HorizonsState {
   readonly position: SharedValue<number>;
   /** Follows the scroll of the carousel, whose pages are `width` wide. */
   readonly onOffset: (offset: number, width: number) => void;
+  /** The page it starts on: the one of the notification that opened the app, if any. */
+  readonly firstPage: number;
+  /** Receives the carousel, for `show` to move it. */
+  readonly attachPager: (pager: PagerView | null) => void;
+  /** Whether the carousel is there for `show` to move it. */
+  readonly ready: boolean;
+  /** Goes straight to a page, without sliding through the others. */
+  readonly show: (horizon: Horizon) => void;
 }
 
+type PagerView = ComponentRef<typeof NativeScrollView>;
+
 export function useHorizons(): HorizonsState {
-  const position = useSharedValue(0);
-  const [page, setPage] = useState(0);
+  const { width } = useWindowDimensions();
+  const [firstPage] = useState(() =>
+    HORIZONS.indexOf(requestedHorizon() ?? HORIZONS[0]),
+  );
+  const position = useSharedValue(firstPage);
+  const [page, setPage] = useState(firstPage);
+  const [pager, attachPager] = useState<PagerView | null>(null);
 
   const onOffset = useCallback(
     (offset: number, width: number) => {
@@ -49,7 +71,25 @@ export function useHorizons(): HorizonsState {
     [position],
   );
 
-  return { horizon: HORIZONS[page], position, onOffset };
+  const show = useCallback(
+    (horizon: Horizon) => {
+      const index = HORIZONS.indexOf(horizon);
+      position.set(index);
+      setPage(index);
+      pager?.scrollTo({ x: index * width, animated: false });
+    },
+    [pager, position, width],
+  );
+
+  return {
+    horizon: HORIZONS[page],
+    position,
+    onOffset,
+    firstPage,
+    attachPager,
+    ready: pager !== null,
+    show,
+  };
 }
 
 export interface HorizonTitle {
@@ -141,12 +181,15 @@ export function HorizonPager({
 }) {
   const colors = useColors();
   const { width } = useWindowDimensions();
+  const { attachPager, firstPage } = horizons;
   const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) =>
     horizons.onOffset(event.nativeEvent.contentOffset.x, width);
 
   return (
     <ScrollView
+      ref={attachPager}
       testID="horizon-pager"
+      contentOffset={{ x: firstPage * width, y: 0 }}
       horizontal
       pagingEnabled
       // A drag goes either sideways or along the list of the page, never both at once.

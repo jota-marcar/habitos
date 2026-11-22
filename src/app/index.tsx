@@ -24,9 +24,11 @@ import type { DayHabit } from "@/domain/day";
 import type { WeekGoal } from "@/domain/weekly-goals";
 import { isInWeek, weekOf } from "@/domain/weeks";
 import { CalendarSheet } from "@/ui/calendar-sheet";
+import { today as currentDay } from "@/ui/clock";
 import { formatDayTitle, formatWeekRange } from "@/ui/format";
 import { HabitOptionsSheet } from "@/ui/habit-options-sheet";
 import { playOptionsOpened } from "@/ui/haptics";
+import { listenToHorizonRequests } from "@/ui/horizon-request";
 import {
   HorizonPager,
   HorizonTitles,
@@ -130,6 +132,19 @@ export default function Today() {
   const isThisWeek = isInWeek(today, week);
   const weekRange = formatWeekRange(week, today);
   const weekPage = useWeek(week.start);
+
+  // Tapping a notification opens its page on the current day and week (RF-26, RF-37, RF-49). A
+  // form that is open stays on top, with what was typed in it. Until the carousel is there, a
+  // request waits, because it could not be moved.
+  const { ready: pagerReady, show: showHorizon } = horizons;
+  const { select: selectDay } = day;
+  useEffect(() => {
+    if (!pagerReady) return;
+    return listenToHorizonRequests((horizon) => {
+      showHorizon(horizon);
+      selectDay(currentDay());
+    });
+  }, [pagerReady, showHorizon, selectDay]);
 
   const calendar = useSheet("top");
   const openCalendarFromDate = useOpenSheetGesture(calendar, "day-date");
