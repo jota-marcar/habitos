@@ -339,6 +339,28 @@ test("from a worktree, restacks a free branch and goes back to its own", () => {
   );
 });
 
+test("from a detached worktree, restacks a free branch and stays detached", () => {
+  const mergedTip = mergeBranchWithSquash();
+  setPullRequest("MERGED", mergedTip);
+  git("switch", "--quiet", "main");
+  git("branch", "fix/stacked", mergedTip);
+  const stackedTree = path.join(root, "stacked-tree");
+  git("worktree", "add", "--quiet", stackedTree, "fix/stacked");
+  commit("stacked.txt", "stacked\n", "work on top", stackedTree);
+  git("worktree", "remove", stackedTree);
+  const worktree = path.join(root, "detached-tree");
+  git("worktree", "add", "--quiet", "--detach", worktree, "main");
+  const start = gitIn(worktree, "rev-parse", "HEAD");
+
+  runSync(worktree);
+
+  expect(git("rev-parse", "fix/stacked~1")).toBe(
+    git("rev-parse", "origin/main"),
+  );
+  expect(gitIn(worktree, "rev-parse", "--abbrev-ref", "HEAD")).toBe("HEAD");
+  expect(gitIn(worktree, "rev-parse", "HEAD")).toBe(start);
+});
+
 test("from a worktree, deletes a merged branch that no worktree holds", () => {
   setPullRequest("MERGED", mergeBranchWithSquash());
   git("switch", "--quiet", "main");
