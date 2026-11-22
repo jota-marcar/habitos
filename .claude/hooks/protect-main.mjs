@@ -47,9 +47,22 @@ function gitSubcommand(segment) {
   return { name: tokens[j], args: tokens.slice(j + 1) };
 }
 
-function pushesToProtectedBranch(args) {
-  const refspec = new RegExp(`(^|[:+])${PROTECTED_BRANCH}$`);
-  return args.some((a) => !a.startsWith("-") && refspec.test(a));
+// The branch a refspec pushes to: `main`, `HEAD`, `+HEAD:main`, `x:refs/heads/main`, `:main`…
+function destinationOf(refspec, cwd) {
+  const spec = refspec.replace(/^\+/, "");
+  const destination = spec.slice(spec.indexOf(":") + 1);
+  const branch = destination.replace(/^refs\/heads\//, "");
+  return branch === "HEAD" ? currentBranch(cwd) : branch;
+}
+
+function pushesToProtectedBranch(args, cwd) {
+  if (args.some((a) => ["--all", "--branches", "--mirror"].includes(a))) {
+    return true;
+  }
+  // The first argument that is not an option is the remote.
+  const [, ...refspecs] = args.filter((a) => !a.startsWith("-"));
+  if (refspecs.length === 0) return currentBranch(cwd) === PROTECTED_BRANCH;
+  return refspecs.some((r) => destinationOf(r, cwd) === PROTECTED_BRANCH);
 }
 
 function block(reason) {
@@ -74,14 +87,8 @@ for (const segment of segments(command)) {
     block(`Blocked: no direct commits on ${PROTECTED_BRANCH}.`);
   }
 
-  if (git.name === "push") {
-    const noRefspec = git.args.filter((a) => !a.startsWith("-")).length <= 1;
-    if (
-      pushesToProtectedBranch(git.args) ||
-      (noRefspec && currentBranch(cwd) === PROTECTED_BRANCH)
-    ) {
-      block(`Blocked: no direct pushes to ${PROTECTED_BRANCH}.`);
-    }
+  if (git.name === "push" && pushesToProtectedBranch(git.args, cwd)) {
+    block(`Blocked: no direct pushes to ${PROTECTED_BRANCH}.`);
   }
 }
 

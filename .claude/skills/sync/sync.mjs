@@ -10,6 +10,8 @@ import { existsSync } from "node:fs";
 
 const BASE = "main";
 const GH_WINDOWS = "C:/Program Files/GitHub CLI/gh.exe";
+// A Node script that answers for GitHub in the tests (src/__tests__/sync-script.test.js).
+const GH_STUB = process.env.SYNC_GH_STUB;
 
 function run(command, args) {
   return execFileSync(command, args, {
@@ -59,32 +61,40 @@ if (before === after) {
 }
 
 // A squash merge leaves no trace in git that the branch was merged, so GitHub is asked.
-const gh = ghPath();
+const gh = GH_STUB ?? ghPath();
+const runGh = (args) =>
+  GH_STUB ? run(process.execPath, [GH_STUB, ...args]) : run(gh, args);
 const branches = git("branch", "--format=%(refname:short)")
   .split("\n")
   .filter((branch) => branch && branch !== BASE);
 
-const prState = (branch) =>
-  gh
-    ? attempt(() =>
-        run(gh, [
-          "pr",
-          "list",
-          "--head",
-          branch,
-          "--state",
-          "all",
-          "--json",
-          "state",
-          "--jq",
-          ".[0].state",
-        ]),
-      )
-    : null;
+// The latest Pull Request of a branch, with its state and the commit it ended on.
+const pullRequest = (branch) => {
+  if (!gh) return null;
+  const output = attempt(() =>
+    runGh([
+      "pr",
+      "list",
+      "--head",
+      branch,
+      "--state",
+      "all",
+      "--json",
+      "state,headRefOid",
+    ]),
+  );
+  return output === null ? null : (JSON.parse(output)[0] ?? null);
+};
 
 const isAncestor = (commit, branch) =>
   attempt(() => git("merge-base", "--is-ancestor", commit, branch)) !== null;
 const countCommits = (range) => Number(git("rev-list", "--count", range));
+
+// Whether every commit of the branch is in its Pull Request, so deleting it loses nothing.
+const isInPullRequest = (branch, pr) => {
+  const tip = git("rev-parse", branch);
+  return tip === pr.headRefOid || isAncestor(tip, pr.headRefOid);
+};
 
 // Restack. A branch created on top of another one carries that branch's
 // commits. After a squash merge, main holds the same code in a different
@@ -96,7 +106,7 @@ const restackProblems = [];
 const mergedTips = gh
   ? (
       attempt(() =>
-        run(gh, [
+        runGh([
           "pr",
           "list",
           "--state",
@@ -121,7 +131,7 @@ const moves = new Map(mergedTips.map((tip) => [tip, `origin/${BASE}`]));
 // Stacked branches have more history than the branch below them, so sorting by
 // history length restacks the lower branch first.
 const candidates = branches
-  .filter((branch) => prState(branch) !== "MERGED")
+  .filter((branch) => pullRequest(branch)?.state !== "MERGED")
   .sort((a, b) => countCommits(a) - countCommits(b));
 
 for (const branch of candidates) {
@@ -190,19 +200,22 @@ if (git("rev-parse", "--abbrev-ref", "HEAD") !== BASE) {
 const deleted = [];
 const kept = [];
 for (const branch of branches) {
-  const state = prState(branch);
+  const pr = pullRequest(branch);
+  const merged = pr?.state === "MERGED";
   const pushed = attempt(() => git("rev-parse", `origin/${branch}`)) !== null;
+  const safe = merged && isInPullRequest(branch, pr);
 
-  if (state === "MERGED" && !pushed) {
+  if (safe && !pushed) {
     git("branch", "-D", branch);
     deleted.push(branch);
   } else {
-    const reason =
-      state === "MERGED"
+    const reason = !merged
+      ? pr
+        ? `its Pull Request is ${pr.state}`
+        : "no Pull Request found"
+      : safe
         ? "merged, but the remote branch still exists"
-        : state
-          ? `its Pull Request is ${state}`
-          : "no Pull Request found";
+        : "merged, but it has commits that are not in its Pull Request";
     kept.push(`${branch} (${reason})`);
   }
 }

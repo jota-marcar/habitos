@@ -55,12 +55,13 @@ Cada persona puede añadir sus propias preferencias en `.claude/settings.local.j
 [.claude/hooks/protect-main.mjs](../.claude/hooks/protect-main.mjs), en el evento `PreToolUse` de las herramientas Bash y PowerShell.
 
 - Bloquea `git commit` cuando la rama actual es `main`.
-- Bloquea `git push` hacia `main`, ya sea explícito (`git push origin main`, `HEAD:main`) o implícito (push sin rama estando en `main`).
+- Bloquea `git push` hacia `main`: explícito (`git push origin main`, `HEAD:main`, `HEAD:refs/heads/main`), a través de `HEAD` estando en `main`, implícito (push sin rama estando en `main`) o con `--all` y `--mirror`.
 - Al bloquear, explica a Claude el motivo y le indica que cree una rama.
+- Lo prueba [protect-main-hook.test.js](../src/__tests__/protect-main-hook.test.js), que lo ejecuta sobre un repositorio desechable.
 
 Complementa la protección de `main` en GitHub: el servidor lo impediría igualmente, pero el hook lo detecta antes.
 
-**Limitaciones conocidas:** comprueba la rama del directorio de trabajo de la sesión, así que no detecta un `cd otro-repo && git commit`. Si Node no está disponible, el hook falla sin bloquear.
+**Limitaciones conocidas:** comprueba la rama del directorio de trabajo de la sesión, así que no detecta un `cd otro-repo && git commit`. Tampoco ve un git dentro de `$(...)` o de `bash -c "..."`, y un texto como `echo git commit` en `main` lo toma por un commit. Si Node no está disponible, el hook falla sin bloquear.
 
 **Requisito:** Node.js en el `PATH`.
 
@@ -119,9 +120,9 @@ Los detalles están en [CONTRIBUTING.md](../CONTRIBUTING.md#8-integración-conti
 
 [.claude/skills/sync/](../.claude/skills/sync/SKILL.md). Pone al día el repositorio local después de un merge.
 
-- El script [sync.mjs](../.claude/skills/sync/sync.mjs) actualiza `main` y borra las ramas locales cuyo Pull Request está fusionado y cuya rama remota ya no existe. Pregunta a GitHub porque un squash merge no deja rastro en git.
+- El script [sync.mjs](../.claude/skills/sync/sync.mjs) actualiza `main` y borra las ramas locales cuyo Pull Request está fusionado, cuya rama remota ya no existe y que no tienen commits fuera de ese PR. Pregunta a GitHub porque un squash merge no deja rastro en git. Lo prueba [sync-script.test.js](../src/__tests__/sync-script.test.js), que lo ejecuta sobre repositorios desechables con GitHub simulado.
 - Pone al día las ramas apiladas sobre un PR recién fusionado con `git rebase --onto`, pasa `npm run verify` y las sube con `--force-with-lease`. Un `git merge origin/main` daba conflictos casi siempre: con squash merge, `main` tiene el código del PR de abajo en un commit nuevo y git ve dos versiones de las mismas líneas. Nació de la regla de tres tras los conflictos de los PR 27, 28 y 32.
-- No hace nada si hay cambios sin commit, no fuerza ramas con conflictos ni con `verify` en rojo, y no borra ramas con el PR abierto o sin PR.
+- No hace nada si hay cambios sin commit, no fuerza ramas con conflictos ni con `verify` en rojo, y no borra ramas con el PR abierto, sin PR o con trabajo que no llegó al PR.
 - Se invoca con `/sync` o cuando el usuario dice que ha hecho un merge.
 
 ### Subagentes integrados
