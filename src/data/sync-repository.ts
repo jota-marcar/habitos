@@ -130,12 +130,14 @@ function localValue(row: CloudRow, column: string): SqlValue {
 }
 
 /**
- * The rows of `table` with changes to upload, in order of id, starting after `afterId`, at
- * most `limit`. Deleted rows too: the deletion has to reach the account.
+ * The rows of `table` with changes to upload, deleted or live as `deleted` says, in order of id,
+ * starting after `afterId`, at most `limit`. They are asked for apart because the deleted ones
+ * have to reach the account first (see `synchronize`).
  */
 export async function pendingRows(
   db: Database,
   table: SyncTable,
+  deleted: boolean,
   afterId: string,
   limit: number,
 ): Promise<CloudRow[]> {
@@ -143,10 +145,10 @@ export async function pendingRows(
   const rows = await db.all<Record<string, SqlValue>>(
     `SELECT ${columns.join(", ")}
        FROM ${table}
-      WHERE pending_sync = 1 AND id > ?
+      WHERE pending_sync = 1 AND deleted = ? AND id > ?
       ORDER BY id
       LIMIT ?`,
-    [afterId, limit],
+    [deleted ? 1 : 0, afterId, limit],
   );
   return rows.map(
     (row) =>

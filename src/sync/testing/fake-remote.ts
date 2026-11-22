@@ -3,7 +3,8 @@
 // - The server assigns updated_at, and every row of one upload shares it, like the rows of
 //   one transaction (ADR-0016).
 // - An upload is all or nothing.
-// - The children need their parent, and the natural keys are unique among live rows.
+// - The children need their parent, and the natural keys are unique among live rows, row by row
+//   in the order of the upload.
 
 import type {
   CloudRow,
@@ -96,8 +97,9 @@ export class FakeRemote implements Remote {
     const next = new Map(this.rows[table]);
     for (const row of rows) {
       next.set(row.id, { ...row, updated_at: updatedAt });
+      // Like Postgres, each row is checked as it is written, not the upload as a whole.
+      this.check(table, next);
     }
-    this.check(table, next);
     this.rows[table] = next;
     return rows.map((row) => ({ id: row.id, updated_at: updatedAt }));
   }

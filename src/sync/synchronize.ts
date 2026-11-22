@@ -69,16 +69,31 @@ async function pull(
   }
 }
 
-/** Uploads the local changes of `table`. */
+/**
+ * Uploads the local changes of `table`, the deleted rows first. The account checks its unique
+ * keys row by row: a reminder removed and set again at the same time would clash with the old
+ * one if it arrived before its deletion, and that upload would fail on every retry.
+ */
 async function push(
   db: Database,
   remote: Remote,
   table: SyncTable,
   pageSize: number,
 ): Promise<void> {
+  await pushRows(db, remote, table, true, pageSize);
+  await pushRows(db, remote, table, false, pageSize);
+}
+
+async function pushRows(
+  db: Database,
+  remote: Remote,
+  table: SyncTable,
+  deleted: boolean,
+  pageSize: number,
+): Promise<void> {
   let afterId = "";
   for (;;) {
-    const rows = await pendingRows(db, table, afterId, pageSize);
+    const rows = await pendingRows(db, table, deleted, afterId, pageSize);
     if (rows.length === 0) return;
     const uploaded = await remote.push(table, rows);
     const updatedAt = new Map(uploaded.map((row) => [row.id, row.updated_at]));
