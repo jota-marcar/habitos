@@ -36,6 +36,7 @@ import {
   HORIZONTAL_FAIL_DISTANCE,
   SPRING,
   settlesOpen,
+  sheetOpacity,
   visibleHeight,
 } from "./sheet-motion";
 import { fontSize, radius, spacing, topGap, useColors } from "./theme";
@@ -196,7 +197,10 @@ export function Sheet({
     const h = height.get();
     // Until it is measured, a closed sheet stays out of sight beyond its edge.
     const hidden = (h > 0 ? h : 10_000) - visible.get();
-    return { transform: [{ translateY: atBottom ? hidden : -hidden }] };
+    return {
+      opacity: sheetOpacity(visible.get()),
+      transform: [{ translateY: atBottom ? hidden : -hidden }],
+    };
   });
 
   const grabber = (

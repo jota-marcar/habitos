@@ -61,6 +61,16 @@ export function visibleHeight(raw: number, height: number): number {
 }
 
 /**
+ * The opacity of a sheet that shows `visible` points of itself. A closed sheet is not drawn at
+ * all: it waits out of sight by its measured height, which arrives some frames after its
+ * content changes, and until then a sheet that has grown would peek in from its edge.
+ */
+export function sheetOpacity(visible: number): number {
+  "worklet";
+  return visible > 0 ? 1 : 0;
+}
+
+/**
  * How many months the calendar moves when a sideways drag is let go: 1 to the next month, -1
  * to the previous one, 0 to stay (RF-18). Dragging to the left, a negative `travel`, brings
  * the next month. As in the sheets, a fast flick wins; otherwise the drag must have covered
