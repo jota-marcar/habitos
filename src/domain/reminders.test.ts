@@ -2,9 +2,11 @@ import { localDate } from "./dates";
 import type { Entry } from "./entries";
 import type { Habit, HabitVersion } from "./habits";
 import {
+  FINAL_NOTICE_TIME,
   MAX_UPCOMING_REMINDERS,
   SNOOZE_MINUTES,
   addReminder,
+  finalNoticeMoment,
   removeReminder,
   showsGestureHint,
   snoozedTime,
@@ -370,5 +372,79 @@ describe("upcomingReminders", () => {
 
   test("a limit of zero gives nothing", () => {
     expect(upcomingReminders(base, at(MONDAY, "07:00"), 0)).toEqual([]);
+  });
+
+  test("reaches a habit that starts more than a week from now", () => {
+    const starts = localDate("2026-12-01");
+    const data = {
+      habits: [habit("read", { createdOn: starts })],
+      versions: [version("read", { effectiveFrom: starts })],
+      entries: [],
+      reminders: [reminder("read", "09:00")],
+    };
+
+    const upcoming = upcomingReminders(data, at(MONDAY, "07:00"), 2);
+
+    expect(summary(upcoming)).toEqual([
+      "2026-12-01 09:00 read",
+      "2026-12-02 09:00 read",
+    ]);
+  });
+
+  test("reaches it past a habit without reminders, and past an earlier start", () => {
+    const first = localDate("2026-11-25");
+    const second = localDate("2026-12-20");
+    const data = {
+      habits: [
+        habit("silent"),
+        habit("first", { createdOn: first }),
+        habit("second", { createdOn: second }),
+      ],
+      versions: [
+        version("silent"),
+        version("first", { effectiveFrom: first }),
+        version("second", { effectiveFrom: second }),
+      ],
+      entries: [],
+      reminders: [reminder("second", "09:00")],
+    };
+
+    const upcoming = upcomingReminders(data, at(MONDAY, "07:00"), 1);
+
+    expect(summary(upcoming)).toEqual(["2026-12-20 09:00 second"]);
+  });
+
+  test("an archived habit that was still to start is not looked for", () => {
+    const starts = localDate("2026-12-01");
+    const data = {
+      habits: [habit("read", { createdOn: starts, archivedOn: starts })],
+      versions: [version("read", { effectiveFrom: starts })],
+      entries: [],
+      reminders: [reminder("read", "09:00")],
+    };
+
+    expect(upcomingReminders(data, at(MONDAY, "07:00"))).toEqual([]);
+  });
+});
+
+describe("finalNoticeMoment", () => {
+  test("is at noon of the day before the last warning (RF-51)", () => {
+    expect(FINAL_NOTICE_TIME).toBe("12:00");
+    expect(
+      finalNoticeMoment(at("2026-11-20", "22:00"), at(MONDAY, "07:00")),
+    ).toEqual(at("2026-11-19", "12:00"));
+  });
+
+  test("can be later today, if noon has not passed", () => {
+    expect(
+      finalNoticeMoment(at(TUESDAY, "08:00"), at(MONDAY, "11:59")),
+    ).toEqual(at(MONDAY, "12:00"));
+  });
+
+  test("goes with the last warning if noon of the day before has passed", () => {
+    const last = at(TUESDAY, "08:00");
+
+    expect(finalNoticeMoment(last, at(MONDAY, "12:00"))).toEqual(last);
+    expect(finalNoticeMoment(last, at(TUESDAY, "07:00"))).toEqual(last);
   });
 });

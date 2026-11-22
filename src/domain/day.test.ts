@@ -1,4 +1,4 @@
-import { habitsForDay, isDone, progressOf } from "./day";
+import { habitsForDay, isDone, nextStartAfter, progressOf } from "./day";
 import { localDate } from "./dates";
 import type { Entry } from "./entries";
 import type { Habit, HabitConfig, HabitVersion } from "./habits";
@@ -106,6 +106,37 @@ describe("progressOf", () => {
 
   test("a quantitative habit with no target has no progress", () => {
     expect(progressOf("quantitative", booleanVersion, 5)).toBe(0);
+  });
+});
+
+describe("nextStartAfter", () => {
+  const starting = (id: string, createdOn: string): Habit => ({
+    id,
+    name: id,
+    type: "boolean",
+    color: null,
+    createdOn: localDate(createdOn),
+    archivedOn: null,
+  });
+  const date = localDate("2026-11-10");
+
+  test("is the soonest start after the day, whatever the order", () => {
+    const habits = [
+      starting("late", "2026-12-20"),
+      starting("started", "2026-11-01"),
+      starting("soon", "2026-11-25"),
+      starting("later", "2026-12-01"),
+    ];
+
+    expect(nextStartAfter(habits, date)).toBe("2026-11-25");
+  });
+
+  test("a habit that starts that very day is not still to start", () => {
+    expect(nextStartAfter([starting("today", date)], date)).toBeNull();
+  });
+
+  test("is null without habits to start", () => {
+    expect(nextStartAfter([], date)).toBeNull();
   });
 });
 

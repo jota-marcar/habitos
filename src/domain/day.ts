@@ -66,6 +66,23 @@ function groupBy<T>(items: readonly T[], key: (item: T) => string) {
 }
 
 /**
+ * The first day after `date` on which one of `habits` starts, or null if none is still to
+ * start. A search through the coming days jumps there: nothing new can be due before (RF-06).
+ */
+export function nextStartAfter(
+  habits: readonly Habit[],
+  date: LocalDate,
+): LocalDate | null {
+  let next: LocalDate | null = null;
+  for (const { createdOn } of habits) {
+    if (createdOn > date && (next === null || createdOn < next)) {
+      next = createdOn;
+    }
+  }
+  return next;
+}
+
+/**
  * The habits due on `date`, in the order of `habits`: those created on or before that day,
  * not retired by archiving, and scheduled for that weekday in the version in force then
  * (RF-12, RF-17). It works the same for past, present and future days.

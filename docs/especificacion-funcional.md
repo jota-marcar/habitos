@@ -58,6 +58,7 @@ El MVP se centra en los hábitos diarios. La aplicación se amplía con los obje
 | **Objetivo puntual** | `oneOff` | Objetivo semanal de una sola semana. |
 | **Registro semanal** | `WeeklyGoalEntry` | Total apuntado de un objetivo semanal en una semana. |
 | **Aviso de progreso** | `ProgressDigest` | Aviso a una hora fija de la semana que nombra los objetivos aún sin conseguir y cuánto llevan. |
+| **Aviso final** | `finalNotice` | Aviso que pide abrir la aplicación cuando los recordatorios ya preparados están a punto de acabarse. |
 
 La columna "En el código" es el nombre en inglés con el que cada término aparece en el código y en el modelo de datos ([ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)). Cada término se traduce siempre igual; uno nuevo se añade aquí antes de usarlo en el código. `goal` queda reservado para los objetivos de la [visión a futuro](#6-visión-a-futuro-tres-horizontes), y `Record` se evita porque ya tiene otro significado en el lenguaje de programación.
 
@@ -211,6 +212,10 @@ Es la pantalla principal de la aplicación (ver 3.1).
   - El aviso dice cuántos hábitos quedan y los nombra en el orden de la vista del día (RF-12). Si son muchos o tienen nombres largos, la lista se recorta (por ejemplo, "Leer, Beber agua, Correr y 2 más").
   - Al tocarlo se abre la aplicación en el día actual, como un recordatorio (RF-26). No tiene botones, porque reúne varios hábitos.
   - Las horas son fijas y los avisos no se pueden desactivar (ver sección 4).
+- **RF-51.** Los recordatorios se preparan con antelación y el teléfono solo guarda un número limitado, así que se acabarían sin avisar si la aplicación no se abre en muchos días. Para que eso no ocurra, el último de los avisos preparados es un **aviso final**: "Abre Hábitos para seguir recibiendo tus recordatorios".
+  - Llega a las 12:00 del día anterior al último aviso preparado, para que al abrir la aplicación a tiempo no se pierda ninguno. Si esa hora ya ha pasado, llega junto con el último aviso.
+  - Abrir la aplicación, usar un botón de un recordatorio o que la aplicación se actualice sola lo aplaza, así que con un uso normal nunca llega.
+  - Al tocarlo se abre la aplicación en el día actual, como un recordatorio (RF-26). No tiene botones.
 - **RF-35.** La aplicación pide permiso para enviar recordatorios la primera vez que se abre. Si el usuario lo deniega, no se le vuelve a pedir al abrirla.
 - **RF-36.** Si los recordatorios no están permitidos, al guardar un hábito con recordatorios (al crearlo o al editarlo) se avisa al usuario con un diálogo del sistema, que explica que no los recibirá y ofrece abrir los ajustes del teléfono para activarlos. El hábito se guarda igualmente, con sus recordatorios, y estos empiezan a funcionar en cuanto se da el permiso, sin tener que volver a editarlo.
 

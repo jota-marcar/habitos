@@ -23,6 +23,7 @@ import {
 import {
   MAX_UPCOMING_REMINDERS,
   SNOOZE_MINUTES,
+  finalNoticeMoment,
   showsGestureHint,
   upcomingReminders,
   type GestureHint,
@@ -53,8 +54,19 @@ export const PROGRESS_PREFIX = "progress.";
 /** Every snoozed notification has an identifier that starts like this. */
 export const SNOOZE_PREFIX = "snooze.";
 
+/**
+ * The final notice (RF-51). There is only ever one, so a new one replaces it in place: if iOS
+ * suspends the app halfway through, it is not left without it.
+ */
+export const FINAL_NOTICE_ID = "final-notice";
+
 // The notifications the window owns: the snoozed ones are handled apart.
-const WINDOW_PREFIXES = [REMINDER_PREFIX, DIGEST_PREFIX, PROGRESS_PREFIX];
+const WINDOW_PREFIXES = [
+  REMINDER_PREFIX,
+  DIGEST_PREFIX,
+  PROGRESS_PREFIX,
+  FINAL_NOTICE_ID,
+];
 
 /** The page that tapping a notification opens: its own horizon (RF-26, RF-37, RF-49). */
 export function horizonOfNotification(id: string): Horizon {
@@ -233,21 +245,42 @@ export function progressDigestNotification(
   };
 }
 
+/** The notice that asks to open the app before the window runs out (RF-51). */
+export function finalNoticeNotification(
+  lastWarning: LocalDateTime,
+  now: LocalDateTime,
+): PlannedNotification {
+  return {
+    id: FINAL_NOTICE_ID,
+    at: finalNoticeMoment(lastWarning, now),
+    title: "Tus recordatorios se acaban",
+    body: "Abre Hábitos para seguir recibiendo tus recordatorios",
+    habitId: null,
+    category: null,
+  };
+}
+
 /**
  * The window of notifications (ADR-0005): the reminders and the digests together, soonest
- * first and as many as fit. At the same minute, reminders go first.
+ * first and as many as fit. At the same minute, reminders go first. When they fill it, there
+ * are more to come than iOS can hold, so the last place goes to the final notice (RF-51).
  */
 export function windowOf(
   reminders: readonly PlannedNotification[],
   digests: readonly PlannedNotification[],
+  now: LocalDateTime,
 ): PlannedNotification[] {
   const moment = ({ at }: PlannedNotification) => `${at.date} ${at.time}`;
+  const soonestFirst = (a: PlannedNotification, b: PlannedNotification) =>
+    moment(a) < moment(b) ? -1 : moment(a) > moment(b) ? 1 : 0;
+
   // Array.prototype.sort is stable, so reminders stay before digests at the same minute.
-  return [...reminders, ...digests]
-    .sort((a, b) =>
-      moment(a) < moment(b) ? -1 : moment(a) > moment(b) ? 1 : 0,
-    )
-    .slice(0, MAX_UPCOMING_REMINDERS);
+  const sorted = [...reminders, ...digests].sort(soonestFirst);
+  if (sorted.length < MAX_UPCOMING_REMINDERS) return sorted;
+
+  const kept = sorted.slice(0, MAX_UPCOMING_REMINDERS - 1);
+  const notice = finalNoticeNotification(kept[kept.length - 1].at, now);
+  return [...kept, notice].sort(soonestFirst);
 }
 
 /**
@@ -352,6 +385,7 @@ export async function planReminders(
         ...digests.map(digestNotification),
         ...progressDigests.map(progressDigestNotification),
       ],
+      now,
     ),
     categories: [...categories.values()],
     today: now.date,
@@ -374,17 +408,32 @@ function snoozedHabitAndDay(id: string): { habitId: string; date: string } {
  * - Cancels the reminders and digests that have left the window, and schedules those that are
  *   missing or have changed. A changed one is replaced without cancelling it first: iOS may
  *   suspend the app halfway through, and it must not be left without its reminders.
+ *
+ * A step that fails does not stop the others: iOS rejects a moment that has just passed, and
+ * that must not cost the reminders after it. The first failure is thrown at the end, and the
+ * next refresh tries again.
  */
 export async function syncNotifications(
   notifier: Notifier,
   plan: ReminderPlan,
   knownCategories: Map<string, string> = new Map(),
 ): Promise<void> {
+  const failures: unknown[] = [];
+  const attempt = async (step: () => Promise<void>) => {
+    try {
+      await step();
+    } catch (error) {
+      failures.push(error);
+    }
+  };
+
   for (const category of plan.categories) {
     const signature = JSON.stringify(category.buttons);
     if (knownCategories.get(category.id) !== signature) {
-      await notifier.setCategory(category);
-      knownCategories.set(category.id, signature);
+      await attempt(async () => {
+        await notifier.setCategory(category);
+        knownCategories.set(category.id, signature);
+      });
     }
   }
 
@@ -394,7 +443,7 @@ export async function syncNotifications(
     if (!id.startsWith(SNOOZE_PREFIX)) continue;
     const { habitId, date } = snoozedHabitAndDay(id);
     if (date !== plan.today || !plan.pendingToday.has(habitId)) {
-      await notifier.cancel(id);
+      await attempt(() => notifier.cancel(id));
     }
   }
 
@@ -406,14 +455,18 @@ export async function syncNotifications(
     if (wanted.get(id) === notification.signature) {
       kept.add(id);
     } else if (!wanted.has(id)) {
-      await notifier.cancel(id);
+      await attempt(() => notifier.cancel(id));
     }
   }
   for (const notification of plan.notifications) {
     if (!kept.has(notification.id)) {
-      await notifier.schedule(notification, signatureOf(notification));
+      await attempt(() =>
+        notifier.schedule(notification, signatureOf(notification)),
+      );
     }
   }
+
+  if (failures.length > 0) throw failures[0];
 }
 
 /**
