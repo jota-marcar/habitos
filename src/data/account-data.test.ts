@@ -15,10 +15,21 @@ import {
   markSynced,
   openMigratedDatabase,
   version,
+  weeklyGoal,
+  weeklyGoalVersion,
 } from "./testing/fixtures";
 import type { TestDatabase } from "./testing/node-database";
+import { addWeeklyGoal, saveWeeklyGoalEntry } from "./weekly-goals-repository";
 
-const TABLES = ["habits", "habit_versions", "entries", "reminders"];
+const TABLES = [
+  "habits",
+  "habit_versions",
+  "entries",
+  "reminders",
+  "weekly_goals",
+  "weekly_goal_versions",
+  "weekly_goal_entries",
+];
 
 let db: TestDatabase;
 
@@ -43,6 +54,17 @@ async function addFullHabit(id: string): Promise<void> {
     id: `${id}-reminder`,
     habitId: id,
     time: localTime("08:30"),
+  });
+}
+
+/** A weekly goal with a row in each of its tables. */
+async function addFullWeeklyGoal(id: string): Promise<void> {
+  await addWeeklyGoal(db, weeklyGoal(id), weeklyGoalVersion(id));
+  await saveWeeklyGoalEntry(db, {
+    id: `${id}-entry`,
+    weeklyGoalId: id,
+    week: localDate("2026-11-16"),
+    value: 1,
   });
 }
 
@@ -108,6 +130,16 @@ describe("hasPendingChanges", () => {
     expect(await hasPendingChanges(db)).toBe(true);
   });
 
+  test("a weekly goal that has not been uploaded is pending", async () => {
+    await addFullWeeklyGoal("run");
+
+    expect(await hasPendingChanges(db)).toBe(true);
+
+    await markAllSynced();
+
+    expect(await hasPendingChanges(db)).toBe(false);
+  });
+
   test("deleting an uploaded habit is pending: the account still has it", async () => {
     await addFullHabit("water");
     await markAllSynced();
@@ -130,6 +162,7 @@ describe("deleteAccountData", () => {
   test("leaves no row in any table of the database", async () => {
     await addFullHabit("water");
     await addFullHabit("read");
+    await addFullWeeklyGoal("run");
     await markSynced(db, "habits");
     await deleteHabit(db, "read");
     await db.run(

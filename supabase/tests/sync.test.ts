@@ -18,8 +18,20 @@ import {
   saveHabit,
 } from "@/data/habits-repository";
 import { listReminders } from "@/data/reminders-repository";
-import { habit, openMigratedDatabase, version } from "@/data/testing/fixtures";
+import {
+  habit,
+  openMigratedDatabase,
+  version,
+  weeklyGoal,
+  weeklyGoalVersion,
+} from "@/data/testing/fixtures";
 import type { TestDatabase } from "@/data/testing/node-database";
+import {
+  addWeeklyGoal,
+  listWeeklyGoalEntries,
+  listWeeklyGoals,
+  saveWeeklyGoalEntry,
+} from "@/data/weekly-goals-repository";
 import { localDate } from "@/domain/dates";
 import { localTime } from "@/domain/times";
 import { supabaseRemote, RemoteError } from "@/sync/supabase-remote";
@@ -117,6 +129,27 @@ beforeEach(async () => {
 afterEach(() => {
   phone?.db.close();
   tablet?.db.close();
+});
+
+test("a weekly goal and its total reach another device", async () => {
+  const goalId = id();
+  const week = localDate("2026-11-16");
+  const goal = weeklyGoal(goalId, { recurring: false, name: "Run" });
+  await addWeeklyGoal(phone.db, goal, weeklyGoalVersion(goalId, { id: id() }));
+  await saveWeeklyGoalEntry(phone.db, {
+    id: id(),
+    weeklyGoalId: goalId,
+    week,
+    value: 2,
+  });
+
+  await sync(phone);
+  await sync(tablet);
+
+  expect(await listWeeklyGoals(tablet.db)).toEqual([goal]);
+  expect(await listWeeklyGoalEntries(tablet.db, week)).toMatchObject([
+    { weeklyGoalId: goalId, value: 2 },
+  ]);
 });
 
 test("the data of a device reach another device of the account (RF-05, RF-38)", async () => {

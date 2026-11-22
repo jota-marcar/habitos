@@ -35,7 +35,23 @@ describe("migrate", () => {
       "reminders",
       "sync_account",
       "sync_cursors",
+      "weekly_goal_entries",
+      "weekly_goal_versions",
+      "weekly_goals",
     ]);
+    expect(await schemaVersion(db)).toBe(MIGRATIONS.length);
+  });
+
+  test("a database of the previous version keeps its data and gains the weekly goals", async () => {
+    await migrate(db, MIGRATIONS.slice(0, 3));
+    await db.run(
+      "INSERT INTO habits (id, name, type, created_on) VALUES ('h', 'Read', 'boolean', '2026-11-01')",
+    );
+
+    await migrate(db);
+
+    expect(await db.all("SELECT id FROM habits")).toEqual([{ id: "h" }]);
+    expect(await db.all("SELECT id FROM weekly_goals")).toEqual([]);
     expect(await schemaVersion(db)).toBe(MIGRATIONS.length);
   });
 
