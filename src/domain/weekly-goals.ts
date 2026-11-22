@@ -207,16 +207,17 @@ export interface WeekGoal {
 }
 
 // A one-off goal only has its week. A recurring one goes on until it is archived, and the week
-// it was archived only shows it if something was recorded, so that no history is hidden (RF-44).
+// it was archived only shows it if it has an entry, so that no history is hidden. An entry
+// brought back to 0 counts: if that hid the goal, it could not be recorded again (RF-44).
 function appearsIn(
   goal: WeeklyGoal,
   monday: LocalDate,
-  value: number,
+  hasEntry: boolean,
 ): boolean {
   if (monday < goal.firstWeek) return false;
   if (!goal.recurring) return monday === goal.firstWeek;
   if (goal.archivedWeek === null || monday < goal.archivedWeek) return true;
-  return monday === goal.archivedWeek && value > 0;
+  return monday === goal.archivedWeek && hasEntry;
 }
 
 /** The goals of `week`, in the order of `goals`, each with its total (RF-46). */
@@ -236,13 +237,13 @@ export function goalsForWeek(
 
   const weekGoals: WeekGoal[] = [];
   for (const goal of data.goals) {
-    const value = valueByGoal.get(goal.id) ?? 0;
-    if (!appearsIn(goal, week.start, value)) continue;
+    if (!appearsIn(goal, week.start, valueByGoal.has(goal.id))) continue;
     const version = versionOn(
       data.versions.filter((v) => v.weeklyGoalId === goal.id),
       week.start,
     );
     if (version === null) continue;
+    const value = valueByGoal.get(goal.id) ?? 0;
     weekGoals.push({
       goal,
       version,

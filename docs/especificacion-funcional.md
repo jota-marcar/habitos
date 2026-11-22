@@ -130,12 +130,13 @@ La aplicación tiene una sola pantalla principal, con una página por horizonte:
 
 - **RF-07.** *Retirado.* Los hábitos se gestionan desde un día en que tocan (RF-08). El listado de todos los hábitos queda fuera del alcance (sección 4).
 - **RF-08.** El usuario puede editar cualquier dato de un hábito salvo el tipo. Se edita desde sus opciones (RF-34), en cualquier día en que aparezca: pasado, actual o futuro.
-- **RF-09.** Los cambios en un hábito (nombre, meta, días programados, recordatorios…) se aplican desde el día actual en adelante, se edite desde el día que se edite. Los días pasados conservan lo que se registró. Si se edita desde un día distinto del actual, el formulario lo indica con una línea discreta: "Los cambios se aplican desde hoy". Un hábito que aún no ha empezado (RF-06) es la excepción: sus cambios se aplican desde el día en que empieza, y el formulario lo indica si se edita desde otro día ("Los cambios se aplican desde el 20 de noviembre de 2026"). El nombre y el color son la excepción: identifican al hábito, así que cambian también en los días pasados.
+- **RF-09.** Los cambios en un hábito (nombre, meta, días programados, recordatorios…) se aplican desde el día actual en adelante, se edite desde el día que se edite. Los días pasados conservan lo que se registró. Si se edita desde un día distinto del actual, el formulario lo indica con una línea discreta: "Los cambios se aplican desde hoy". Un hábito que aún no ha empezado (RF-06) es la excepción: sus cambios se aplican desde el día en que empieza, y el formulario lo indica si se edita desde otro día ("Los cambios se aplican desde el 20 de noviembre de 2026"). El nombre y el color son la excepción: identifican al hábito, así que cambian también en los días pasados. Si se quita de los días programados un día que ya tiene un registro, aunque se haya vuelto a 0, el hábito sigue apareciendo ese día para no ocultar lo apuntado y poder corregirlo, pero ese día ya no envía recordatorios ni aparece en los avisos de pendientes.
 - **RF-10.** El usuario puede archivar un hábito. Archivar sirve para dejar de seguir un hábito sin perder lo que se hizo; por ejemplo, uno que ya forma parte de la rutina.
-  - Deja de aparecer en los días siguientes y deja de recordarse, pero su historial se conserva y sigue visible en los días pasados. El día en que se archiva solo aparece si ya tenía algo registrado.
+  - Deja de aparecer en los días siguientes y deja de recordarse, pero su historial se conserva y sigue visible en los días pasados. El día en que se archiva solo aparece si tiene un registro, aunque se haya vuelto a 0: así, desmarcarlo no lo oculta y se puede volver a marcar.
   - Archivar pide confirmación, porque no se puede deshacer: para retomar el hábito se crea uno nuevo.
   - En los días en que aparece, lo registrado se puede seguir corrigiendo, pero el hábito ya no se puede editar ni archivar (RF-34).
 - **RF-11.** El usuario puede eliminar un hábito de forma permanente, tras una confirmación explícita. Eliminar sirve para borrarlo como si no hubiera existido: desaparece de todos los días, también de los pasados, junto con todo su historial.
+- **RF-52.** Un formulario de hábito u objetivo con cambios sin guardar no se cierra por accidente: tanto "Cancelar" como el gesto de deslizarlo hacia abajo piden confirmación ("Seguir editando" o "Descartar"). Sin cambios, se cierra directamente. Un selector de hora abierto cuenta como cambio, porque al guardar se añadiría su hora (RF-22).
 
 ### 3.4 Vista de un día
 
@@ -250,7 +251,7 @@ Un objetivo semanal se mide por la semana completa, de lunes a domingo: cuenta l
   - La meta, la unidad y el incremento se aplican desde la semana actual, o desde su primera semana si aún no ha empezado. Las semanas pasadas conservan los suyos. Si se edita desde otra semana, el formulario indica desde cuándo se aplican.
   - Un objetivo puntual de una semana pasada y un objetivo archivado ya no se editan.
 - **RF-44.** El usuario puede archivar un objetivo recurrente para dejar de seguirlo sin perder lo conseguido.
-  - Deja de aparecer en las semanas siguientes. La semana en que se archiva solo aparece si ya tenía algo apuntado.
+  - Deja de aparecer en las semanas siguientes. La semana en que se archiva solo aparece si tiene un registro, aunque se haya vuelto a 0: así, quitar lo apuntado no lo oculta y se puede volver a apuntar.
   - Archivar pide confirmación, porque no se puede deshacer.
   - Un objetivo puntual no se archiva: termina con su semana.
 - **RF-45.** El usuario puede eliminar un objetivo de forma permanente, tras una confirmación explícita. Desaparece de todas las semanas junto con lo apuntado.

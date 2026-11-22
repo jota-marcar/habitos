@@ -48,11 +48,12 @@ export function progressOf(
   return value / version.target;
 }
 
-// An archived habit stops appearing after the day it was archived. On that day it only
-// appears if something was recorded, so that no history is hidden (RF-10).
-function isRetiredOn(habit: Habit, date: LocalDate, value: number): boolean {
+// An archived habit stops appearing after the day it was archived. On that day it only appears
+// if it has an entry, so that no history is hidden. An entry brought back to 0 counts: if
+// unmarking it hid the habit, it could not be marked again (RF-10).
+function isRetiredOn(habit: Habit, date: LocalDate, hasEntry: boolean) {
   if (habit.archivedOn === null || date < habit.archivedOn) return false;
-  return date > habit.archivedOn || value === 0;
+  return date > habit.archivedOn || !hasEntry;
 }
 
 function groupBy<T>(items: readonly T[], key: (item: T) => string) {
@@ -83,9 +84,10 @@ export function nextStartAfter(
 }
 
 /**
- * The habits due on `date`, in the order of `habits`: those created on or before that day,
- * not retired by archiving, and scheduled for that weekday in the version in force then
- * (RF-12, RF-17). It works the same for past, present and future days.
+ * The habits shown on `date`, in the order of `habits`: those created on or before that day,
+ * not retired by archiving, and scheduled for that weekday in the version in force then or
+ * with an entry that day, so that changing the scheduled days hides nothing already recorded
+ * (RF-09, RF-12, RF-17). It works the same for past, present and future days.
  */
 export function habitsForDay(
   data: {
@@ -107,14 +109,14 @@ export function habitsForDay(
   for (const habit of data.habits) {
     if (habit.createdOn > date) continue;
 
-    const value = valueByHabit.get(habit.id) ?? 0;
-    if (isRetiredOn(habit, date, value)) continue;
+    const hasEntry = valueByHabit.has(habit.id);
+    if (isRetiredOn(habit, date, hasEntry)) continue;
 
     const version = versionOn(versionsByHabit.get(habit.id) ?? [], date);
-    if (version === null || !isScheduledOn(version.scheduledDays, weekday)) {
-      continue;
-    }
+    if (version === null) continue;
+    if (!hasEntry && !isScheduledOn(version.scheduledDays, weekday)) continue;
 
+    const value = valueByHabit.get(habit.id) ?? 0;
     dayHabits.push({
       habit,
       version,
@@ -123,4 +125,18 @@ export function habitsForDay(
     });
   }
   return dayHabits;
+}
+
+/**
+ * The habits of `date` that are scheduled that day. A habit shown only because it has an entry
+ * is left out: reminders and digests only warn on its scheduled days (RF-23, RF-37).
+ */
+export function scheduledHabitsForDay(
+  data: Parameters<typeof habitsForDay>[0],
+  date: LocalDate,
+): DayHabit[] {
+  const weekday = weekdayOf(date);
+  return habitsForDay(data, date).filter(({ version }) =>
+    isScheduledOn(version.scheduledDays, weekday),
+  );
 }

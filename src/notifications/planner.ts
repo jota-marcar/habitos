@@ -13,7 +13,7 @@ import {
   listWeeklyGoals,
 } from "@/data/weekly-goals-repository";
 import { localDate, localDateOf, type LocalDate } from "@/domain/dates";
-import { habitsForDay, type DayHabit } from "@/domain/day";
+import { scheduledHabitsForDay, type DayHabit } from "@/domain/day";
 import { upcomingPendingDigests, type PendingDigest } from "@/domain/digests";
 import type { Habit } from "@/domain/habits";
 import {
@@ -368,7 +368,10 @@ export async function planReminders(
     const category = categoryOfDay(dayHabit);
     if (!categories.has(category.id)) categories.set(category.id, category);
   }
-  const pendingToday = habitsForDay({ habits, versions, entries }, now.date)
+  const pendingToday = scheduledHabitsForDay(
+    { habits, versions, entries },
+    now.date,
+  )
     .filter((dayHabit) => !dayHabit.done)
     .map((dayHabit) => dayHabit.habit.id);
 

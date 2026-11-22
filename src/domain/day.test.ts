@@ -1,4 +1,10 @@
-import { habitsForDay, isDone, nextStartAfter, progressOf } from "./day";
+import {
+  habitsForDay,
+  isDone,
+  nextStartAfter,
+  progressOf,
+  scheduledHabitsForDay,
+} from "./day";
 import { localDate } from "./dates";
 import type { Entry } from "./entries";
 import type { Habit, HabitConfig, HabitVersion } from "./habits";
@@ -259,6 +265,40 @@ describe("habitsForDay", () => {
       // The previous Wednesday was still under the first version.
       expect(idsFor(data, localDate("2026-10-21"))).toEqual(["water"]);
     });
+
+    test("a day with an entry keeps the habit, although it is no longer scheduled", () => {
+      const withEntry = {
+        ...data,
+        entries: [entry("water", "2026-10-28", 1)],
+      };
+
+      expect(habitsForDay(withEntry, wednesday)).toMatchObject([
+        { value: 1, done: false, version: { target: 3 } },
+      ]);
+    });
+
+    test("it stays after bringing the entry back to 0, so it can be recorded again", () => {
+      const unmarked = {
+        ...data,
+        entries: [entry("water", "2026-10-28", 0)],
+      };
+
+      expect(habitsForDay(unmarked, wednesday)).toMatchObject([
+        { value: 0, done: false },
+      ]);
+    });
+
+    test("scheduledHabitsForDay leaves it out: it no longer warns that day", () => {
+      const withEntry = {
+        ...data,
+        entries: [entry("water", "2026-10-28", 1)],
+      };
+
+      expect(scheduledHabitsForDay(withEntry, wednesday)).toEqual([]);
+      expect(
+        scheduledHabitsForDay(withEntry, tuesday).map((d) => d.habit.id),
+      ).toEqual(["water"]);
+    });
   });
 
   describe("archived habits (RF-10)", () => {
@@ -281,10 +321,12 @@ describe("habitsForDay", () => {
       expect(idsFor(data, tuesday)).toEqual([]);
     });
 
-    test("an entry of 0 on the day it was archived counts as nothing recorded", () => {
+    test("stays on the day it was archived after unmarking it, to mark it again", () => {
       const entries = [entry("meditate", "2026-10-27", 0)];
       const data = { habits: [archived], versions, entries };
-      expect(idsFor(data, tuesday)).toEqual([]);
+      expect(habitsForDay(data, tuesday)).toMatchObject([
+        { value: 0, done: false },
+      ]);
     });
 
     test("appears on the day it was archived if something was recorded", () => {

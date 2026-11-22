@@ -3,7 +3,7 @@
 // Reminders are not versioned: they only affect the future.
 
 import { addDays, type LocalDate } from "./dates";
-import { habitsForDay, nextStartAfter, type DayHabit } from "./day";
+import { nextStartAfter, scheduledHabitsForDay, type DayHabit } from "./day";
 import type { Entry } from "./entries";
 import type { Habit, HabitVersion } from "./habits";
 import { fail, ok, type Result } from "./result";
@@ -129,7 +129,7 @@ export function upcomingReminders(
   // until the next habit starts, however far away that is.
   while (upcoming.length < limit) {
     const pending = new Map(
-      habitsForDay(source, date)
+      scheduledHabitsForDay(source, date)
         .filter((dayHabit) => !dayHabit.done)
         .map((dayHabit) => [dayHabit.habit.id, dayHabit]),
     );
