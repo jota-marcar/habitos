@@ -195,7 +195,7 @@ Es la pantalla principal de la aplicación (ver 3.1).
 
 ### 3.6 Recordatorios
 
-- **RF-22.** Cada hábito puede tener cero, una o varias horas de recordatorio. Cada hora se fija con precisión de minuto y un hábito no puede repetir la misma hora.
+- **RF-22.** Cada hábito puede tener cero, una o varias horas de recordatorio. Cada hora se fija con precisión de minuto y un hábito no puede repetir la misma hora. Si se guarda el hábito con el selector de hora abierto, la hora elegida se añade; para no añadirla está "Descartar".
 - **RF-23.** Un recordatorio solo se envía los días programados del hábito.
 - **RF-24.** Si el hábito ya está cumplido ese día, sus recordatorios pendientes de ese día no se envían, tampoco los pospuestos. Un hábito cuantitativo que ha avanzado sin llegar a la meta sí se recuerda, y el recordatorio indica lo que lleva y la meta (por ejemplo, "llevas 1 de 2 L").
 - **RF-25.** Desde el propio recordatorio, sin abrir la aplicación, el usuario puede:

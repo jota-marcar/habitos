@@ -9,6 +9,7 @@ import {
   buildHabitChanges,
   fieldOf,
   habitFormOf,
+  withPickedTime,
   type HabitFormValues,
   type StoredHabit,
 } from "./habit-form";
@@ -127,6 +128,28 @@ describe("addReminderTime", () => {
       ok: false,
       errors: ["time_duplicated"],
     });
+  });
+});
+
+describe("withPickedTime (RF-22)", () => {
+  const values: HabitFormValues = {
+    ...EMPTY_HABIT_FORM,
+    reminderTimes: [localTime("21:00")],
+  };
+
+  test("leaves the form as it is with the picker closed", () => {
+    expect(withPickedTime(values, null)).toBe(values);
+  });
+
+  test("adds the time of the open picker, in order", () => {
+    expect(withPickedTime(values, localTime("08:00")).reminderTimes).toEqual([
+      "08:00",
+      "21:00",
+    ]);
+  });
+
+  test("changes nothing if the habit already has that time", () => {
+    expect(withPickedTime(values, localTime("21:00"))).toBe(values);
   });
 });
 

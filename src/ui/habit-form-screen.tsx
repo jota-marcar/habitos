@@ -32,7 +32,11 @@ import {
   messagesByField,
 } from "./form-sections";
 import { WEEKDAY_INITIALS, WEEKDAY_NAMES } from "./format";
-import { addReminderTime, type HabitFormValues } from "./habit-form";
+import {
+  addReminderTime,
+  withPickedTime,
+  type HabitFormValues,
+} from "./habit-form";
 import { REMINDER_ERROR_MESSAGES } from "./messages";
 import { warnIfRemindersNotAllowed } from "./reminders";
 import { fontSize, spacing, useColors } from "./theme";
@@ -131,10 +135,11 @@ export function HabitFormScreen({
     if (saving) return;
     setSaving(true);
     try {
-      const rejected = await onSubmit(values);
+      const submitted = withPickedTime(values, pickedTime);
+      const rejected = await onSubmit(submitted);
       setErrors(rejected);
       if (rejected.length > 0) return;
-      if (values.reminderTimes.length > 0) await warnIfRemindersNotAllowed();
+      if (submitted.reminderTimes.length > 0) await warnIfRemindersNotAllowed();
       void refreshReminders(db);
       syncSoon(db);
       router.back();
