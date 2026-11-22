@@ -3,6 +3,7 @@
 import { localDate } from "@/domain/dates";
 import type { Habit, HabitVersion } from "@/domain/habits";
 import { EVERY_DAY } from "@/domain/schedule";
+import type { WeeklyGoal, WeeklyGoalVersion } from "@/domain/weekly-goals";
 
 import { migrate } from "../migrations";
 import { openTestDatabase, type TestDatabase } from "./node-database";
@@ -35,6 +36,37 @@ export function version(
     habitId,
     effectiveFrom: localDate("2026-11-01"),
     scheduledDays: EVERY_DAY,
+    target: null,
+    unit: null,
+    increment: null,
+    ...overrides,
+  };
+}
+
+export function weeklyGoal(
+  id: string,
+  overrides: Partial<WeeklyGoal> = {},
+): WeeklyGoal {
+  return {
+    id,
+    name: id,
+    type: "boolean",
+    color: null,
+    recurring: true,
+    firstWeek: localDate("2026-11-16"),
+    archivedWeek: null,
+    ...overrides,
+  };
+}
+
+export function weeklyGoalVersion(
+  weeklyGoalId: string,
+  overrides: Partial<WeeklyGoalVersion> = {},
+): WeeklyGoalVersion {
+  return {
+    id: `${weeklyGoalId}-v1`,
+    weeklyGoalId,
+    effectiveFrom: localDate("2026-11-16"),
     target: null,
     unit: null,
     increment: null,

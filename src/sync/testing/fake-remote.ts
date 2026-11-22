@@ -3,7 +3,7 @@
 // - The server assigns updated_at, and every row of one upload shares it, like the rows of
 //   one transaction (ADR-0016).
 // - An upload is all or nothing.
-// - The children need their habit, and the natural keys are unique among live rows.
+// - The children need their parent, and the natural keys are unique among live rows.
 
 import type {
   CloudRow,
@@ -19,6 +19,20 @@ const NATURAL_KEYS: Record<SyncTable, readonly string[]> = {
   habit_versions: ["habit_id", "effective_from"],
   entries: ["habit_id", "date"],
   reminders: ["habit_id", "time"],
+  weekly_goals: [],
+  weekly_goal_versions: ["weekly_goal_id", "effective_from"],
+  weekly_goal_entries: ["weekly_goal_id", "week"],
+};
+
+/** The table each child hangs from, and the column that points to it. */
+const PARENTS: Partial<
+  Record<SyncTable, { readonly table: SyncTable; readonly column: string }>
+> = {
+  habit_versions: { table: "habits", column: "habit_id" },
+  entries: { table: "habits", column: "habit_id" },
+  reminders: { table: "habits", column: "habit_id" },
+  weekly_goal_versions: { table: "weekly_goals", column: "weekly_goal_id" },
+  weekly_goal_entries: { table: "weekly_goals", column: "weekly_goal_id" },
 };
 
 /** The error of Postgres for a unique key that already exists. */
@@ -48,6 +62,9 @@ export class FakeRemote implements Remote {
     habit_versions: new Map(),
     entries: new Map(),
     reminders: new Map(),
+    weekly_goals: new Map(),
+    weekly_goal_versions: new Map(),
+    weekly_goal_entries: new Map(),
   };
 
   /** Runs before answering each pull: what other devices do meanwhile. */
@@ -95,10 +112,14 @@ export class FakeRemote implements Remote {
 
   private check(table: SyncTable, rows: Map<string, PulledRow>): void {
     const keys = NATURAL_KEYS[table];
+    const parent = PARENTS[table];
     const seen = new Set<string>();
     for (const row of rows.values()) {
-      if (table !== "habits" && !this.rows.habits.has(String(row.habit_id))) {
-        throw new Error(`The habit of ${table} ${row.id} does not exist.`);
+      if (
+        parent !== undefined &&
+        !this.rows[parent.table].has(String(row[parent.column]))
+      ) {
+        throw new Error(`The parent of ${table} ${row.id} does not exist.`);
       }
       if (keys.length === 0 || row.deleted === true) continue;
       const key = keys.map((column) => String(row[column])).join("|");

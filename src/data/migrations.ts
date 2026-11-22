@@ -81,11 +81,55 @@ const SYNC_STATE = `
   ) STRICT;
 `;
 
+// A week is stored as its Monday. `IS` and not `=`: a text that is not a date gives null, which
+// a CHECK would let through.
+const isMonday = (column: string) => `strftime('%w', ${column}) IS '1'`;
+
+// Weekly goals (ADR-0022): the same shape as habits, with a single total per goal and week.
+const WEEKLY_GOALS = `
+  CREATE TABLE weekly_goals (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('boolean', 'quantitative')),
+    color TEXT,
+    recurring INTEGER NOT NULL CHECK (recurring IN (0, 1)),
+    first_week TEXT NOT NULL CHECK (${isMonday("first_week")}),
+    archived_week TEXT CHECK (archived_week IS NULL OR ${isMonday("archived_week")}),
+    ${SYNC_COLUMNS},
+    CHECK (recurring = 1 OR archived_week IS NULL)
+  ) STRICT;
+
+  CREATE TABLE weekly_goal_versions (
+    id TEXT PRIMARY KEY NOT NULL,
+    weekly_goal_id TEXT NOT NULL REFERENCES weekly_goals (id) ON DELETE CASCADE,
+    effective_from TEXT NOT NULL CHECK (${isMonday("effective_from")}),
+    target REAL,
+    unit TEXT,
+    increment REAL,
+    ${SYNC_COLUMNS}
+  ) STRICT;
+
+  CREATE UNIQUE INDEX weekly_goal_versions_goal_effective_from
+    ON weekly_goal_versions (weekly_goal_id, effective_from) WHERE deleted = 0;
+
+  CREATE TABLE weekly_goal_entries (
+    id TEXT PRIMARY KEY NOT NULL,
+    weekly_goal_id TEXT NOT NULL REFERENCES weekly_goals (id) ON DELETE CASCADE,
+    week TEXT NOT NULL CHECK (${isMonday("week")}),
+    value REAL NOT NULL CHECK (value >= 0),
+    ${SYNC_COLUMNS}
+  ) STRICT;
+
+  CREATE UNIQUE INDEX weekly_goal_entries_goal_week
+    ON weekly_goal_entries (weekly_goal_id, week) WHERE deleted = 0;
+`;
+
 /** Every migration, in order. The version of the schema is the position, starting at 1. */
 export const MIGRATIONS: readonly string[] = [
   INITIAL_SCHEMA,
   HABIT_COLOR,
   SYNC_STATE,
+  WEEKLY_GOALS,
 ];
 
 /** The version of the schema of `db`: 0 for a new database. */

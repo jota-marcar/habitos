@@ -108,7 +108,34 @@ erDiagram
     HABIT ||--|{ HABIT_VERSION : "se configura con"
     HABIT ||--o{ ENTRY : "se registra en"
     HABIT ||--o{ REMINDER : "avisa con"
+    USER ||--o{ WEEKLY_GOAL : tiene
+    WEEKLY_GOAL ||--|{ WEEKLY_GOAL_VERSION : "se configura con"
+    WEEKLY_GOAL ||--o{ WEEKLY_GOAL_ENTRY : "se registra en"
 
+    WEEKLY_GOAL {
+        uuid id
+        uuid user_id
+        text name
+        text type "boolean | quantitative"
+        text color "nullable, clave de paleta"
+        boolean recurring "no cambia"
+        date first_week "lunes"
+        date archived_week "nullable, lunes"
+    }
+    WEEKLY_GOAL_VERSION {
+        uuid id
+        uuid weekly_goal_id
+        date effective_from "lunes"
+        numeric target "nullable"
+        text unit "nullable"
+        numeric increment "nullable"
+    }
+    WEEKLY_GOAL_ENTRY {
+        uuid id
+        uuid weekly_goal_id
+        date week "lunes"
+        numeric value "1/0 en sí o no"
+    }
     HABIT {
         uuid id
         uuid user_id
@@ -156,6 +183,7 @@ Decisiones del modelo:
 - **Qué recordatorios se programan:** a partir de ahora y por cercanía, los de cada hábito en sus días programados, salvo que el hábito esté cumplido ese día o archivado. Como mucho 60 ([ADR-0005](adr/0005-recordatorios-locales-en-ventana-deslizante.md)). Cada aviso lleva el progreso del hábito ese día para poder mostrarlo.
 - **Ayuda del gesto:** si ya se ha usado un botón y desde qué día se explica se guardan en el almacén clave-valor de `expo-sqlite`, solo en el dispositivo (RF-25). Va fuera de la base a propósito: el arranque se niega a abrir una base con un esquema más nuevo que la app, así que una migración impediría deshacer con seguridad la actualización OTA que la añadiera.
 - **Avisos de pendientes:** dos al día a horas fijas (17:00 y 22:00), los días en que queda algún hábito sin cumplir (RF-37). No se guardan en la base: se calculan, como los recordatorios. Comparten la ventana de 60 con ellos (ver "Programar los recordatorios").
+- **Objetivos semanales:** tablas propias con la misma forma que los hábitos, y un único total por objetivo y semana (clave única `weekly_goal_id + week`). Las semanas se guardan por su lunes. Qué objetivos tocan una semana se calcula con `first_week`, `recurring` y `archived_week` (RF-44, RF-48) ([ADR-0022](adr/0022-objetivos-semanales-en-tablas-propias-con-un-total-por-semana.md)).
 - **Campos de sincronización** en todas las tablas: identificador generado en el dispositivo (UUID), `updated_at` asignado por el servidor y `deleted` (borrado lógico) para propagar eliminaciones.
 - **En la base local** no existe `user_id` (es de un solo usuario) y cada tabla añade `pending_sync`, que marca las filas con cambios sin subir. Las claves únicas ignoran las filas borradas. Dos tablas solo existen en el dispositivo y guardan el estado de la sincronización: `sync_cursors`, hasta dónde ha bajado cada tabla, y `sync_account`, de qué cuenta son los datos ([ADR-0018](adr/0018-sincronizacion-con-pull-antes-que-push-y-union-por-clave-natural.md)).
 - **Migraciones locales:** lista ordenada en `src/data/migrations.ts`; la base guarda su versión y al abrir se aplican las que faltan. Una migración publicada no se edita.

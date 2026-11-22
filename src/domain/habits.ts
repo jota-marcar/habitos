@@ -59,12 +59,16 @@ export interface Habit {
   readonly archivedOn: LocalDate | null;
 }
 
-/** The part of a habit that is versioned. Amounts are null in boolean habits. */
-export interface HabitConfig {
-  readonly scheduledDays: ScheduledDays;
+/** The amounts of a quantitative habit or weekly goal: null in boolean ones. */
+export interface Amounts {
   readonly target: number | null;
   readonly unit: string | null;
   readonly increment: number | null;
+}
+
+/** The part of a habit that is versioned. */
+export interface HabitConfig extends Amounts {
+  readonly scheduledDays: ScheduledDays;
 }
 
 export interface HabitVersion extends HabitConfig {
@@ -73,11 +77,9 @@ export interface HabitVersion extends HabitConfig {
   readonly effectiveFrom: LocalDate;
 }
 
-export type HabitError =
-  | "name_empty"
-  | "name_too_long"
-  | "scheduled_days_invalid"
-  | "scheduled_days_empty"
+export type NameError = "name_empty" | "name_too_long";
+
+export type AmountsError =
   | "amounts_not_allowed"
   | "target_not_positive"
   | "target_too_precise"
@@ -85,6 +87,9 @@ export type HabitError =
   | "unit_too_long"
   | "increment_not_positive"
   | "increment_too_precise";
+
+export type HabitError =
+  NameError | AmountsError | "scheduled_days_invalid" | "scheduled_days_empty";
 
 export const DEFAULT_SCHEDULED_DAYS: ScheduledDays = EVERY_DAY;
 export const DEFAULT_INCREMENT = 1;
@@ -98,20 +103,53 @@ function lengthOf(text: string): number {
   return [...text.trim()].length;
 }
 
-function validateName(name: string): HabitError[] {
+export function validateName(name: string): NameError[] {
   if (name.trim() === "") return ["name_empty"];
   return lengthOf(name) > MAX_NAME_LENGTH ? ["name_too_long"] : [];
 }
 
 function validateAmount(
   value: number | null,
-  notPositive: HabitError,
-  tooPrecise: HabitError,
-): HabitError[] {
+  notPositive: AmountsError,
+  tooPrecise: AmountsError,
+): AmountsError[] {
   if (value === null || !Number.isFinite(value) || value <= 0) {
     return [notPositive];
   }
   return isAmount(value) ? [] : [tooPrecise];
+}
+
+/** Boolean habits and goals have no amounts; quantitative ones need all of them. */
+export function validateAmounts(
+  type: HabitType,
+  amounts: Amounts,
+): AmountsError[] {
+  if (type === "boolean") {
+    const hasAmounts =
+      amounts.target !== null ||
+      amounts.unit !== null ||
+      amounts.increment !== null;
+    return hasAmounts ? ["amounts_not_allowed"] : [];
+  }
+
+  const errors = validateAmount(
+    amounts.target,
+    "target_not_positive",
+    "target_too_precise",
+  );
+  if (amounts.unit === null || amounts.unit.trim() === "") {
+    errors.push("unit_empty");
+  } else if (lengthOf(amounts.unit) > MAX_UNIT_LENGTH) {
+    errors.push("unit_too_long");
+  }
+  errors.push(
+    ...validateAmount(
+      amounts.increment,
+      "increment_not_positive",
+      "increment_too_precise",
+    ),
+  );
+  return errors;
 }
 
 function validateConfig(type: HabitType, config: HabitConfig): HabitError[] {
@@ -123,45 +161,21 @@ function validateConfig(type: HabitType, config: HabitConfig): HabitError[] {
     errors.push("scheduled_days_empty");
   }
 
-  if (type === "boolean") {
-    const hasAmounts =
-      config.target !== null ||
-      config.unit !== null ||
-      config.increment !== null;
-    if (hasAmounts) errors.push("amounts_not_allowed");
-    return errors;
-  }
-
-  errors.push(
-    ...validateAmount(
-      config.target,
-      "target_not_positive",
-      "target_too_precise",
-    ),
-  );
-  if (config.unit === null || config.unit.trim() === "") {
-    errors.push("unit_empty");
-  } else if (lengthOf(config.unit) > MAX_UNIT_LENGTH) {
-    errors.push("unit_too_long");
-  }
-  errors.push(
-    ...validateAmount(
-      config.increment,
-      "increment_not_positive",
-      "increment_too_precise",
-    ),
-  );
+  errors.push(...validateAmounts(type, config));
   return errors;
 }
 
-// Stores the unit without surrounding spaces.
-function normalizeConfig(config: HabitConfig): HabitConfig {
+/** The amounts as they are stored: the unit, without surrounding spaces. */
+export function normalizeAmounts(amounts: Amounts): Amounts {
   return {
-    scheduledDays: config.scheduledDays,
-    target: config.target,
-    unit: config.unit === null ? null : config.unit.trim(),
-    increment: config.increment,
+    target: amounts.target,
+    unit: amounts.unit === null ? null : amounts.unit.trim(),
+    increment: amounts.increment,
   };
+}
+
+function normalizeConfig(config: HabitConfig): HabitConfig {
+  return { scheduledDays: config.scheduledDays, ...normalizeAmounts(config) };
 }
 
 function sameConfig(a: HabitConfig, b: HabitConfig): boolean {
@@ -180,7 +194,8 @@ export interface NewHabit {
   readonly config: HabitConfig;
 }
 
-function later(a: LocalDate, b: LocalDate): LocalDate {
+/** The later of two dates. */
+export function later(a: LocalDate, b: LocalDate): LocalDate {
   return a > b ? a : b;
 }
 
@@ -247,13 +262,14 @@ export function archiveHabit(habit: Habit, today: LocalDate): Habit {
 
 /**
  * The version in force on `date`: the one with the latest `effectiveFrom` that is not after
- * `date`, or null if the habit had no configuration yet. `versions` belong to a single habit.
+ * `date`, or null if there was no configuration yet. `versions` belong to a single habit or
+ * weekly goal.
  */
-export function versionOn(
-  versions: readonly HabitVersion[],
+export function versionOn<V extends { readonly effectiveFrom: LocalDate }>(
+  versions: readonly V[],
   date: LocalDate,
-): HabitVersion | null {
-  let current: HabitVersion | null = null;
+): V | null {
+  let current: V | null = null;
   for (const version of versions) {
     if (version.effectiveFrom > date) continue;
     if (current === null || version.effectiveFrom > current.effectiveFrom) {

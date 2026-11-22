@@ -9,8 +9,22 @@ import {
 } from "@/data/habits-repository";
 import { listReminders } from "@/data/reminders-repository";
 import { SYNC_TABLES, adoptSyncAccount } from "@/data/sync-repository";
-import { habit, openMigratedDatabase, version } from "@/data/testing/fixtures";
+import {
+  habit,
+  openMigratedDatabase,
+  version,
+  weeklyGoal,
+  weeklyGoalVersion,
+} from "@/data/testing/fixtures";
 import type { TestDatabase } from "@/data/testing/node-database";
+import {
+  addWeeklyGoal,
+  deleteWeeklyGoal,
+  listWeeklyGoalEntries,
+  listWeeklyGoalVersions,
+  listWeeklyGoals,
+  saveWeeklyGoalEntry,
+} from "@/data/weekly-goals-repository";
 
 import { synchronize } from "./synchronize";
 import { FakeRemote, UniqueViolation } from "./testing/fake-remote";
@@ -63,6 +77,83 @@ async function entriesOf(db: TestDatabase, day: LocalDate) {
     value,
   }));
 }
+
+describe("synchronize weekly goals", () => {
+  const WEEK = localDate("2026-11-16");
+
+  test("another device finds the goal, its version and its total", async () => {
+    const goal = weeklyGoal("run", { recurring: false, color: "teal" });
+    await addWeeklyGoal(phone, goal, weeklyGoalVersion("run"));
+    await saveWeeklyGoalEntry(phone, {
+      id: "run-entry",
+      weeklyGoalId: "run",
+      week: WEEK,
+      value: 2,
+    });
+
+    await synchronize(phone, remote, USER);
+    await synchronize(tablet, remote, USER);
+
+    expect(remote.row("weekly_goals", "run")).toMatchObject({
+      recurring: false,
+    });
+    expect(await listWeeklyGoals(tablet)).toEqual([goal]);
+    expect(await listWeeklyGoalVersions(tablet)).toHaveLength(1);
+    expect(await listWeeklyGoalEntries(tablet, WEEK)).toMatchObject([
+      { id: "run-entry", value: 2 },
+    ]);
+    expect(await pendingCount(phone)).toBe(0);
+    expect(await pendingCount(tablet)).toBe(0);
+  });
+
+  test("a recurring goal arrives as recurring", async () => {
+    await addWeeklyGoal(phone, weeklyGoal("run"), weeklyGoalVersion("run"));
+
+    await synchronize(phone, remote, USER);
+    await synchronize(tablet, remote, USER);
+
+    expect((await listWeeklyGoals(tablet))[0].recurring).toBe(true);
+  });
+
+  test("the total of the same week on two devices is joined by its key", async () => {
+    await addWeeklyGoal(phone, weeklyGoal("run"), weeklyGoalVersion("run"));
+    await synchronize(phone, remote, USER);
+    await synchronize(tablet, remote, USER);
+    await saveWeeklyGoalEntry(phone, {
+      id: "phone-entry",
+      weeklyGoalId: "run",
+      week: WEEK,
+      value: 1,
+    });
+    await saveWeeklyGoalEntry(tablet, {
+      id: "tablet-entry",
+      weeklyGoalId: "run",
+      week: WEEK,
+      value: 3,
+    });
+
+    await synchronize(phone, remote, USER);
+    await synchronize(tablet, remote, USER);
+    await synchronize(phone, remote, USER);
+
+    expect(remote.rows.weekly_goal_entries.size).toBe(1);
+    expect(await listWeeklyGoalEntries(phone, WEEK)).toEqual(
+      await listWeeklyGoalEntries(tablet, WEEK),
+    );
+  });
+
+  test("a deleted goal disappears from the other devices", async () => {
+    await addWeeklyGoal(phone, weeklyGoal("run"), weeklyGoalVersion("run"));
+    await synchronize(phone, remote, USER);
+    await synchronize(tablet, remote, USER);
+
+    await deleteWeeklyGoal(phone, "run");
+    await synchronize(phone, remote, USER);
+    await synchronize(tablet, remote, USER);
+
+    expect(await listWeeklyGoals(tablet)).toEqual([]);
+  });
+});
 
 describe("synchronize", () => {
   test("uploads every local row on the first synchronization (RF-38)", async () => {

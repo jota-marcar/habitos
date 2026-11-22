@@ -25,6 +25,7 @@ Cada ADR documenta una decisión técnica importante: el contexto, las opciones 
 | [0019](0019-eliminacion-de-la-cuenta-con-una-edge-function-que-revoca-sign-in-with-apple-antes-de-borrar-al-usuario.md) | Eliminación de la cuenta con una Edge Function que revoca Sign in with Apple antes de borrar al usuario | Propuesto |
 | [0020](0020-actualizaciones-ota-con-eas-update-primero-en-desarrollo-y-despues-en-produccion.md) | Actualizaciones OTA con EAS Update, primero en desarrollo y después en producción | Propuesto |
 | [0021](0021-carrusel-de-horizontes-con-scrollview-horizontal-paginado.md) | Carrusel de horizontes con ScrollView horizontal paginado | Propuesto |
+| [0022](0022-objetivos-semanales-en-tablas-propias-con-un-total-por-semana.md) | Objetivos semanales en tablas propias con un total por semana | Propuesto |
 
 ## Plantilla
 

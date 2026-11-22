@@ -5,6 +5,7 @@ import { weekdayOf, type LocalDate } from "./dates";
 import type { Entry } from "./entries";
 import {
   versionOn,
+  type Amounts,
   type Habit,
   type HabitType,
   type HabitVersion,
@@ -21,12 +22,12 @@ export interface DayHabit {
 }
 
 /**
- * A boolean habit is done when it is marked; a quantitative one, when the accumulated amount
- * reaches the target of the version in force that day (RF-16).
+ * A boolean habit or weekly goal is done when it is marked; a quantitative one, when the
+ * accumulated amount reaches the target of the version in force then (RF-16, RF-47).
  */
 export function isDone(
   type: HabitType,
-  version: HabitVersion,
+  version: Pick<Amounts, "target">,
   value: number,
 ): boolean {
   if (type === "boolean") return value >= 1;
@@ -39,7 +40,7 @@ export function isDone(
  */
 export function progressOf(
   type: HabitType,
-  version: HabitVersion,
+  version: Pick<Amounts, "target">,
   value: number,
 ): number {
   if (isDone(type, version, value)) return 1;

@@ -7,7 +7,14 @@
 import { deleteAccountData } from "./account-data";
 import type { Database, SqlValue } from "./database";
 
-export type SyncTable = "habits" | "habit_versions" | "entries" | "reminders";
+export type SyncTable =
+  | "habits"
+  | "habit_versions"
+  | "entries"
+  | "reminders"
+  | "weekly_goals"
+  | "weekly_goal_versions"
+  | "weekly_goal_entries";
 
 /** The synchronized tables, parents before their children, as their foreign keys require. */
 export const SYNC_TABLES: readonly SyncTable[] = [
@@ -15,6 +22,9 @@ export const SYNC_TABLES: readonly SyncTable[] = [
   "habit_versions",
   "entries",
   "reminders",
+  "weekly_goals",
+  "weekly_goal_versions",
+  "weekly_goal_entries",
 ];
 
 /** The value of a column in the cloud. */
@@ -60,7 +70,30 @@ const COLUMNS: Record<SyncTable, readonly string[]> = {
   ],
   entries: ["id", "habit_id", "date", "value", "deleted"],
   reminders: ["id", "habit_id", "time", "deleted"],
+  weekly_goals: [
+    "id",
+    "name",
+    "type",
+    "color",
+    "recurring",
+    "first_week",
+    "archived_week",
+    "deleted",
+  ],
+  weekly_goal_versions: [
+    "id",
+    "weekly_goal_id",
+    "effective_from",
+    "target",
+    "unit",
+    "increment",
+    "deleted",
+  ],
+  weekly_goal_entries: ["id", "weekly_goal_id", "week", "value", "deleted"],
 };
+
+/** The columns that are 0 or 1 on the device and a boolean in the cloud. */
+const BOOLEAN_COLUMNS: readonly string[] = ["deleted", "recurring"];
 
 /**
  * The unique keys made of data instead of the id (ADR-0009). Two devices without connection
@@ -72,6 +105,9 @@ const NATURAL_KEYS: Record<SyncTable, readonly string[]> = {
   habit_versions: ["habit_id", "effective_from"],
   entries: ["habit_id", "date"],
   reminders: ["habit_id", "time"],
+  weekly_goals: [],
+  weekly_goal_versions: ["weekly_goal_id", "effective_from"],
+  weekly_goal_entries: ["weekly_goal_id", "week"],
 };
 
 /** The columns of `table` that travel to and from the cloud. */
@@ -80,7 +116,7 @@ export function syncedColumns(table: SyncTable): readonly string[] {
 }
 
 function toCloud(column: string, value: SqlValue): CloudValue {
-  return column === "deleted" ? value === 1 : value;
+  return BOOLEAN_COLUMNS.includes(column) ? value === 1 : value;
 }
 
 /** The value of `column` in `row`, as the device stores it. */

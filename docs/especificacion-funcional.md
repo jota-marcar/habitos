@@ -8,7 +8,7 @@ Una aplicación móvil para registrar cada día qué hábitos se han cumplido.
 
 El problema que resuelve no es la falta de motivación, sino el **olvido**: con el ajetreo diario se pasan cosas que uno quiere hacer. Apuntar lo que se hace genera conciencia, y los recordatorios evitan que se olvide.
 
-A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo (ver [6. Visión a futuro](#6-visión-a-futuro-tres-horizontes)). El MVP se centra solo en los hábitos diarios.
+El MVP se centra en los hábitos diarios. La aplicación se amplía con los objetivos semanales (ver [3.8](#38-objetivos-semanales)) y a futuro podría incluir objetivos a largo plazo (ver [6. Visión a futuro](#6-visión-a-futuro-tres-horizontes)).
 
 ### Principios
 
@@ -30,7 +30,7 @@ A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo
 | **Hábito** | `Habit` | Algo que el usuario quiere hacer de forma periódica (por ejemplo, "Meditar" o "Beber agua"). |
 | **Hábito booleano** | `boolean` | Se cumple o no se cumple (por ejemplo, "Meditar"). |
 | **Hábito cuantitativo** | `quantitative` | Tiene una meta numérica con unidad (por ejemplo, "Beber agua: 2 L"). |
-| **Meta** | `target` | Cantidad que hay que alcanzar en un día para cumplir un hábito cuantitativo. |
+| **Meta** | `target` | Cantidad que hay que alcanzar para cumplir un hábito cuantitativo en un día, o un objetivo semanal de cantidad en una semana. |
 | **Incremento** | `increment` | Cantidad que se suma con cada toque en un hábito cuantitativo (por ejemplo, 250 ml). |
 | **Unidad** | `unit` | Texto corto que acompaña a las cantidades de un hábito cuantitativo (por ejemplo, "L" o "páginas"). |
 | **Días programados** | `scheduledDays` | Días de la semana en los que toca un hábito. |
@@ -54,6 +54,10 @@ A futuro, la aplicación podría ampliarse a objetivos semanales y a largo plazo
 | **Horizonte** | `horizon` | Cada página de la pantalla principal, según el plazo que abarca: los hábitos del día, los objetivos de la semana y, más adelante, los objetivos a largo plazo. |
 | **Semana** | `week` | Periodo de lunes a domingo en la hora local del dispositivo. |
 | **Objetivo semanal** | `WeeklyGoal` | Algo que el usuario quiere conseguir en el conjunto de una semana, sin importar qué día lo haga. |
+| **Objetivo recurrente** | `recurring` | Objetivo semanal que se repite todas las semanas y empieza cada una de cero. |
+| **Objetivo puntual** | `oneOff` | Objetivo semanal de una sola semana. |
+| **Registro semanal** | `WeeklyGoalEntry` | Total apuntado de un objetivo semanal en una semana. |
+| **Aviso de progreso** | `ProgressDigest` | Aviso a una hora fija de la semana que nombra los objetivos aún sin conseguir y cuánto llevan. |
 
 La columna "En el código" es el nombre en inglés con el que cada término aparece en el código y en el modelo de datos ([ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)). Cada término se traduce siempre igual; uno nuevo se añade aquí antes de usarlo en el código. `goal` queda reservado para los objetivos de la [visión a futuro](#6-visión-a-futuro-tres-horizontes), y `Record` se evita porque ya tiene otro significado en el lenguaje de programación.
 
@@ -217,13 +221,51 @@ Es la pantalla principal de la aplicación (ver 3.1).
 - **RF-28.** Todas las funciones de registro (marcar, sumar, consultar días) funcionan sin conexión. Los cambios se sincronizan con la cuenta cuando vuelve la conexión.
 - **RF-29.** Se conserva el historial completo de registros desde el primer día, aunque en el MVP no se muestren estadísticas.
 
+### 3.8 Objetivos semanales
+
+Un objetivo semanal se mide por la semana completa, de lunes a domingo: cuenta lo mismo si se hace en un día o en cinco. Por ahora es independiente de los hábitos.
+
+- **RF-42.** El usuario puede crear un objetivo semanal con estos datos:
+
+  | Dato | Obligatorio | Notas |
+  |------|-------------|-------|
+  | Nombre | Sí | Texto corto, de 40 caracteres como máximo. |
+  | Tipo | Sí | Sí o no, o cantidad. No se puede cambiar después de crearlo. |
+  | Meta | Solo cantidad | Número mayor que 0, con 2 decimales como máximo. |
+  | Unidad | Solo cantidad | Texto libre corto, de 10 caracteres como máximo: "h", "veces", "km"… |
+  | Incremento | Solo cantidad | Número mayor que 0, con 2 decimales como máximo. Por defecto, 1. |
+  | Repetir cada semana | Sí | Activado por defecto. No se puede cambiar después de crearlo. |
+  | Color | No | Uno de la paleta de los hábitos (RF-06), o ninguno. |
+
+  Con "Repetir cada semana" activado es **recurrente**; desactivado, **puntual**. Va activado por defecto porque, si el usuario lo pasa por alto, el objetivo vuelve a aparecer a la vista en lugar de desaparecer sin avisar. El formulario indica con una línea discreta qué va a pasar: "Se repite cada semana" o "Solo la semana del 16–22 nov".
+
+  El objetivo empieza en la semana que se está viendo si es futura. Creado desde la semana actual o desde una pasada, empieza en la actual.
+- **RF-43.** El usuario puede editar cualquier dato de un objetivo salvo el tipo y la repetición.
+  - El nombre y el color cambian también en las semanas pasadas.
+  - La meta, la unidad y el incremento se aplican desde la semana actual, o desde su primera semana si aún no ha empezado. Las semanas pasadas conservan los suyos.
+  - Un objetivo puntual de una semana pasada y un objetivo archivado ya no se editan.
+- **RF-44.** El usuario puede archivar un objetivo recurrente para dejar de seguirlo sin perder lo conseguido.
+  - Deja de aparecer en las semanas siguientes. La semana en que se archiva solo aparece si ya tenía algo apuntado.
+  - Archivar pide confirmación, porque no se puede deshacer.
+  - Un objetivo puntual no se archiva: termina con su semana.
+- **RF-45.** El usuario puede eliminar un objetivo de forma permanente, tras una confirmación explícita. Desaparece de todas las semanas junto con lo apuntado.
+- **RF-46.** La página semanal muestra los objetivos de la semana que se está viendo, cada uno con su nombre y su progreso, en dos grupos como los hábitos (RF-12): los pendientes arriba y los conseguidos abajo.
+- **RF-47.** Un objetivo de sí o no se marca y desmarca con un toque, y uno de cantidad suma su incremento. Se consigue al alcanzar la meta, que se puede superar.
+  - Se guarda un único total por objetivo y semana, sin el día en que se hizo.
+  - Se puede apuntar en la semana actual y en las pasadas, no en las futuras.
+- **RF-48.** Al terminar la semana, un objetivo recurrente empieza la siguiente de cero. Un objetivo puntual sin conseguir se queda en su semana como no conseguido y no pasa a la siguiente.
+- **RF-49.** La aplicación envía un **aviso de progreso** los jueves a las 20:00 y los domingos a las 11:00.
+  - Solo se envía si a esa hora quedan objetivos de la semana sin conseguir, y nombra cada uno con lo que lleva (por ejemplo, "Proyectos 2 de 5 h · Correr 1 de 3"). Si son muchos, la lista se recorta como en RF-37.
+  - Al tocarlo se abre la aplicación en la página semanal de la semana actual. No tiene botones, porque reúne varios objetivos.
+  - Las horas son fijas.
+
 ## 4. Fuera del alcance del MVP
 
 Funcionalidades descartadas por ahora, en orden aproximado de interés:
 
 1. Estadísticas: rachas, porcentaje de cumplimiento, calendario de actividad. Cuando existan, tendrán su opción en el menú (RF-32); hasta entonces el menú no la muestra.
 2. Widget en la pantalla de inicio para marcar hábitos.
-3. Más tipos de frecuencia (por ejemplo, "3 veces por semana"). Encaja con los objetivos semanales de la [visión a futuro](#6-visión-a-futuro-tres-horizontes).
+3. Más tipos de frecuencia en los hábitos. "3 veces por semana" se cubre con un objetivo semanal (ver [3.8](#38-objetivos-semanales)).
 4. Más tipos de hábito.
 5. Reordenar manualmente los hábitos.
 6. Automatizaciones (registrar hábitos sin intervención del usuario).
@@ -243,7 +285,7 @@ Puntos a decidir antes de implementar la parte correspondiente. Ahora mismo no q
 
 ## 6. Visión a futuro: tres horizontes
 
-> **Solo es una idea.** No forma parte del MVP, no tiene requisitos ni tareas y se concretará cuando el desarrollo avance. Se apunta para no perderla y para construir a partir de ella.
+> **Solo es una idea, salvo los objetivos semanales,** que ya tienen sus requisitos en la sección [3.8](#38-objetivos-semanales). El resto no forma parte del MVP, no tiene requisitos ni tareas y se concretará cuando el desarrollo avance. Se apunta para no perderla y para construir a partir de ella.
 
 La aplicación podría organizarse en tres partes, una por cada horizonte de tiempo. Cada una responde a una pregunta distinta:
 
@@ -259,9 +301,7 @@ Es lo que define el MVP (secciones 3.1 a 3.7) y la base de las otras dos partes.
 
 ### Objetivos semanales
 
-- La referencia es la **semana completa**, no cada día: las 5 horas cuentan igual si se hacen en un día, en tres o en cinco.
-- Pueden ser **recurrentes** (todas las semanas, como "5 horas a la semana en proyectos personales") o **puntuales** (solo una semana concreta). De momento se contemplan los dos; ya se verá cómo encajan.
-- Se parecen a un hábito cuantitativo cuya meta se mide por semana en lugar de por día: lo que se apunta cada día se suma al total de la semana. Incluyen la frecuencia "N veces por semana" de la sección 4.
+Definidos en la sección [3.8](#38-objetivos-semanales).
 
 ### Objetivos a largo plazo
 
@@ -283,5 +323,4 @@ Los tres horizontes podrían relacionarse: un objetivo a largo plazo se consigue
 ### Preguntas abiertas
 
 - ¿Cómo se vinculan los horizontes y qué se ve de ese vínculo?
-- ¿Cómo conviven los objetivos semanales recurrentes y los puntuales?
 - ¿Cómo se mide el progreso de un objetivo a largo plazo: hitos intermedios, avance calculado a partir de lo vinculado, o solo cumplido o no en la fecha?

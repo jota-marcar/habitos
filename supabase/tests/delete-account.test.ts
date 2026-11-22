@@ -15,7 +15,17 @@ import {
 
 import { addHabit } from "@/data/habits-repository";
 import { saveEntry } from "@/data/entries-repository";
-import { habit, openMigratedDatabase, version } from "@/data/testing/fixtures";
+import {
+  habit,
+  openMigratedDatabase,
+  version,
+  weeklyGoal,
+  weeklyGoalVersion,
+} from "@/data/testing/fixtures";
+import {
+  addWeeklyGoal,
+  saveWeeklyGoalEntry,
+} from "@/data/weekly-goals-repository";
 import { localDate } from "@/domain/dates";
 import { localTime } from "@/domain/times";
 import { supabaseRemote } from "@/sync/supabase-remote";
@@ -27,7 +37,15 @@ const KEY = process.env.ANON_KEY ?? process.env.PUBLISHABLE_KEY;
 const SECRET_KEY = process.env.SERVICE_ROLE_KEY ?? process.env.SECRET_KEY;
 const PASSWORD = "a-password-for-the-tests";
 
-const ACCOUNT_TABLES = ["habits", "habit_versions", "entries", "reminders"];
+const ACCOUNT_TABLES = [
+  "habits",
+  "habit_versions",
+  "entries",
+  "reminders",
+  "weekly_goals",
+  "weekly_goal_versions",
+  "weekly_goal_entries",
+];
 
 // The first request starts the function, which downloads its dependencies.
 jest.setTimeout(60_000);
@@ -70,6 +88,18 @@ async function accountWithData(): Promise<Account> {
       date: localDate("2026-11-12"),
       value: 1,
     });
+    const weeklyGoalId = id();
+    await addWeeklyGoal(
+      db,
+      weeklyGoal(weeklyGoalId),
+      weeklyGoalVersion(weeklyGoalId, { id: id() }),
+    );
+    await saveWeeklyGoalEntry(db, {
+      id: id(),
+      weeklyGoalId,
+      week: localDate("2026-11-16"),
+      value: 1,
+    });
     await synchronize(db, supabaseRemote(account), data.user.id);
   } finally {
     db.close();
@@ -97,8 +127,19 @@ const ONE_ROW_EACH = {
   habit_versions: 1,
   entries: 1,
   reminders: 1,
+  weekly_goals: 1,
+  weekly_goal_versions: 1,
+  weekly_goal_entries: 1,
 };
-const NO_ROWS = { habits: 0, habit_versions: 0, entries: 0, reminders: 0 };
+const NO_ROWS = {
+  habits: 0,
+  habit_versions: 0,
+  entries: 0,
+  reminders: 0,
+  weekly_goals: 0,
+  weekly_goal_versions: 0,
+  weekly_goal_entries: 0,
+};
 
 async function deleteAccount(account: SupabaseClient) {
   const { data, error } = await account.functions.invoke("delete-account", {
