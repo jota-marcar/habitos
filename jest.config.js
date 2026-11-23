@@ -16,14 +16,16 @@ module.exports = {
   testPathIgnorePatterns: ["/node_modules/", "/supabase/tests/"],
   // Coverage is only measured, and required in full, for the domain (pure rules where
   // every branch is a business rule), the data layer (where a wrong query loses data), the
-  // synchronization (where a wrong step loses data too) and the Edge Functions (where a
-  // wrong step deletes an account or leaves it connected to Apple). The adapter of Supabase
-  // and the entry points of the functions are tested against a real Supabase in the CI
-  // instead (ADR-0018, ADR-0019). See docs/arquitectura.md.
+  // synchronization (where a wrong step loses data too), the notifications (a reminder that
+  // fails does so in silence) and the Edge Functions (where a wrong step deletes an account or
+  // leaves it connected to Apple). The adapter of Supabase and the entry points of the
+  // functions are tested against a real Supabase in the CI instead (ADR-0018, ADR-0019). See
+  // docs/arquitectura.md.
   collectCoverageFrom: [
     "src/domain/**/*.ts",
     "src/data/**/*.ts",
     "src/sync/**/*.ts",
+    "src/notifications/**/*.ts",
     "supabase/functions/**/*.ts",
     "!src/**/*.test.ts",
     "!supabase/functions/**/*.test.ts",
@@ -31,8 +33,17 @@ module.exports = {
     "!src/*/testing/**",
     "!src/sync/remote.ts",
     "!src/sync/supabase-remote.ts",
+    // Only types, and only the wiring that runs as the app starts.
+    "!src/notifications/notifier.ts",
+    "!src/notifications/startup.ts",
   ],
   coverageThreshold: {
+    "./src/notifications/": {
+      statements: 100,
+      branches: 100,
+      functions: 100,
+      lines: 100,
+    },
     "./src/data/": {
       statements: 100,
       branches: 100,

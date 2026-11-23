@@ -202,7 +202,7 @@ GitHub Actions comprueba cada cambio. Los flujos están en `.github/workflows/`.
 
 | Flujo | Cuándo | Qué ejecuta | ¿Bloquea el merge? |
 |-------|--------|-------------|--------------------|
-| **CI → Verify** | En cada Pull Request hacia `main` y en cada commit de `main` | `npm run verify`: formato, lint, tipos y tests, con cobertura del 100 % en el dominio, en la capa de datos, en la sincronización y en las Edge Functions | Sí |
+| **CI → Verify** | En cada Pull Request hacia `main` y en cada commit de `main` | `npm run verify`: formato, lint, tipos y tests, con cobertura del 100 % en el dominio, en la capa de datos, en la sincronización, en las notificaciones y en las Edge Functions | Sí |
 | **CI → Database** | Igual | El esquema de la nube (`supabase/`) sobre una base local de Supabase: tests pgTAP de Row Level Security y restricciones (`supabase test db`) y, con la API de Supabase, alineación con el esquema local y sincronización de punta a punta (`npm run test:schema`) | Sí |
 | **CI → Audit** | Igual | `npm run audit-deps`: avisos de seguridad | No, solo informa |
 | **Weekly review** | Cada lunes a las 07:00 UTC, o a mano desde la pestaña Actions | `npm run audit-deps` y `npx expo-doctor` | No aplica; si falla, GitHub avisa por correo |
