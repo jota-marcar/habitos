@@ -11,6 +11,7 @@ import type {
 } from "@/domain/weekly-goals";
 
 import type { Database } from "./database";
+import { markDeleted } from "./emptied-rows";
 
 interface WeeklyGoalRow {
   id: string;
@@ -212,21 +213,22 @@ export async function saveWeeklyGoalEntry(
 }
 
 /**
- * Deletes a goal with all its history (RF-45). The rows are only marked as deleted, so that the
- * synchronization can propagate it (ADR-0004).
+ * Deletes a goal with all its history (RF-45). Only an empty marker of each row stays, so that
+ * the synchronization can propagate it (ADR-0004, ADR-0023).
  */
 export async function deleteWeeklyGoal(
   db: Database,
   goalId: string,
 ): Promise<void> {
-  const mark = "SET deleted = 1, pending_sync = 1";
   await db.transaction(async (tx) => {
-    await tx.run(`UPDATE weekly_goals ${mark} WHERE id = ?`, [goalId]);
-    for (const table of ["weekly_goal_versions", "weekly_goal_entries"]) {
-      await tx.run(
-        `UPDATE ${table} ${mark} WHERE weekly_goal_id = ? AND deleted = 0`,
-        [goalId],
-      );
+    await markDeleted(tx, "weekly_goals", "id = ?", [goalId]);
+    for (const table of [
+      "weekly_goal_versions",
+      "weekly_goal_entries",
+    ] as const) {
+      await markDeleted(tx, table, "weekly_goal_id = ? AND deleted = 0", [
+        goalId,
+      ]);
     }
   });
 }

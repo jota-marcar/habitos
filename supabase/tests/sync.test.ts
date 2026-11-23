@@ -10,6 +10,7 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+import { EMPTIED_VALUES } from "@/data/emptied-rows";
 import { listEntries, saveEntry } from "@/data/entries-repository";
 import {
   addHabit,
@@ -23,6 +24,11 @@ import {
   listReminders,
 } from "@/data/reminders-repository";
 import {
+  SYNC_TABLES,
+  syncedColumns,
+  type SyncTable,
+} from "@/data/sync-repository";
+import {
   habit,
   openMigratedDatabase,
   version,
@@ -32,6 +38,7 @@ import {
 import type { TestDatabase } from "@/data/testing/node-database";
 import {
   addWeeklyGoal,
+  deleteWeeklyGoal,
   listWeeklyGoalEntries,
   listWeeklyGoals,
   saveWeeklyGoalEntry,
@@ -184,6 +191,110 @@ test("changes and deletions reach the other device", async () => {
 
   expect(await habitNames(phone.db)).toEqual(["Drink water"]);
   expect(await values(phone.db)).toEqual([1]);
+});
+
+describe("a deletion is for good (ADR-0023)", () => {
+  const cloudRow = async (table: SyncTable, rowId: string) => {
+    const { data, error } = await phone.client
+      .from(table)
+      .select(syncedColumns(table).join(", "))
+      .eq("id", rowId)
+      .single();
+    if (error !== null) throw error;
+    return data as unknown as Record<string, unknown>;
+  };
+
+  test("the account holds the same emptied values as the device", async () => {
+    const goalId = id();
+    const week = localDate("2026-11-16");
+    await addWeeklyGoal(
+      phone.db,
+      weeklyGoal(goalId, { name: "Secret" }),
+      weeklyGoalVersion(goalId, { id: id() }),
+    );
+    await saveWeeklyGoalEntry(phone.db, {
+      id: id(),
+      weeklyGoalId: goalId,
+      week,
+      value: 2,
+    });
+    const habitId = await addFullHabit(phone.db, "Secret");
+    await sync(phone);
+
+    await deleteHabit(phone.db, habitId);
+    await deleteWeeklyGoal(phone.db, goalId);
+    await sync(phone);
+
+    for (const table of SYNC_TABLES) {
+      const rows = await phone.db.all<{ id: string }>(
+        `SELECT id FROM ${table} WHERE deleted = 1`,
+      );
+      expect(rows.length).toBeGreaterThan(0);
+      for (const { id: rowId } of rows) {
+        expect(await cloudRow(table, rowId)).toMatchObject({
+          deleted: true,
+          ...EMPTIED_VALUES[table],
+        });
+      }
+    }
+    // Nothing is left to upload or to download: both sides hold the same values.
+    expect(await sync(phone)).toEqual({ changed: false });
+  });
+
+  test("the other device empties its copy", async () => {
+    const water = await addFullHabit(phone.db, "Secret");
+    await sync(phone);
+    await sync(tablet);
+
+    await deleteHabit(phone.db, water);
+    await sync(phone);
+    await sync(tablet);
+
+    expect(
+      await tablet.db.first("SELECT name FROM habits WHERE id = ?", [water]),
+    ).toEqual({ name: "" });
+    expect(await habitNames(tablet.db)).toEqual([]);
+  });
+
+  test("an older change on another device does not bring it back", async () => {
+    const water = await addFullHabit(phone.db, "Secret");
+    await sync(phone);
+    await sync(tablet);
+
+    await deleteHabit(phone.db, water);
+    await sync(phone);
+    await saveHabit(tablet.db, habit(water, { name: "Changed offline" }));
+    await sync(tablet);
+    await sync(tablet);
+
+    expect(await cloudRow("habits", water)).toMatchObject({
+      deleted: true,
+      name: "",
+    });
+    expect(await habitNames(tablet.db)).toEqual([]);
+  });
+
+  test("a new entry of a habit deleted elsewhere ends up deleted", async () => {
+    const water = await addFullHabit(phone.db, "Secret");
+    await sync(phone);
+    await sync(tablet);
+
+    await deleteHabit(phone.db, water);
+    await sync(phone);
+    const entryId = id();
+    await saveEntry(tablet.db, {
+      id: entryId,
+      habitId: water,
+      date: NEXT_DAY,
+      value: 3,
+    });
+    await sync(tablet);
+
+    expect(await cloudRow("entries", entryId)).toMatchObject({
+      deleted: true,
+      ...EMPTIED_VALUES.entries,
+    });
+  });
 });
 
 test("downloads in pages", async () => {
