@@ -42,7 +42,7 @@ Nada de esto se ha probado todavía en un dispositivo:
 ## Qué viene después
 
 - **Puntos menores de la auditoría:** pantalla de error propia en español, la lectura que puede pisar una ordenación, límites de los campos al escribir, el botón Posponer a última hora y el criterio de los objetivos archivados.
-- **Antes del tercer horizonte:** tests de notificaciones, separación de capas, núcleo común de hábitos y objetivos, empaquetar la app en la CI y dividir `arquitectura.md`.
+- **Antes del tercer horizonte:** tests de notificaciones, separación de capas, núcleo común de hábitos y objetivos y dividir `arquitectura.md`.
 - **En el próximo build:** informes de errores (Sentry), con su ADR, y la limpieza de los restos de web y Android.
 
 ## Decisiones pendientes
@@ -58,4 +58,4 @@ Aplazadas en su momento hasta que la app se abriera a más gente, cosa que ya ha
 | Inicio de sesión obligatorio en la App Store | Revisarlo antes de enviarla | [Riesgos](arquitectura.md#9-riesgos-conocidos) |
 | Política de privacidad | Necesaria antes de la App Store: la app guarda datos de otras personas | Sin escribir |
 
-**Por confirmar con la primera OTA:** que la huella calculada en Windows coincide con la del build de EAS en macOS ([ADR-0020](adr/0020-actualizaciones-ota-con-eas-update-primero-en-desarrollo-y-despues-en-produccion.md)). Si la actualización no llega, `eas fingerprint:compare` muestra la diferencia.
+**Huella nativa, comprobada el 2026-11-23:** la calculada en Windows con las variables de EAS coincide con la de los builds de desarrollo y de producción, hechos en macOS ([ADR-0020](adr/0020-actualizaciones-ota-con-eas-update-primero-en-desarrollo-y-despues-en-produccion.md)). `update:dev` y `update:prod` lo vuelven a comprobar antes de publicar.

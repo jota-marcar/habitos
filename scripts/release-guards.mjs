@@ -2,7 +2,7 @@
 // over-the-air updates (update.mjs). What is released must be what is in git and, for
 // production, what is in main on GitHub.
 
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 export function git(...args) {
@@ -74,6 +74,61 @@ export function requireMainUpToDate(what) {
       "main is not the same as origin/main. Bring it up to date (/sync) and push nothing to main.",
     );
   }
+}
+
+/** Runs a read-only EAS command for a variant and returns its JSON output. */
+function easJson(variant, command) {
+  // Through the shell, because on Windows eas is a .cmd file.
+  const { status, stdout } = spawnSync(
+    `eas ${command} --json --non-interactive`,
+    {
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+      shell: true,
+      stdio: ["ignore", "pipe", "inherit"],
+      env: { ...process.env, APP_VARIANT: variant, EXPO_NO_DOTENV: "1" },
+    },
+  );
+  if (status !== 0) {
+    fail(`Could not check the native code with EAS: eas ${command} failed.`);
+  }
+  // EAS can print notices before the JSON, which starts on a line of its own.
+  try {
+    return JSON.parse(stdout.slice(stdout.search(/^(?:\[\]|[[{])\s*$/m)));
+  } catch {
+    return fail(
+      `Could not check the native code with EAS: eas ${command} did not return JSON.`,
+    );
+  }
+}
+
+/**
+ * An update only reaches the builds with its same fingerprint, and EAS publishes it with success
+ * even if there is none. The fingerprint depends on the variables of the EAS environment, so it
+ * has to be computed with them: without them it differs from the build's (ADR-0020).
+ */
+export function requireCompatibleBuild(variant) {
+  const [build] = easJson(
+    variant,
+    `build:list --platform ios --channel ${variant} --status finished --limit 1`,
+  );
+  if (build === undefined) {
+    fail(`There is no finished build on the ${variant} channel to update.`);
+  }
+  const { fingerprint1, fingerprint2 } = easJson(
+    variant,
+    `fingerprint:compare --build-id ${build.id} --environment ${variant}`,
+  );
+  if (fingerprint1.hash !== fingerprint2.hash) {
+    fail(
+      `The native code has changed since the last ${variant} build (${build.appVersion} (${build.appBuildVersion})): this update would reach nobody.`,
+      `See the difference with \`eas fingerprint:compare --build-id ${build.id} --environment ${variant}\`.`,
+      "It needs a new build (docs/despliegue.md).",
+    );
+  }
+  console.log(
+    `Native code: matches the latest ${variant} build, ${build.appVersion} (${build.appBuildVersion}). Older builds with other native code will not get this update.`,
+  );
 }
 
 export function printSource(profileName) {

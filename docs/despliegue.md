@@ -25,6 +25,8 @@ Un cambio es **nativo** si añade o actualiza una dependencia con código nativo
 
 **Cuidado con `package.json` y `.gitignore`.** Los `scripts` del primero y el contenido del segundo forman parte de la huella nativa. Aunque no cambien el binario, tocarlos hace que las actualizaciones dejen de llegar a los builds instalados, y entonces hace falta un build nuevo.
 
+`update:dev` y `update:prod` comparan la huella con la del último build de su canal y se niegan a publicar si no coincide, porque EAS la publicaría con éxito y no llegaría a nadie. La huella depende de las variables del entorno de EAS: para compararla a mano, usa `eas fingerprint:compare --build-id <id> --environment <variante>`.
+
 ## Los dos caminos
 
 ### Cambio solo de JavaScript
