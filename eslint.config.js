@@ -69,5 +69,5 @@ module.exports = defineConfig([
       ],
     },
   },
-  ...["data", "shared", "sync", "notifications", "auth"].map(layerRule),
+  ...["data", "shared", "sync", "notifications", "auth", "ui"].map(layerRule),
 ]);

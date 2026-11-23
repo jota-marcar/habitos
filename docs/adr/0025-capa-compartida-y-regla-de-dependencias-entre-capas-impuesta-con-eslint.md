@@ -32,7 +32,7 @@ Las capas quedan ordenadas de abajo arriba, y cada una solo puede depender de la
 
 `domain` → `data` → `shared` → `sync` → `notifications` → `auth` → `ui` → `app`
 
-`src/shared` contiene lo que usan varias capas y no es de ninguna: el reloj, el formato, la petición de horizonte, la apertura de la base de datos y el cliente de Supabase con su configuración. ESLint impone el orden en todas las capas salvo `ui` y `app`, que pueden usar todo lo que tienen debajo.
+`src/shared` contiene lo que usan varias capas y no es de ninguna: el reloj, el formato, la petición de horizonte, la apertura de la base de datos y el cliente de Supabase con su configuración. ESLint impone el orden en todas las capas; `app`, la última, puede usar todas las demás.
 
 ## Consecuencias
 
