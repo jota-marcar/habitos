@@ -123,6 +123,7 @@ Los detalles están en [CONTRIBUTING.md](../CONTRIBUTING.md#8-integración-conti
 - El script [sync.mjs](../.claude/skills/sync/sync.mjs) actualiza `main` y borra las ramas locales cuyo Pull Request está fusionado, cuya rama remota ya no existe y que no tienen commits fuera de ese PR. Pregunta a GitHub porque un squash merge no deja rastro en git. Lo prueba [sync-script.test.js](../src/__tests__/sync-script.test.js), que lo ejecuta sobre repositorios desechables con GitHub simulado.
 - Pone al día las ramas apiladas sobre un PR recién fusionado con `git rebase --onto`, pasa `npm run verify` y las sube con `--force-with-lease`. Un `git merge origin/main` daba conflictos casi siempre: con squash merge, `main` tiene el código del PR de abajo en un commit nuevo y git ve dos versiones de las mismas líneas. Nació de la regla de tres tras los conflictos de los PR 27, 28 y 32.
 - No hace nada si hay cambios sin commit, no fuerza ramas con conflictos ni con `verify` en rojo, y no borra ramas con el PR abierto, sin PR o con trabajo que no llegó al PR.
+- Funciona desde un worktree de git, que es donde trabajan las sesiones de Claude Code. Actualiza `main` en el checkout donde esté abierta sin cambiarse a ella, avanza la rama del worktree actual si no tiene commits propios y nunca rebasa ni borra una rama abierta en otro worktree. Si el checkout de `main` tiene cambios sin commit, avisa y no toca nada.
 - Se invoca con `/sync` o cuando el usuario dice que ha hecho un merge.
 
 ### Subagentes integrados
