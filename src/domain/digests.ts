@@ -3,7 +3,7 @@
 // so a digest of today has to be cancelled as soon as nothing is pending any more.
 
 import { addDays, type LocalDate } from "./dates";
-import { habitsForDay, type DayHabit } from "./day";
+import { habitsForDay, nextStartAfter, type DayHabit } from "./day";
 import type { Entry } from "./entries";
 import type { Habit, HabitVersion } from "./habits";
 import { sortByReminders } from "./order";
@@ -51,9 +51,10 @@ export function upcomingPendingDigests(
   let date = now.date;
   let emptyDays = 0;
 
-  // As with reminders: every habit is scheduled at least once a week, and today may give
-  // nothing because its times have passed.
-  while (upcoming.length < limit && emptyDays <= DAYS_PER_WEEK) {
+  // As with reminders: every habit is scheduled at least once a week and today may give
+  // nothing because its times have passed, so a whole empty week beyond it means that nothing
+  // else is due until the next habit starts.
+  while (upcoming.length < limit) {
     const pending = habitsForDay(source, date).filter((d) => !d.done);
 
     const ofDay: PendingDigest[] = [];
@@ -72,7 +73,14 @@ export function upcomingPendingDigests(
 
     upcoming.push(...ofDay);
     emptyDays = ofDay.length === 0 ? emptyDays + 1 : 0;
-    date = addDays(date, 1);
+    if (emptyDays <= DAYS_PER_WEEK) {
+      date = addDays(date, 1);
+      continue;
+    }
+    const nextStart = nextStartAfter(source.habits, date);
+    if (nextStart === null) break;
+    date = nextStart;
+    emptyDays = 0;
   }
 
   return upcoming.slice(0, limit);

@@ -21,9 +21,11 @@ import type { WeekGoal } from "@/domain/weekly-goals";
 
 import type { PlannedNotification } from "./notifier";
 import {
+  FINAL_NOTICE_ID,
   REMINDER_PREFIX,
   categoryOf,
   digestNotification,
+  finalNoticeNotification,
   horizonOfNotification,
   instantOf,
   localDateTimeOf,
@@ -470,23 +472,69 @@ describe("windowOf", () => {
         at("d2", "2026-11-12", "22:00"),
         at("d3", "2026-11-13", "17:00"),
       ],
+      NOW,
     );
 
     expect(window.map((n) => n.id)).toEqual(["r1", "d1", "d2", "r2", "d3"]);
   });
 
-  test("keeps as many as fit in the window (ADR-0005)", () => {
+  test("keeps as many as fit, with the last place for the final notice (ADR-0005, RF-51)", () => {
     const reminders = Array.from({ length: 40 }, (_, i) =>
-      at(`r${i}`, "2026-11-12", "08:00"),
+      at(`r${i}`, "2026-11-14", "08:00"),
     );
     const digests = Array.from({ length: 40 }, (_, i) =>
-      at(`d${i}`, "2026-11-13", "17:00"),
+      at(`d${i}`, "2026-11-15", "17:00"),
     );
 
-    const window = windowOf(reminders, digests);
+    const window = windowOf(reminders, digests, NOW);
 
     expect(window).toHaveLength(60);
-    expect(window[59].id).toBe("d19");
+    expect(window.filter((n) => n.id === FINAL_NOTICE_ID)).toHaveLength(1);
+    expect(window.map((n) => n.id)).toContain("d18");
+    expect(window.map((n) => n.id)).not.toContain("d19");
+  });
+
+  test("the final notice goes in order, at noon of the day before the last warning", () => {
+    const reminders = Array.from({ length: 60 }, (_, i) =>
+      at(`r${i}`, i < 30 ? "2026-11-14" : "2026-11-16", "08:00"),
+    );
+
+    const window = windowOf(reminders, [], NOW);
+    const notice = window.findIndex((n) => n.id === FINAL_NOTICE_ID);
+
+    expect(window[notice].at).toEqual({ date: "2026-11-15", time: "12:00" });
+    expect(window[notice - 1].at.date).toBe("2026-11-14");
+    expect(window[notice + 1].at.date).toBe("2026-11-16");
+  });
+
+  test("has no final notice while everything fits: nothing is left to run out", () => {
+    const reminders = Array.from({ length: 59 }, (_, i) =>
+      at(`r${i}`, "2026-11-14", "08:00"),
+    );
+
+    const window = windowOf(reminders, [], NOW);
+
+    expect(window).toHaveLength(59);
+    expect(window.some((n) => n.id === FINAL_NOTICE_ID)).toBe(false);
+  });
+});
+
+describe("finalNoticeNotification", () => {
+  test("asks to open the app, with no habit or buttons (RF-51)", () => {
+    const notice = finalNoticeNotification(
+      { date: localDate("2026-11-20"), time: localTime("22:00") },
+      NOW,
+    );
+
+    expect(notice).toEqual({
+      id: FINAL_NOTICE_ID,
+      at: { date: "2026-11-19", time: "12:00" },
+      title: "Tus recordatorios se acaban",
+      body: "Abre Hábitos para seguir recibiendo tus recordatorios",
+      habitId: null,
+      category: null,
+    });
+    expect(horizonOfNotification(notice.id)).toBe("habits");
   });
 });
 
@@ -556,6 +604,93 @@ describe("syncNotifications", () => {
     await syncNotifications(notifier, plan([planned("a")]));
 
     expect(log).toEqual(["schedule reminder.a"]);
+  });
+
+  test("a notification that iOS rejects does not stop the ones after it", async () => {
+    const { notifier, scheduled } = fakeNotifier();
+    const rejected = new Error("the moment has passed");
+    const schedule = notifier.schedule;
+    notifier.schedule = async (notification, signature) => {
+      if (notification.id === "reminder.a") throw rejected;
+      await schedule(notification, signature);
+    };
+
+    await expect(
+      syncNotifications(notifier, plan([planned("a"), planned("b")])),
+    ).rejects.toBe(rejected);
+
+    expect([...scheduled.keys()]).toEqual(["reminder.b"]);
+  });
+
+  test("a cancellation that fails does not stop the notifications to schedule", async () => {
+    const { notifier, scheduled } = fakeNotifier([
+      { id: "reminder.old", signature: "old" },
+      { id: "snooze.h1.2026-11-11.10:00", signature: "old" },
+    ]);
+    notifier.cancel = () => Promise.reject(new Error("no"));
+
+    await expect(
+      syncNotifications(notifier, plan([planned("a")])),
+    ).rejects.toThrow("no");
+
+    expect(scheduled.has("reminder.a")).toBe(true);
+  });
+
+  test("a category that fails is registered again on the next refresh", async () => {
+    const { notifier } = fakeNotifier();
+    const category = {
+      id: "reminder_boolean",
+      buttons: [{ id: "done", title: "Hecho" }],
+    };
+    const known = new Map<string, string>();
+    const setCategory = notifier.setCategory;
+    notifier.setCategory = () => Promise.reject(new Error("no"));
+
+    await expect(
+      syncNotifications(
+        notifier,
+        plan([planned("a")], { categories: [category] }),
+        known,
+      ),
+    ).rejects.toThrow("no");
+    expect(known.has(category.id)).toBe(false);
+
+    notifier.setCategory = setCategory;
+    await syncNotifications(
+      notifier,
+      plan([planned("a")], { categories: [category] }),
+      known,
+    );
+
+    expect(known.has(category.id)).toBe(true);
+  });
+
+  test("replaces the final notice in place when it moves (RF-51)", async () => {
+    const notice = (date: string) =>
+      finalNoticeNotification(
+        { date: localDate(date), time: localTime("22:00") },
+        NOW,
+      );
+    const { notifier, scheduled, log } = fakeNotifier([
+      { id: FINAL_NOTICE_ID, signature: signatureOf(notice("2026-11-20")) },
+    ]);
+
+    await syncNotifications(notifier, plan([notice("2026-11-21")]));
+
+    expect(log).toEqual([`schedule ${FINAL_NOTICE_ID}`]);
+    expect(scheduled.get(FINAL_NOTICE_ID)).toBe(
+      signatureOf(notice("2026-11-21")),
+    );
+  });
+
+  test("cancels the final notice once the window no longer has it", async () => {
+    const { notifier, log } = fakeNotifier([
+      { id: FINAL_NOTICE_ID, signature: "old" },
+    ]);
+
+    await syncNotifications(notifier, plan([]));
+
+    expect(log).toEqual([`cancel ${FINAL_NOTICE_ID}`]);
   });
 
   test("schedules again those that have changed", async () => {

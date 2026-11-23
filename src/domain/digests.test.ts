@@ -172,6 +172,20 @@ describe("upcomingPendingDigests", () => {
     expect(digests).toEqual([]);
   });
 
+  test("reaches a habit that starts more than a week from now", () => {
+    const starts = localDate("2026-12-01");
+    const data = {
+      habits: [habit("read", { createdOn: starts })],
+      versions: [version("read", { effectiveFrom: starts })],
+      entries: [],
+      reminders: [],
+    };
+
+    const digests = upcomingPendingDigests(data, at("2026-11-09", "07:00"), 1);
+
+    expect(summary(digests)).toEqual(["2026-12-01 17:00 read"]);
+  });
+
   test("names the habits in the order the day view shows at that time (RF-12)", () => {
     const digests = upcomingPendingDigests(
       {
