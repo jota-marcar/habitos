@@ -23,9 +23,15 @@ Trae los objetivos semanales con sus avisos de progreso, el aviso antes de queda
 
 1. Aplicar las migraciones que falten en `habitos-dev`.
 2. `npm run update:dev` y probar en Hábitos Dev la lista de abajo.
-3. Aplicar las migraciones en `habitos`. La de vaciar lo eliminado es irreversible.
-4. `npm run update:prod`, que crea el tag `v0.2.0`.
-5. Abrir Hábitos dos veces y comprobar en **Ajustes** que dice "Versión 0.2.0". TestFlight seguirá mostrando `0.1.0 (2)`.
+3. Exportar los datos de `habitos`, porque el plan gratuito no tiene copias automáticas. El fichero contiene datos de los probadores: guárdalo fuera del repositorio y bórralo cuando la publicación esté comprobada.
+
+   ```powershell
+   supabase db dump --remote=REF_PROD --data-only --schema public -f ..\habitos-antes-de-0.2.0.sql
+   ```
+
+4. Aplicar las migraciones en `habitos`. La de vaciar lo eliminado es irreversible.
+5. `npm run update:prod`, que crea el tag `v0.2.0`.
+6. Abrir Hábitos dos veces y comprobar en **Ajustes** que dice "Versión 0.2.0". TestFlight seguirá mostrando `0.1.0 (2)`.
 
 ### Qué probar en el iPhone
 
@@ -42,7 +48,7 @@ Nada de esto se ha probado todavía en un dispositivo:
 ## Qué viene después
 
 - **Puntos menores de la auditoría:** pantalla de error propia en español, la lectura que puede pisar una ordenación, límites de los campos al escribir, el botón Posponer a última hora y el criterio de los objetivos archivados.
-- **Antes del tercer horizonte:** dividir `arquitectura.md` y, después de publicar la `0.2.0`, el núcleo común de hábitos y objetivos.
+- **Después de publicar la `0.2.0`, antes del tercer horizonte:** el núcleo común de hábitos y objetivos.
 - **En el próximo build:** informes de errores (Sentry), con su ADR, y la limpieza de los restos de web y Android.
 
 ## Decisiones pendientes
@@ -51,7 +57,7 @@ Aplazadas en su momento hasta que la app se abriera a más gente, cosa que ya ha
 
 | Decisión | Recomendación | Dónde |
 |----------|---------------|-------|
-| Revisar los límites del plan gratuito de Supabase | Hacerlo antes de invitar a más gente | [ADR-0003](adr/0003-supabase-como-backend.md) |
+| Plan de Supabase | Revisado el 2026-11-23: seguir en Free con los amigos y pasar a Pro (desde 25 USD/mes) antes de la App Store. Free no tiene copias automáticas y pausa los proyectos tras 1 semana sin actividad | [ADR-0003](adr/0003-supabase-como-backend.md) |
 | Nonce del inicio de sesión con Google | Mantenerlo mientras sean amigos; revisarlo antes de la App Store | [ADR-0017](adr/0017-inicio-de-sesion-nativo-con-apple-y-google-y-sesion-en-el-llavero.md) |
 | Purgar las filas borradas, ya vacías | No hace falta aún: ocupan poco y sin ellas un dispositivo antiguo no sabría qué se borró | [ADR-0009](adr/0009-sql-directo-y-migraciones-propias-en-la-capa-de-datos-local.md), [ADR-0023](adr/0023-vaciar-las-filas-borradas-y-hacer-definitivo-el-borrado.md) |
 | Mismo correo con Apple y con Google | Comprobar si da una sola cuenta. Con "Ocultar mi correo" de Apple serían dos | [ADR-0017](adr/0017-inicio-de-sesion-nativo-con-apple-y-google-y-sesion-en-el-llavero.md) |
