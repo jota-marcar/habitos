@@ -39,9 +39,11 @@ export function tagRelease(what) {
     git("push", "--quiet", "origin", `refs/tags/${tag}`);
     console.log(`\nTagged ${tag}.`);
   } catch {
+    const create = git("tag", "--list", tag)
+      ? ""
+      : `\n  git tag -a ${tag} -m "${tag}: ${what}"`;
     console.warn(
-      `\nWARNING: ${tag} was released, but its tag could not be created or pushed. Run:`,
-      `\n  git tag -a ${tag} -m "${tag}: ${what}"`,
+      `\nWARNING: ${tag} was released, but its tag could not be created or pushed. Run:${create}`,
       `\n  git push origin refs/tags/${tag}`,
     );
   }

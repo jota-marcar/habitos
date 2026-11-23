@@ -21,7 +21,7 @@ El JavaScript solo puede usar lo que el binario trae. Por eso, un cambio nativo 
 | Entregar un cambio solo de JavaScript | `npm run update:prod` | No | **Todos** los que tengan un build compatible, sin hacer nada |
 | Entregar un cambio nativo | `npm run build:prod` | **Sí** | Team (Expo) al procesarse; **Amigos**, cuando lo añado a su grupo y Apple lo aprueba |
 
-Un cambio es **nativo** si añade o actualiza una dependencia con código nativo, o si toca `app.json`, `app.config.ts` o los iconos. Todo lo demás es solo JavaScript.
+Un cambio es **nativo** si añade o actualiza una dependencia con código nativo, o si toca `app.json` (salvo `version`), `app.config.ts` o los iconos. Todo lo demás es solo JavaScript.
 
 **Cuidado con `package.json` y `.gitignore`.** Los `scripts` del primero y el contenido del segundo forman parte de la huella nativa. Aunque no cambien el binario, tocarlos hace que las actualizaciones dejen de llegar a los builds instalados, y entonces hace falta un build nuevo.
 

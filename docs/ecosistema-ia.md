@@ -63,6 +63,7 @@ Cada persona puede añadir sus propias preferencias en `.claude/settings.local.j
 - Bloquea `git commit` cuando la rama actual es `main`.
 - Bloquea `git push` hacia `main`: explícito (`git push origin main`, `HEAD:main`, `HEAD:refs/heads/main`), a través de `HEAD` estando en `main`, implícito (push sin rama estando en `main`) o con `--all` y `--mirror`.
 - Al bloquear, explica a Claude el motivo y le indica que cree una rama.
+- Pide confirmación en los push que las reglas de permisos no distinguen y pueden reescribir o borrar ramas remotas: banderas combinadas (`-uf`, `-ud`) y `--prune`.
 - Lo prueba [protect-main-hook.test.js](../src/__tests__/protect-main-hook.test.js), que lo ejecuta sobre un repositorio desechable.
 
 Complementa la protección de `main` en GitHub: el servidor lo impediría igualmente, pero el hook lo detecta antes.

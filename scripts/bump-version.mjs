@@ -78,6 +78,17 @@ if (subjects.length === 0 && forced === undefined) {
 }
 
 const current = appVersion();
+const readJson = (file) => JSON.parse(readFileSync(file, "utf8"));
+const lock = readJson("package-lock.json");
+if (
+  readJson("package.json").version !== current ||
+  lock.version !== current ||
+  lock.packages[""].version !== current
+) {
+  fail(
+    `app.json says ${current}, but package.json or package-lock.json differ. Align them first.`,
+  );
+}
 const next = bumped(released, forced ?? levelOf(subjects, released));
 
 console.log(`Last release: ${tag ?? "none"}`);

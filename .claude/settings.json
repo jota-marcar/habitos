@@ -98,6 +98,7 @@
       "PowerShell(git push --all*)",
       "PowerShell(git push * --all*)",
       "PowerShell(gh pr merge *)",
+      "PowerShell(& \"C:/Program Files/GitHub CLI/gh.exe\" pr merge *)",
       "PowerShell(git reset --hard *)",
       "PowerShell(git clean *)",
       "PowerShell(npm install *)",

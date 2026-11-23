@@ -65,6 +65,14 @@ function pushesToProtectedBranch(args, cwd) {
   return refspecs.some((r) => destinationOf(r, cwd) === PROTECTED_BRANCH);
 }
 
+// Pushing is allowed without asking, but not what rewrites or deletes remote branches. The ask
+// rules of settings.json cannot see a force inside combined flags (`-uf`) or `--prune`.
+function rewritesRemote(args) {
+  return args.some(
+    (a) => a === "--prune" || /^-[a-zA-Z]*[fd][a-zA-Z]*$/.test(a),
+  );
+}
+
 function block(reason) {
   process.stderr.write(
     `${reason}\nPer CONTRIBUTING.md, changes reach ${PROTECTED_BRANCH} only through a Pull Request. ` +
@@ -78,6 +86,7 @@ const command = input?.tool_input?.command;
 if (typeof command !== "string" || !/\bgit\b/.test(command)) process.exit(0);
 
 const cwd = input.cwd || process.cwd();
+let mustAsk = false;
 
 for (const segment of segments(command)) {
   const git = gitSubcommand(segment);
@@ -90,6 +99,21 @@ for (const segment of segments(command)) {
   if (git.name === "push" && pushesToProtectedBranch(git.args, cwd)) {
     block(`Blocked: no direct pushes to ${PROTECTED_BRANCH}.`);
   }
+
+  if (git.name === "push" && rewritesRemote(git.args)) mustAsk = true;
+}
+
+if (mustAsk) {
+  process.stdout.write(
+    JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: "PreToolUse",
+        permissionDecision: "ask",
+        permissionDecisionReason:
+          "This push can rewrite or delete remote branches.",
+      },
+    }),
+  );
 }
 
 process.exit(0);
