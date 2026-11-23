@@ -25,11 +25,16 @@ import {
   SNOOZE_MINUTES,
   finalNoticeMoment,
   showsGestureHint,
+  snoozedTime,
   upcomingReminders,
   type GestureHint,
   type UpcomingReminder,
 } from "@/domain/reminders";
-import { localTimeOf, type LocalDateTime } from "@/domain/times";
+import {
+  localTimeOf,
+  type LocalDateTime,
+  type LocalTime,
+} from "@/domain/times";
 import type { WeekGoal } from "@/domain/weekly-goals";
 import { weekOf } from "@/domain/weeks";
 import { formatAmount } from "@/shared/format";
@@ -78,6 +83,8 @@ export const BUTTONS = { done: "done", add: "add", snooze: "snooze" } as const;
 
 const BOOLEAN_CATEGORY = "reminder_boolean";
 const QUANTITATIVE_CATEGORY_PREFIX = "reminder_add_";
+// The same buttons without Posponer, for the reminders it could not move within their day.
+const NO_SNOOZE_CATEGORY_SUFFIX = "_no_snooze";
 
 // Future days cannot be recorded (RF-20), so this only bounds a query that reaches today.
 const LAST_DATE = localDate("9999-12-31");
@@ -110,13 +117,20 @@ const GESTURE_HINTS: Readonly<Record<Habit["type"], string>> = {
   boolean: "Mantén pulsado para marcarlo o posponerlo",
   quantitative: "Mantén pulsado para sumar o posponerlo",
 };
+const NO_SNOOZE_GESTURE_HINTS: typeof GESTURE_HINTS = {
+  boolean: "Mantén pulsado para marcarlo",
+  quantitative: "Mantén pulsado para sumar",
+};
 
 /** The gesture hint is not being shown: nothing to explain and nothing to remember. */
 export const NO_GESTURE_HINT: GestureHint = { startedOn: null, learned: true };
 
 function withoutGestureHint(body: string | null): string | null {
   if (body === null) return null;
-  const hints = Object.values(GESTURE_HINTS);
+  const hints = [
+    ...Object.values(GESTURE_HINTS),
+    ...Object.values(NO_SNOOZE_GESTURE_HINTS),
+  ];
   const text = body
     .split("\n")
     .filter((line) => !hints.includes(line))
@@ -139,11 +153,26 @@ const SNOOZE_BUTTON: NotificationButton = {
   title: `Posponer ${SNOOZE_MINUTES / 60} h`,
 };
 
-/** The buttons of the reminders of a habit, as it is that day (RF-25). */
-export function categoryOfDay({
+/** Whether Posponer would take a reminder at `time` out of its day (RF-25). */
+function cannotSnooze(time: LocalTime): boolean {
+  return snoozedTime(time) === null;
+}
+
+function categoryAt(category: string, time: LocalTime): string {
+  return cannotSnooze(time)
+    ? `${category}${NO_SNOOZE_CATEGORY_SUFFIX}`
+    : category;
+}
+
+/**
+ * The buttons of the reminders of a habit, as it is that day (RF-25): with Posponer and, for
+ * the last hour of the day, without it. Both are registered, because snoozing a reminder can
+ * take it to that last hour while the app is closed.
+ */
+export function categoriesOfDay({
   habit,
   version,
-}: DayHabit): NotificationCategory {
+}: DayHabit): readonly NotificationCategory[] {
   const increment = formatAmount(version.increment ?? 0);
   const main: NotificationButton =
     habit.type === "boolean"
@@ -152,7 +181,11 @@ export function categoryOfDay({
           id: BUTTONS.add,
           title: `+${increment} ${version.unit ?? ""}`.trim(),
         };
-  return { id: categoryOf(habit), buttons: [main, SNOOZE_BUTTON] };
+  const id = categoryOf(habit);
+  return [
+    { id, buttons: [main, SNOOZE_BUTTON] },
+    { id: `${id}${NO_SNOOZE_CATEGORY_SUFFIX}`, buttons: [main] },
+  ];
 }
 
 /** The notification of a reminder on a specific day. */
@@ -162,8 +195,11 @@ export function notificationOf(
 ): PlannedNotification {
   const { reminder, date, dayHabit } = upcoming;
   const body = reminderBody(upcoming);
+  const hints = cannotSnooze(reminder.time)
+    ? NO_SNOOZE_GESTURE_HINTS
+    : GESTURE_HINTS;
   const hint = showsGestureHint(gestureHint, date)
-    ? GESTURE_HINTS[dayHabit.habit.type]
+    ? hints[dayHabit.habit.type]
     : null;
   return {
     id: `${REMINDER_PREFIX}${reminder.id}.${date}`,
@@ -171,7 +207,7 @@ export function notificationOf(
     title: dayHabit.habit.name,
     body: hint === null ? body : body === null ? hint : `${body}\n${hint}`,
     habitId: dayHabit.habit.id,
-    category: categoryOf(dayHabit.habit),
+    category: categoryAt(categoryOf(dayHabit.habit), reminder.time),
   };
 }
 
@@ -296,6 +332,10 @@ export function snoozedNotification(
     id: `${SNOOZE_PREFIX}${original.habitId}.${at.date}.${at.time}`,
     at,
     body: withoutGestureHint(original.body),
+    category:
+      original.category === null
+        ? null
+        : categoryAt(original.category, at.time),
   };
 }
 
@@ -365,8 +405,9 @@ export async function planReminders(
 
   const categories = new Map<string, NotificationCategory>();
   for (const { dayHabit } of upcoming) {
-    const category = categoryOfDay(dayHabit);
-    if (!categories.has(category.id)) categories.set(category.id, category);
+    for (const category of categoriesOfDay(dayHabit)) {
+      if (!categories.has(category.id)) categories.set(category.id, category);
+    }
   }
   const pendingToday = scheduledHabitsForDay(
     { habits, versions, entries },

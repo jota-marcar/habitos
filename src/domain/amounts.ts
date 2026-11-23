@@ -4,6 +4,9 @@
 
 export const AMOUNT_DECIMALS = 2;
 
+/** The largest target or increment (RF-06, RF-42): beyond it, numbers stop being readable. */
+export const MAX_AMOUNT = 999_999;
+
 const FACTOR = 10 ** AMOUNT_DECIMALS;
 // Tolerance for the error that multiplying by FACTOR introduces (0.07 * 100 = 7.000000000000001).
 const TOLERANCE = 1e-9;
@@ -31,4 +34,12 @@ const AMOUNT_TEXT = /^\d+([.,]\d+)?$/;
 export function parseAmount(text: string): number | null {
   const trimmed = text.trim();
   return AMOUNT_TEXT.test(trimmed) ? Number(trimmed.replace(",", ".")) : null;
+}
+
+/**
+ * Whether the text of an amount can still be typed: only one above the maximum cannot. A text
+ * that is not a number yet, like "1,", is left for the rules of each amount.
+ */
+export function fitsMaxAmount(text: string): boolean {
+  return !(Number(text.trim().replace(",", ".")) > MAX_AMOUNT);
 }

@@ -118,7 +118,23 @@ describe("planReminders", () => {
           { id: "snooze", title: "Posponer 1 h" },
         ],
       },
+      {
+        id: "reminder_boolean_no_snooze",
+        buttons: [{ id: "done", title: "Hecho" }],
+      },
     ]);
+  });
+
+  test("from 23:00 a reminder does not offer Posponer (RF-25)", async () => {
+    await addHabit(db, habit("late"), version("late"), [
+      reminder("late", "22:59"),
+      reminder("late", "23:00"),
+    ]);
+
+    const { notifications } = await remindersPlanned();
+
+    expect(notifications[0].category).toBe("reminder_boolean");
+    expect(notifications[1].category).toBe("reminder_boolean_no_snooze");
   });
 
   test("a quantitative habit says how it is going that day (RF-24)", async () => {
@@ -151,6 +167,10 @@ describe("planReminders", () => {
           { id: "add", title: "+0,25 L" },
           { id: "snooze", title: "Posponer 1 h" },
         ],
+      },
+      {
+        id: "reminder_add_water_no_snooze",
+        buttons: [{ id: "add", title: "+0,25 L" }],
       },
     ]);
   });
@@ -850,6 +870,25 @@ describe("snoozedNotification", () => {
     expect(snoozedNotification(original, at).body).toBe("Llevas 1 de 2 L");
     expect(snoozedNotification(hintOnly, at).body).toBeNull();
   });
+
+  test("snoozed into the last hour of the day, it no longer offers Posponer", () => {
+    const original: PlannedNotification = {
+      id: "reminder.r1.2026-11-12",
+      at: { date: NOW.date, time: localTime("22:30") },
+      title: "Leer",
+      body: null,
+      habitId: "read",
+      category: "reminder_boolean",
+    };
+    const at = { date: NOW.date, time: localTime("23:30") };
+
+    expect(snoozedNotification(original, at).category).toBe(
+      "reminder_boolean_no_snooze",
+    );
+    expect(
+      snoozedNotification({ ...original, category: null }, at).category,
+    ).toBeNull();
+  });
 });
 
 describe("gesture hint (RF-25)", () => {
@@ -886,6 +925,16 @@ describe("gesture hint (RF-25)", () => {
     expect(reminderBodies(plan)[0]).toBe(
       "Llevas 0 de 2 L\nMantén pulsado para sumar o posponerlo",
     );
+  });
+
+  test("a reminder that cannot be snoozed does not mention it", async () => {
+    await addHabit(db, habit("read", { name: "Leer" }), version("read"), [
+      reminder("read", "23:30"),
+    ]);
+
+    const plan = await planReminders(db, NOW, NEW_HINT);
+
+    expect(reminderBodies(plan)[0]).toBe("Mantén pulsado para marcarlo");
   });
 
   test("stops after seven days, counted from the first reminder", async () => {

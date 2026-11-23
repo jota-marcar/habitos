@@ -7,6 +7,8 @@ import { ReminderKeeper } from "@/ui/reminders";
 import { SessionProvider, useSession } from "@/ui/session";
 import { SyncKeeper } from "@/ui/sync";
 
+export { ErrorScreen as ErrorBoundary } from "@/ui/error-screen";
+
 export const unstable_settings = STACK_SETTINGS;
 
 export default function RootLayout() {

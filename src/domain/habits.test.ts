@@ -5,6 +5,7 @@ import {
   HABIT_COLORS,
   MAX_NAME_LENGTH,
   MAX_UNIT_LENGTH,
+  limitedText,
   archiveHabit,
   changeConfig,
   changesApplyFrom,
@@ -236,6 +237,18 @@ describe("createHabit", () => {
     expect(errorsOf({ ...water, config })).toEqual(["increment_too_precise"]);
   });
 
+  test("rejects a target or an increment above the maximum", () => {
+    const target = { ...waterConfig, target: 1_000_000 };
+    const increment = { ...waterConfig, increment: 1_000_000 };
+
+    expect(errorsOf({ ...water, config: target })).toEqual([
+      "target_too_large",
+    ]);
+    expect(errorsOf({ ...water, config: increment })).toEqual([
+      "increment_too_large",
+    ]);
+  });
+
   test("reports every error at once", () => {
     const config = {
       scheduledDays: NO_DAYS,
@@ -252,6 +265,20 @@ describe("createHabit", () => {
       "unit_empty",
       "increment_not_positive",
     ]);
+  });
+});
+
+describe("limitedText", () => {
+  test("leaves a text that fits as it is, with its spaces", () => {
+    expect(limitedText(" abc ", 3)).toBe(" abc ");
+  });
+
+  test("cuts a longer one, keeping the spaces before it", () => {
+    expect(limitedText("  abcd", 3)).toBe("  abc");
+  });
+
+  test("counts an emoji as one character and never splits it", () => {
+    expect(limitedText("🧘🧘🧘", 2)).toBe("🧘🧘");
   });
 });
 

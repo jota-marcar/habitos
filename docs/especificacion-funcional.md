@@ -125,9 +125,9 @@ La aplicación tiene una sola pantalla principal, con una página por horizonte:
   |------|-------------|-------|
   | Nombre | Sí | Texto corto, de 40 caracteres como máximo. |
   | Tipo | Sí | Booleano o cuantitativo. No se puede cambiar después de crearlo. |
-  | Meta | Solo cuantitativo | Número mayor que 0, con 2 decimales como máximo. |
+  | Meta | Solo cuantitativo | Número mayor que 0 y hasta 999.999, con 2 decimales como máximo. |
   | Unidad | Solo cuantitativo | Texto libre corto, de 10 caracteres como máximo: "L", "páginas", "min"… |
-  | Incremento | Solo cuantitativo | Número mayor que 0, con 2 decimales como máximo. Por defecto, 1. |
+  | Incremento | Solo cuantitativo | Número mayor que 0 y hasta 999.999, con 2 decimales como máximo. Por defecto, 1. |
   | Días programados | Sí | Al menos un día. Por defecto, todos. |
   | Recordatorios | No | Cero o más horas del día (ver 3.6). |
   | Color | No | Uno de una paleta de 12 colores, o ninguno. Por defecto, ninguno. Tocar el color elegido lo quita. |
@@ -209,9 +209,9 @@ Es la pantalla principal de la aplicación (ver 3.1).
 - **RF-25.** Desde el propio recordatorio, sin abrir la aplicación, el usuario puede:
   - **Booleano:** marcarlo como cumplido.
   - **Cuantitativo:** sumar el incremento.
-  - **Ambos:** posponerlo 1 hora. El tiempo es el mismo para todos los hábitos. Un recordatorio no sale del día de su hábito: si al posponerlo caería en el día siguiente, no se vuelve a enviar.
+  - **Ambos:** posponerlo 1 hora. El tiempo es el mismo para todos los hábitos. Un recordatorio no sale del día de su hábito, así que los de las 23:00 en adelante no ofrecen este botón. Si se usa pasadas las 23:00 el de un recordatorio anterior, no se vuelve a enviar.
 
-  iOS solo muestra estos botones al mantener pulsada la notificación, así que los recordatorios lo explican con una línea ("Mantén pulsado para marcarlo o posponerlo", o "para sumar o posponerlo" en un cuantitativo). La línea deja de aparecer en cuanto el usuario usa un botón por primera vez y, si no llega a usarlo, a los 7 días del primer recordatorio. Es una ayuda del dispositivo: no se sincroniza con la cuenta.
+  iOS solo muestra estos botones al mantener pulsada la notificación, así que los recordatorios lo explican con una línea ("Mantén pulsado para marcarlo o posponerlo", o "para sumar o posponerlo" en un cuantitativo, sin "o posponerlo" en los que no pueden posponerse). La línea deja de aparecer en cuanto el usuario usa un botón por primera vez y, si no llega a usarlo, a los 7 días del primer recordatorio. Es una ayuda del dispositivo: no se sincroniza con la cuenta.
 - **RF-26.** Al tocar el recordatorio (fuera de sus botones), se abre la aplicación en el día actual, en la página de Hábitos, aunque se hubiera dejado en otra.
 - **RF-27.** Los recordatorios funcionan sin conexión.
 - **RF-37.** Además de los recordatorios de cada hábito, la aplicación envía cada día dos avisos de pendientes, a las 17:00 y a las 22:00. Así el usuario no se olvida de registrar lo que ya ha hecho, y se le recuerda lo que aún no ha hecho, también los hábitos que no tienen recordatorios.
@@ -248,9 +248,9 @@ Un objetivo semanal se mide por la semana completa, de lunes a domingo: cuenta l
   |------|-------------|-------|
   | Nombre | Sí | Texto corto, de 40 caracteres como máximo. |
   | Tipo | Sí | Sí o no, o cantidad. No se puede cambiar después de crearlo. |
-  | Meta | Solo cantidad | Número mayor que 0, con 2 decimales como máximo. |
+  | Meta | Solo cantidad | Número mayor que 0 y hasta 999.999, con 2 decimales como máximo. |
   | Unidad | Solo cantidad | Texto libre corto, de 10 caracteres como máximo: "h", "veces", "km"… |
-  | Incremento | Solo cantidad | Número mayor que 0, con 2 decimales como máximo. Por defecto, 1. |
+  | Incremento | Solo cantidad | Número mayor que 0 y hasta 999.999, con 2 decimales como máximo. Por defecto, 1. |
   | Repetir cada semana | Sí | Activado por defecto. No se puede cambiar después de crearlo. |
   | Color | No | Uno de la paleta de los hábitos (RF-06), o ninguno. |
 

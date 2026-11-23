@@ -93,6 +93,8 @@ export function useDay(): Day {
   const writes = useRef<Promise<void>>(Promise.resolve());
   // Discards the reads that finish after a newer one has started.
   const lastRead = useRef(0);
+  // A read that had to sort, until one finishes: a newer read takes over if it is discarded.
+  const sortDue = useRef(false);
   // The pause after the last change, and whether it is over: the next read then moves the
   // habits to their group.
   const settleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -106,6 +108,7 @@ export function useDay(): Day {
   const load = useCallback(
     async (shownDate: LocalDate, sort: boolean) => {
       const read = ++lastRead.current;
+      if (sort) sortDue.current = true;
       const [allHabits, versions, entries, reminders] = await Promise.all([
         listHabits(db),
         listHabitVersions(db),
@@ -121,7 +124,8 @@ export function useDay(): Day {
       // The current day is sorted by what is overdue and what comes next; any other day, by
       // the first reminders (RF-12).
       const time = shownDate === today() ? localTimeOf(now()) : null;
-      if (sort || order.current === null) {
+      if (sortDue.current || order.current === null) {
+        sortDue.current = false;
         const sorted = sortDayHabits(dayHabits, reminders, time);
         order.current = {
           pending: sorted.pending.map(habitIdOf),

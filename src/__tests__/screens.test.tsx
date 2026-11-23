@@ -366,9 +366,10 @@ function spyOnAppState() {
       listeners.push(listener);
       return { remove: () => undefined };
     });
-  return async (state: AppStateStatus) => {
+  return async (state: AppStateStatus, rightAfter?: () => void) => {
     await act(async () => {
       listeners.forEach((listener) => listener(state));
+      rightAfter?.();
     });
   };
 }
@@ -639,6 +640,23 @@ describe("day view", () => {
     await waitForTheMove(1);
     expect(habitNames()).toEqual(["Leer", "Sin hora", "Pasear"]);
     expect(doneNames()).toEqual(["Pasear"]);
+  });
+
+  test("still sorts the day if a synchronization overtakes the read (RF-12)", async () => {
+    await addBoolean("read", "Leer", "22:00");
+    await addBoolean("walk", "Pasear", "08:00");
+    const appBecomes = spyOnAppState();
+    await renderApp();
+    await screen.findByText("Pasear");
+    await fireEvent.press(screen.getByTestId("habit-walk"));
+    await screen.findByRole("checkbox", { checked: true });
+
+    await appBecomes("background");
+    await appBecomes("active", () =>
+      mockSync.listeners.forEach((listener) => listener()),
+    );
+
+    await waitFor(() => expect(doneNames()).toEqual(["Pasear"]));
   });
 
   test("keeps the view of a habit that changes group, so that it can slide (RF-12)", async () => {
@@ -915,6 +933,29 @@ describe("new habit", () => {
     expect(await listHabitVersions(db)).toEqual([
       expect.objectContaining({ target: 2, unit: "L", increment: 0.25 }),
     ]);
+  });
+
+  test("the fields stop at their limits while typing (RF-06)", async () => {
+    await renderApp("/habits/new");
+    const valueOf = (label: string) =>
+      screen.getByLabelText(label).props.value as string;
+    const type = (label: string, text: string) =>
+      fireEvent.changeText(screen.getByLabelText(label), text);
+
+    await type("Nombre", "a".repeat(41));
+    expect(valueOf("Nombre")).toHaveLength(40);
+
+    await fireEvent.press(screen.getByText("Cantidad"));
+    await type("Unidad", "a".repeat(11));
+    expect(valueOf("Unidad")).toHaveLength(10);
+
+    await type("Meta", "999999");
+    await type("Meta", "1000000");
+    expect(valueOf("Meta")).toBe("999999");
+
+    await type("Incremento", "5");
+    await type("Incremento", "1000000");
+    expect(valueOf("Incremento")).toBe("5");
   });
 
   describe("opening the reminder picker", () => {
@@ -2111,8 +2152,9 @@ describe("weekly goals (RF-42 to RF-50)", () => {
     expect(screen.getByText("Correr")).toBeTruthy();
     await pressAlertButton(alert, "Archivar");
 
+    // With no goal left in force, the page explains again how to create one.
     expect(
-      await screen.findByText("Esta semana no hay objetivos."),
+      await screen.findByText("Desliza desde abajo para crear uno."),
     ).toBeTruthy();
     expect(await listWeeklyGoals(db)).toEqual([
       expect.objectContaining({ archivedWeek: THIS_WEEK }),
