@@ -54,6 +54,10 @@ jobs:
         with:
           # Exact version: a new CLI does not run without review.
           version: 3.1.0
+      # The ports of Supabase (supabase/config.toml) are inside the range Linux hands out to
+      # outgoing connections, so one of them could be taken when its container starts.
+      - name: Reserve the ports of Supabase
+        run: sudo sysctl -w net.ipv4.ip_local_reserved_ports=54320-54329
       # Postgres, with the migrations of supabase/migrations applied, and the services the app
       # talks to: the API (Kong and PostgREST), Auth (GoTrue) and the Edge Runtime, which serves
       # supabase/functions. The rest are left out.
