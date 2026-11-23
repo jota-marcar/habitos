@@ -25,6 +25,7 @@ import {
   git,
   printSource,
   requireCommitted,
+  requireCompatibleBuild,
   requireMainUpToDate,
   requireUnreleasedVersion,
   tagRelease,
@@ -67,6 +68,8 @@ if (variant.fromMain) {
   requireUnreleasedVersion(`A ${variantName} update`);
 }
 printSource(variantName);
+requireCompatibleBuild(variantName);
+warnIfAppJsonChanged();
 
 if (checkOnly) {
   console.log("Ready to publish.");

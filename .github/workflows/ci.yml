@@ -31,6 +31,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run verify
+      # Metro resolves imports that Jest mocks or never reaches: a broken one would only fail
+      # when publishing. The bundle is left out of the repository.
+      - name: Bundle the app
+        run: npx expo export --platform ios --output-dir "$RUNNER_TEMP/bundle"
 
   # Cloud schema (supabase/): Row Level Security, constraints and alignment with the local
   # schema, on a local Supabase database (ADR-0015). Also the synchronization from end to end,
