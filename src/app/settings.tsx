@@ -17,6 +17,7 @@ import { Section } from "@/ui/components";
 import { useDatabase } from "@/ui/database";
 import { useSession } from "@/ui/session";
 import { SheetOption } from "@/ui/sheet";
+import { SyncStatusLine } from "@/ui/sync-status";
 import { fontSize, spacing, useColors } from "@/ui/theme";
 
 const PROVIDER_NAMES: Readonly<Record<string, string>> = {
@@ -156,6 +157,7 @@ export default function Settings() {
               {email}
             </Text>
           )}
+          <SyncStatusLine />
         </View>
         <SheetOption
           icon="rectangle.portrait.and.arrow.right"

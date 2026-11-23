@@ -41,6 +41,7 @@ import { newId, today } from "./clock";
 import { useDatabase } from "./database";
 import { playRecorded, recordedFeedback } from "./haptics";
 import { SETTLE_DELAY_MS } from "./use-day";
+import { reportWriteFailure } from "./write-failure";
 
 export interface WeekPage {
   /** Its goals in the groups and order of the screen, or null while they are being read. */
@@ -138,7 +139,12 @@ export function useWeek(monday: LocalDate): WeekPage {
   const change = useCallback(
     (make: () => Promise<void>): Promise<void> => {
       const write = writes.current.then(async () => {
-        await make();
+        try {
+          await make();
+        } catch (error) {
+          reportWriteFailure(error);
+          throw error;
+        }
         // The progress digests say how the goals are going, and stop once all are achieved
         // (RF-49).
         void refreshReminders(db);

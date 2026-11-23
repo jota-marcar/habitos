@@ -44,6 +44,7 @@ import { msUntilTomorrow, newId, now, today } from "./clock";
 import { useDatabase } from "./database";
 import { takeDayOnReturn } from "./day-on-return";
 import { playRecorded, recordedFeedback } from "./haptics";
+import { reportWriteFailure } from "./write-failure";
 
 export interface Day {
   /** The day on screen. */
@@ -222,7 +223,12 @@ export function useDay(): Day {
   const change = useCallback(
     (make: () => Promise<void>): Promise<void> => {
       const write = writes.current.then(async () => {
-        await make();
+        try {
+          await make();
+        } catch (error) {
+          reportWriteFailure(error);
+          throw error;
+        }
         // Marking a habit done cancels its pending reminders of the day (RF-24); archiving
         // or deleting it, all of them.
         void refreshReminders(db);

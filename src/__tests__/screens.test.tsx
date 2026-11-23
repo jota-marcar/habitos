@@ -103,6 +103,17 @@ jest.mock("@/sync/app-sync", () => ({
     mockSync.listeners.add(listener);
     return () => mockSync.listeners.delete(listener);
   },
+  onSyncFinished: () => () => {},
+}));
+// What the device remembers about the synchronizations (RF-53).
+let mockSyncRecord: {
+  lastCopiedAt: number | null;
+  failingSince: number | null;
+} = { lastCopiedAt: null, failingSince: null };
+const mockClearSyncRecord = jest.fn(async () => {});
+jest.mock("@/sync/sync-record", () => ({
+  readSyncRecord: async () => mockSyncRecord,
+  clearSyncRecord: () => mockClearSyncRecord(),
 }));
 jest.mock("@/auth/config", () => ({
   readAuthConfig: () => ({
@@ -280,6 +291,8 @@ beforeEach(async () => {
   mockGoogle.hasPreviousSignIn.mockReturnValue(false);
   mockSync.syncNow.mockReset().mockResolvedValue(undefined);
   mockSync.syncSoon.mockReset();
+  mockSyncRecord = { lastCopiedAt: null, failingSince: null };
+  mockClearSyncRecord.mockClear();
   db = await openMigratedDatabase();
 });
 
@@ -2645,6 +2658,96 @@ describe("sign-in", () => {
     expect(
       await screen.findByText(/No se ha podido iniciar sesión/),
     ).toBeTruthy();
+  });
+});
+
+describe("state of the copy (RF-53)", () => {
+  // The clock of these tests is at 10:00 of the current day.
+  const at = (time: string) => new Date(`${TODAY}T${time}:00`).getTime();
+  const daysAgo = (days: number) => at("10:00") - days * 24 * 60 * 60 * 1000;
+
+  test("the settings say when it was last copied", async () => {
+    mockSyncRecord = { lastCopiedAt: at("09:55"), failingSince: null };
+
+    await renderApp("/settings");
+
+    expect(await screen.findByTestId("sync-status")).toHaveTextContent(
+      "Copiado en tu cuenta hace 5 min",
+    );
+  });
+
+  test("the settings say nothing before the first copy", async () => {
+    await renderApp("/settings");
+    await screen.findByLabelText("Cerrar sesión");
+
+    expect(screen.queryByTestId("sync-status")).toBeNull();
+  });
+
+  test("the settings say when there are changes to copy", async () => {
+    await addBoolean("walk", "Pasear");
+
+    await renderApp("/settings");
+
+    expect(await screen.findByTestId("sync-status")).toHaveTextContent(
+      "Hay cambios pendientes de copiar en tu cuenta",
+    );
+  });
+
+  test("the main screen warns of changes stuck for days", async () => {
+    await addBoolean("walk", "Pasear");
+    mockSyncRecord = { lastCopiedAt: null, failingSince: daysAgo(3) };
+
+    await renderApp();
+
+    expect(await screen.findByTestId("sync-warning")).toHaveTextContent(
+      "Sin copiar en tu cuenta desde hace 3 días. Comprueba la conexión.",
+    );
+  });
+
+  test("the main screen says nothing while they are only pending", async () => {
+    await addBoolean("walk", "Pasear");
+    mockSyncRecord = { lastCopiedAt: null, failingSince: daysAgo(2) };
+
+    await renderApp();
+    await screen.findByText("Pasear");
+
+    expect(screen.queryByTestId("sync-warning")).toBeNull();
+  });
+
+  test("signing out forgets it", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    await renderApp("/settings");
+    await fireEvent.press(await screen.findByLabelText("Cerrar sesión"));
+    await waitFor(() => expect(alert).toHaveBeenCalled());
+
+    const buttons = alert.mock.lastCall?.[2] as AlertButton[];
+    await act(async () => {
+      buttons.find((b) => b.text === "Cerrar sesión")?.onPress?.();
+    });
+
+    await waitFor(() => expect(mockClearSyncRecord).toHaveBeenCalled());
+  });
+
+  test("a tap that cannot be saved says so", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    await addBoolean("walk", "Pasear");
+    await renderApp();
+    await screen.findByText("Pasear");
+    jest.spyOn(db, "run").mockRejectedValueOnce(new Error("disk full"));
+
+    await fireEvent.press(screen.getByTestId("habit-walk"));
+
+    await waitFor(() =>
+      expect(alert).toHaveBeenCalledWith(
+        "No se ha podido guardar",
+        "Tu último cambio no se ha guardado. Inténtalo de nuevo.",
+      ),
+    );
+    expect(warn).toHaveBeenCalledWith(
+      "A change could not be saved.",
+      new Error("disk full"),
+    );
   });
 });
 

@@ -49,6 +49,7 @@ El MVP se centra en los hábitos diarios. La aplicación se amplía con los obje
 | **Cerrar sesión** | `signOut` | Salir de la cuenta en el dispositivo: sus datos se borran de él, pero siguen en la cuenta. |
 | **Eliminar la cuenta** | `deleteAccount` | Borrar para siempre la cuenta y todos sus datos, en la cuenta y en el dispositivo, y desconectar la aplicación de Apple o de Google. |
 | **Cambios pendientes** | `pendingChanges` | Cambios hechos en el dispositivo que aún no se han copiado en la cuenta. |
+| **Estado de la copia** | `syncStatus` | Si lo que hay en el dispositivo ya está copiado en la cuenta, desde cuándo, o si lleva días sin poder copiarse. |
 | **Ajustes** | `settings` | Pantalla con las opciones de la cuenta, que se abre desde el menú. |
 | **Opciones** | `options` | Acciones sobre un hábito que se abren al mantenerlo pulsado: corregir la cantidad, editar, archivar y eliminar. |
 | **Horizonte** | `horizon` | Cada página de la pantalla principal, según el plazo que abarca: los hábitos del día, los objetivos de la semana y, más adelante, los objetivos a largo plazo. |
@@ -226,6 +227,10 @@ Es la pantalla principal de la aplicación (ver 3.1).
 
 - **RF-28.** Todas las funciones de registro (marcar, sumar, consultar días) funcionan sin conexión. Los cambios se sincronizan con la cuenta cuando vuelve la conexión.
 - **RF-29.** Se conserva el historial completo de registros desde el primer día, aunque en el MVP no se muestren estadísticas.
+- **RF-53.** El usuario puede saber si sus datos están a salvo en su cuenta.
+  - Ajustes muestra el **estado de la copia**: cuándo se copiaron por última vez ("Copiado en tu cuenta hace 5 min") o que hay cambios pendientes de copiar.
+  - Si hay cambios que llevan 3 días o más sin poder copiarse, Ajustes y la pantalla principal lo dicen con una línea discreta ("Sin copiar en tu cuenta desde hace 3 días. Comprueba la conexión."), hasta que se copien.
+  - Si un cambio no se puede guardar en el dispositivo, un diálogo lo avisa, para que el usuario no crea que está guardado.
 
 ### 3.8 Objetivos semanales
 

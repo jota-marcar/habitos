@@ -6,6 +6,7 @@ import { deleteAccountData } from "@/data/account-data";
 import type { Database } from "@/data/database";
 import { removeAllNotifications } from "@/notifications/expo-notifier";
 import { resumeSync, suspendSync } from "@/sync/app-sync";
+import { clearSyncRecord } from "@/sync/sync-record";
 
 import { signOutOfGoogle } from "./sign-in";
 import { supabase } from "./supabase";
@@ -19,6 +20,7 @@ export async function signOut(db: Database): Promise<void> {
   await suspendSync();
   try {
     await deleteAccountData(db);
+    await clearSyncRecord();
     await removeAllNotifications();
     await signOutOfGoogle();
     // Only this device: the default scope would sign out the other devices of the account

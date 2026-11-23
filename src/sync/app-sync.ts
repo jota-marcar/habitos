@@ -7,10 +7,15 @@ import type { Database } from "@/data/database";
 
 import { createSyncScheduler } from "./scheduler";
 import { supabaseRemote } from "./supabase-remote";
+import { recordSyncFailure, recordSyncSuccess } from "./sync-record";
 import { synchronize } from "./synchronize";
 
 let database: Database | null = null;
 const changeListeners = new Set<() => void>();
+const finishedListeners = new Set<() => void>();
+
+const notifyFinished = () =>
+  finishedListeners.forEach((listener) => listener());
 
 const scheduler = createSyncScheduler(
   async () => {
@@ -25,9 +30,14 @@ const scheduler = createSyncScheduler(
       supabaseRemote(supabase()),
       data.session.user.id,
     );
+    await recordSyncSuccess(Date.now());
+    notifyFinished();
     if (changed) changeListeners.forEach((listener) => listener());
   },
-  (error) => console.warn("The data could not be synchronized.", error),
+  (error) => {
+    console.warn("The data could not be synchronized.", error);
+    void recordSyncFailure(Date.now()).then(notifyFinished);
+  },
 );
 
 /**
@@ -64,4 +74,13 @@ export function resumeSync(): void {
 export function onSyncedChanges(listener: () => void): () => void {
   changeListeners.add(listener);
   return () => changeListeners.delete(listener);
+}
+
+/**
+ * Calls `listener` whenever a synchronization ends, well or not: the state of the copy has to
+ * follow (RF-53). Returns how to stop.
+ */
+export function onSyncFinished(listener: () => void): () => void {
+  finishedListeners.add(listener);
+  return () => finishedListeners.delete(listener);
 }

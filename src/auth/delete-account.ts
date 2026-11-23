@@ -8,6 +8,7 @@ import { deleteAccountData } from "@/data/account-data";
 import type { Database } from "@/data/database";
 import { removeAllNotifications } from "@/notifications/expo-notifier";
 import { resumeSync, suspendSync } from "@/sync/app-sync";
+import { clearSyncRecord } from "@/sync/sync-record";
 
 import { authorizeWithApple, revokeGoogleAccess } from "./sign-in";
 import { supabase } from "./supabase";
@@ -77,6 +78,7 @@ async function outcomeOf(error: unknown): Promise<DeleteAccountOutcome> {
 async function forgetAccount(db: Database): Promise<void> {
   await Promise.allSettled([
     deleteAccountData(db),
+    clearSyncRecord(),
     removeAllNotifications(),
     revokeGoogleAccess(),
   ]);

@@ -36,6 +36,7 @@ import {
   type Horizon,
 } from "@/ui/horizons";
 import { Sheet, SheetOption, useOpenSheetGesture, useSheet } from "@/ui/sheet";
+import { SyncWarning } from "@/ui/sync-status";
 import { fontSize, radius, spacing, topGap, useColors } from "@/ui/theme";
 import { TrackedList, type TrackedItem } from "@/ui/tracked-list";
 import { useDay } from "@/ui/use-day";
@@ -266,6 +267,8 @@ export default function Today() {
           />
         </View>
       </GestureDetector>
+
+      <SyncWarning />
 
       <GestureDetector gesture={openCalendarFromList}>
         <View testID="day-list" style={styles.pager}>
