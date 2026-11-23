@@ -20,6 +20,8 @@ import { FunctionsHttpError, type Session } from "@supabase/supabase-js";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { createGestureController } from "react-native-gesture-handler/jest-utils";
 
+import appJson from "../../app.json";
+
 import Today from "@/app/index";
 import EditHabit from "@/app/habits/[id]/edit";
 import NewHabit from "@/app/habits/new";
@@ -2776,6 +2778,14 @@ describe("settings", () => {
     expect(screen).toHavePathname("/settings");
     expect(await screen.findByText("Sesión iniciada con Apple")).toBeTruthy();
     expect(screen.getByText("persona@example.com")).toBeTruthy();
+  });
+
+  test("shows the version of the app, the one in app.json (RF-54)", async () => {
+    await renderApp("/settings");
+
+    expect(
+      await screen.findByText(`Versión ${appJson.expo.version}`),
+    ).toBeTruthy();
   });
 
   test("signing out removes the data and the notifications of the device (RF-03)", async () => {

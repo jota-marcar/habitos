@@ -51,6 +51,7 @@ El MVP se centra en los hábitos diarios. La aplicación se amplía con los obje
 | **Cambios pendientes** | `pendingChanges` | Cambios hechos en el dispositivo que aún no se han copiado en la cuenta. |
 | **Estado de la copia** | `syncStatus` | Si lo que hay en el dispositivo ya está copiado en la cuenta, desde cuándo, o si lleva días sin poder copiarse. |
 | **Ajustes** | `settings` | Pantalla con las opciones de la cuenta, que se abre desde el menú. |
+| **Versión de la aplicación** | `appVersion` | Número que identifica cada publicación de la aplicación (por ejemplo, 0.2.0). |
 | **Opciones** | `options` | Acciones sobre un hábito que se abren al mantenerlo pulsado: corregir la cantidad, editar, archivar y eliminar. |
 | **Horizonte** | `horizon` | Cada página de la pantalla principal, según el plazo que abarca: los hábitos del día, los objetivos de la semana y, más adelante, los objetivos a largo plazo. |
 | **Semana** | `week` | Periodo de lunes a domingo en la hora local del dispositivo. |
@@ -231,6 +232,7 @@ Es la pantalla principal de la aplicación (ver 3.1).
   - Ajustes muestra el **estado de la copia**: cuándo se copiaron por última vez ("Copiado en tu cuenta hace 5 min") o que hay cambios pendientes de copiar.
   - Si hay cambios que llevan 3 días o más sin poder copiarse, Ajustes y la pantalla principal lo dicen con una línea discreta ("Sin copiar en tu cuenta desde hace 3 días. Comprueba la conexión."), hasta que se copien.
   - Si un cambio no se puede guardar en el dispositivo, un diálogo lo avisa, para que el usuario no crea que está guardado.
+- **RF-54.** Ajustes muestra, al final y de forma discreta, la **versión de la aplicación** que está funcionando ("Versión 0.2.0"). Cada publicación tiene una versión nueva, así que basta mirarla para saber si la aplicación ya se ha actualizado.
 
 ### 3.8 Objetivos semanales
 

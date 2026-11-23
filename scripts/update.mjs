@@ -2,8 +2,9 @@
 // Publishes an over-the-air update of the JavaScript with EAS Update for one variant (ADR-0020):
 // - development: to Hábitos Dev, from any branch, to test on the iPhone the exact bundle that
 //   will be released, before anyone else gets it;
-// - production: to Hábitos in TestFlight, from main up to date with GitHub, and only after
-//   confirming that it was tested in Hábitos Dev.
+// - production: to Hábitos in TestFlight, from main up to date with GitHub, with a version that
+//   has not been released yet (ADR-0024), and only after confirming that it was tested in
+//   Hábitos Dev. Once published, its version is tagged.
 // Keeps the variants apart (ADR-0008):
 // - APP_VARIANT is set here, because the `env` of the build profiles in eas.json only applies to
 //   builds, and without it the config would be the development one;
@@ -25,6 +26,8 @@ import {
   printSource,
   requireCommitted,
   requireMainUpToDate,
+  requireUnreleasedVersion,
+  tagRelease,
   warnIfAppJsonChanged,
 } from "./release-guards.mjs";
 
@@ -59,7 +62,10 @@ if (variant === undefined) {
 const checkOnly = process.argv.includes("--check");
 
 requireCommitted();
-if (variant.fromMain) requireMainUpToDate(`A ${variantName} update`);
+if (variant.fromMain) {
+  requireMainUpToDate(`A ${variantName} update`);
+  requireUnreleasedVersion(`A ${variantName} update`);
+}
 printSource(variantName);
 
 if (checkOnly) {
@@ -102,6 +108,7 @@ const publish = spawnSync(
 warnIfAppJsonChanged();
 
 if (publish.status === 0) {
+  if (variant.fromMain) tagRelease("over-the-air update");
   console.log("");
   for (const line of variant.next) console.log(line);
 }

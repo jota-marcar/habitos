@@ -137,23 +137,17 @@ La skill `/sync` lo hace automáticamente.
 
 ## 5. Versiones y releases
 
-Las versiones se marcan con tags de [versionado semántico](https://semver.org/lang/es/) sobre `main`: `vMAYOR.MENOR.PARCHE`.
+Cada publicación de producción tiene una versión nueva de [versionado semántico](https://semver.org/lang/es/) y un tag sobre `main`: `vMAYOR.MENOR.PARCHE` ([ADR-0024](docs/adr/0024-versiones-visibles-con-versionado-semantico-y-un-tag-por-publicacion.md)).
 
 | Parte | Se incrementa cuando… | Relación con los commits |
 |-------|-----------------------|--------------------------|
 | MAYOR | Hay cambios incompatibles. | `feat!`, `fix!` |
 | MENOR | Hay funcionalidad nueva compatible. | `feat` |
-| PARCHE | Solo hay correcciones. | `fix` |
+| PARCHE | Solo hay correcciones u otros cambios. | `fix`, `docs`, `chore`… |
 
-Mientras la aplicación no tenga una primera versión estable, usamos `0.x.y`.
+Mientras la aplicación no tenga una primera versión estable, usamos `0.x.y`, y un cambio incompatible sube la menor.
 
-```bash
-git switch main
-git pull
-git tag -a v0.1.0 -m "v0.1.0: primera versión del MVP"
-git push origin v0.1.0
-gh release create v0.1.0 --generate-notes
-```
+La versión se prepara en una rama con `node scripts/bump-version.mjs`. Los tags los crean `npm run build:prod` y `npm run update:prod` al terminar bien, y esos comandos no publican una versión que ya tenga tag. El detalle está en [docs/despliegue.md](docs/despliegue.md#versiones).
 
 ## 6. Protección de `main` en GitHub
 

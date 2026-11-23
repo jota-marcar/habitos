@@ -108,7 +108,7 @@ Si algo falla, el registro de la función está en **Edge Functions → delete-a
 Un cambio solo de JavaScript llega con una actualización OTA ([sección 6](#6-actualizaciones-ota)), sin build. Un cambio nativo ([qué cuenta como tal](despliegue.md#qué-comando-usar)) necesita un build:
 
 1. Las migraciones nuevas y los cambios de `delete-account` se aplican a `habitos` antes de que el build que los usa llegue a TestFlight ([supabase.md, secciones 5 y 9.3](supabase.md#5-aplicar-el-esquema)).
-2. Si cambia algo que ve el usuario, sube `version` en `app.json`. El número de build lo sube EAS.
+2. [Prepara la versión](despliegue.md#versiones) con `node scripts/bump-version.mjs`. El número de build lo sube EAS.
 3. `npm run build:dev` para Hábitos Dev, y pruébalo.
 4. `npm run build:prod` desde `main` al día.
 

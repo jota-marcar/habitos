@@ -1,5 +1,5 @@
 // The settings, with the options of the account (RF-32): signing out (RF-03) and deleting the
-// account (RF-04).
+// account (RF-04). At the end, the version of the app that is running (RF-54).
 
 import type { User } from "@supabase/supabase-js";
 import { useState } from "react";
@@ -13,6 +13,7 @@ import {
 import { signOut } from "@/auth/sign-out";
 import { hasPendingChanges } from "@/data/account-data";
 import { syncNow } from "@/sync/app-sync";
+import { APP_VERSION } from "@/ui/app-version";
 import { Section } from "@/ui/components";
 import { useDatabase } from "@/ui/database";
 import { useSession } from "@/ui/session";
@@ -174,13 +175,17 @@ export default function Settings() {
           onPress={confirmDeleteAccount}
         />
       </Section>
+      <Text style={[styles.version, { color: colors.textSecondary }]}>
+        Versión {APP_VERSION}
+      </Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.md },
+  content: { gap: spacing.md, padding: spacing.md },
   account: { gap: spacing.xs, padding: spacing.md },
   accountText: { fontSize: fontSize.body },
   accountDetail: { fontSize: fontSize.caption },
+  version: { fontSize: fontSize.caption, textAlign: "center" },
 });
