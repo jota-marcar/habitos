@@ -1,6 +1,6 @@
 # ADR-0015: Pruebas del esquema de Supabase con pgTAP en la CI
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-17
 
 ## Contexto

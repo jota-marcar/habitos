@@ -1,6 +1,6 @@
 # ADR-0021: Carrusel de horizontes con ScrollView horizontal paginado
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-22
 
 ## Contexto

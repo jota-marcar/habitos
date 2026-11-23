@@ -1,6 +1,6 @@
 # ADR-0020: Actualizaciones OTA con EAS Update, primero en desarrollo y después en producción
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-20
 
 ## Contexto

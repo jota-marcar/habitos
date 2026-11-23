@@ -47,7 +47,7 @@ npm run build:prod -- --check
 npm run build:prod
 ```
 
-El primero solo hace las comprobaciones: que no haya cambios sin commit, que la rama sea `main` y que coincida con GitHub. El segundo compila en EAS y, al terminar, envía el build a App Store Connect (`--auto-submit`).
+El primero solo hace las comprobaciones: que no haya cambios sin commit, que la rama sea `main`, que coincida con GitHub y que la [versión](despliegue.md#versiones) no se haya publicado ya. El segundo compila en EAS, envía el build a App Store Connect (`--auto-submit`) y crea el tag de la versión.
 
 La primera vez, EAS pregunta en la terminal:
 
@@ -85,7 +85,7 @@ Para que pruebe la app alguien que no es usuario de tu cuenta de App Store Conne
 
 1. **TestFlight → Información de pruebas:** una descripción breve de la beta, un correo para comentarios, tus datos de contacto y una nota para el revisor: "Se inicia sesión con Sign in with Apple o Google; no hace falta cuenta de demostración".
 2. **Pruebas externas → +:** crea un grupo (por ejemplo, `Amigos`), añade a los probadores por su correo y añade el build. Se envía a la **revisión beta** de Apple.
-3. El estado del build en el grupo pasa por **Pendiente de revisión** (en la cola de Apple), **En revisión** y **Aprobado** (o **Rechazado**, con el motivo en App Store Connect y por correo). Suele tardar menos de un día; la primera vez puede tardar uno o dos. Los builds siguientes de la misma versión no siempre necesitan una revisión completa.
+3. El estado del build en el grupo pasa por **Pendiente de revisión** (en la cola de Apple), **En revisión** y **Aprobado** (o **Rechazado**, con el motivo en App Store Connect y por correo). Suele tardar menos de un día; la primera vez puede tardar uno o dos. Como cada build lleva una versión nueva, conviene contar con esa revisión cada vez. Las actualizaciones OTA no pasan por ella.
 4. Al aprobarse, a cada probador le llega un correo con un enlace para abrir TestFlight y un código de canje. Basta con abrirlo en el iPhone. El correo de la invitación puede ser distinto del de su Apple ID: la invitación se asocia al Apple ID que la canjea, y es de un solo uso.
 5. **Google:** mientras el proyecto `habitos` de Google Cloud esté "en pruebas", solo pueden entrar con Google las cuentas de su lista de usuarios de prueba (**Google Auth Platform → Público**). Añade las de los probadores, o pulsa **Publicar aplicación** ([supabase.md, 8.2](supabase.md#82-google-cloud-un-proyecto-por-entorno)). Con Apple pueden entrar sin más.
 
@@ -105,12 +105,7 @@ Si algo falla, el registro de la función está en **Edge Functions → delete-a
 
 ## 5. Las versiones siguientes
 
-Un cambio solo de JavaScript llega con una actualización OTA ([sección 6](#6-actualizaciones-ota)), sin build. Un cambio nativo ([qué cuenta como tal](despliegue.md#qué-comando-usar)) necesita un build:
-
-1. Las migraciones nuevas y los cambios de `delete-account` se aplican a `habitos` antes de que el build que los usa llegue a TestFlight ([supabase.md, secciones 5 y 9.3](supabase.md#5-aplicar-el-esquema)).
-2. [Prepara la versión](despliegue.md#versiones) con `node scripts/bump-version.mjs`. El número de build lo sube EAS.
-3. `npm run build:dev` para Hábitos Dev, y pruébalo.
-4. `npm run build:prod` desde `main` al día.
+El orden de los pasos, para un cambio de JavaScript o nativo, está en [despliegue.md](despliegue.md#los-dos-caminos). El número de build lo sube EAS, y la versión se prepara [en un PR](despliegue.md#versiones).
 
 ## 6. Actualizaciones OTA
 
@@ -132,13 +127,7 @@ Publica en el canal `development`, con las variables del entorno `development` d
 
 ### 6.2 Publicarla en producción
 
-Con el PR fusionado y `main` al día (`/sync`), y las migraciones que necesite ya aplicadas a `habitos`:
-
-```powershell
-npm run update:prod
-```
-
-Comprueba que es `main` al día, pide confirmar que se ha probado en Hábitos Dev y publica en el canal `production`, con las variables del entorno `production` de EAS. Hábitos la descarga la próxima vez que se abre y la usa la siguiente.
+`npm run update:prod`, siguiendo los [pasos de despliegue.md](despliegue.md#cambio-solo-de-javascript). Comprueba que es `main` al día y que la versión es nueva, pide confirmar que se ha probado en Hábitos Dev, publica en el canal `production` con las variables del entorno `production` de EAS y crea el tag de la versión.
 
 ### 6.3 Si falla
 

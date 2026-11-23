@@ -6,22 +6,16 @@ Proyecto de aprendizaje: se desarrolla con Claude Code e irá incorporando agent
 
 ## Estado
 
-Para usar la aplicación hay que iniciar sesión con Apple o Google. Los datos se guardan en el dispositivo y se sincronizan con la cuenta: la aplicación funciona sin conexión y sube los cambios cuando vuelve a tenerla.
+La aplicación está en TestFlight, con un grupo de probadores. Qué versión hay publicada y qué viene después está en [docs/estado.md](docs/estado.md).
 
-- Ya se puede crear, editar, archivar y eliminar hábitos (con su color), ver los de cada día ordenados por lo vencido y el próximo recordatorio, marcarlos o registrar la cantidad, y recorrer los días con el calendario.
-- Los recordatorios son notificaciones locales con el progreso del hábito, y tocarlas abre la aplicación. Además, a las 17:00 y a las 22:00 un aviso nombra los hábitos del día que siguen pendientes.
-- Probado en el iPhone: los botones de los recordatorios y los avisos de pendientes funcionan.
-- Se inicia y se cierra sesión con Apple o con Google.
-- Los datos se sincronizan con la cuenta al abrir la aplicación, al volver a ella, poco después de cada cambio y, sin conexión, en reintentos cada vez más espaciados. Al iniciar sesión por primera vez, los hábitos del dispositivo se juntan con los de la cuenta.
-- Se puede eliminar la cuenta, con todos sus datos y, si se entró con Apple, revocando el acceso de Sign in with Apple.
-
-El MVP está cerrado: pasó un testeo general en el iPhone con la variante de desarrollo, y la de producción está publicada en TestFlight y probada en el iPhone. Ver [docs/testflight.md](docs/testflight.md).
-
-La aplicación tiene dos variantes, desarrollo y producción, que se compilan con EAS. La CI comprueba el formato, el lint, los tipos y los tests en cada Pull Request, y la sincronización de punta a punta contra un Supabase local.
+- **Hábitos diarios** con color, días programados, cantidad o sí/no, y un calendario para recorrer los días.
+- **Objetivos semanales**, recurrentes o de una sola semana, en su propia página.
+- **Recordatorios** locales con botones, avisos de lo que queda pendiente y avisos de progreso de la semana.
+- **Sin conexión:** los datos viven en el dispositivo y se sincronizan con la cuenta de Apple o Google al recuperarla.
 
 ## Desarrollo
 
-Requisitos: Node.js 24.15 o posterior (ver `.nvmrc`) y npm.
+Requisitos: Node.js 24 (ver `.nvmrc`) y npm.
 
 ```bash
 npm install
@@ -38,6 +32,7 @@ Los comandos completos están en [CLAUDE.md](CLAUDE.md#desarrollo).
 
 ## Documentación
 
+- [Estado del proyecto](docs/estado.md): qué hay publicado, qué viene ahora y qué falta por decidir.
 - [Especificación funcional](docs/especificacion-funcional.md): qué hace la aplicación.
 - [Arquitectura](docs/arquitectura.md): cómo se construye.
 - [Decisiones de arquitectura (ADR)](docs/adr/): por qué se construye así.

@@ -1,6 +1,6 @@
 # ADR-0019: Eliminación de la cuenta con una Edge Function que revoca Sign in with Apple antes de borrar al usuario
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-18
 
 ## Contexto

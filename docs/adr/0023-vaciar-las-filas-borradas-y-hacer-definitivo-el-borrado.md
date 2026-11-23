@@ -1,6 +1,6 @@
 # ADR-0023: Vaciar las filas borradas y hacer definitivo el borrado
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-23
 
 ## Contexto

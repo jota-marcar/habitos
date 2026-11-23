@@ -1,6 +1,6 @@
 # ADR-0016: Cursor de sincronización serializado por usuario
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-17
 
 ## Contexto

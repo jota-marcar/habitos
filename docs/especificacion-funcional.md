@@ -8,7 +8,7 @@ Una aplicación móvil para registrar cada día qué hábitos se han cumplido.
 
 El problema que resuelve no es la falta de motivación, sino el **olvido**: con el ajetreo diario se pasan cosas que uno quiere hacer. Apuntar lo que se hace genera conciencia, y los recordatorios evitan que se olvide.
 
-El MVP se centra en los hábitos diarios. La aplicación se amplía con los objetivos semanales (ver [3.8](#38-objetivos-semanales)) y a futuro podría incluir objetivos a largo plazo (ver [6. Visión a futuro](#6-visión-a-futuro-tres-horizontes)).
+La aplicación empezó por los hábitos diarios, que fueron su MVP. Se ha ampliado con los objetivos semanales (ver [3.8](#38-objetivos-semanales)) y a futuro podría incluir objetivos a largo plazo (ver [6. Visión a futuro](#6-visión-a-futuro-tres-horizontes)).
 
 ### Principios
 
@@ -20,8 +20,8 @@ El MVP se centra en los hábitos diarios. La aplicación se amplía con los obje
 
 ### Usuarios
 
-- **Fase inicial:** uso personal, una sola persona.
-- **Futuro:** amigos con su propia cuenta. Cada usuario ve únicamente sus hábitos; no hay funciones sociales.
+- **Ahora:** el autor y un grupo de amigos que la prueban, cada uno con su propia cuenta.
+- Cada usuario ve únicamente sus datos; no hay funciones sociales.
 
 ## 2. Glosario
 
@@ -57,14 +57,18 @@ El MVP se centra en los hábitos diarios. La aplicación se amplía con los obje
 | **Semana** | `week` | Periodo de lunes a domingo en la hora local del dispositivo. |
 | **Objetivo semanal** | `WeeklyGoal` | Algo que el usuario quiere conseguir en el conjunto de una semana, sin importar qué día lo haga. |
 | **Objetivo recurrente** | `recurring` | Objetivo semanal que se repite todas las semanas y empieza cada una de cero. |
-| **Objetivo puntual** | `oneOff` | Objetivo semanal de una sola semana. |
+| **Objetivo puntual** | `recurring = false` | Objetivo semanal de una sola semana. |
+| **Versión de la configuración** | `HabitVersion`, `WeeklyGoalVersion` | Los días, la meta, la unidad y el incremento vigentes desde una fecha. Al editarlos se añade una versión, para que el pasado conserve los suyos. |
+| **Vigente desde** | `effectiveFrom` | Primer día, o primera semana, en que se aplica una versión de la configuración. |
+| **Primera semana** | `firstWeek` | Lunes de la semana en que empieza un objetivo semanal. |
+| **Semana de archivado** | `archivedWeek` | Lunes de la semana en que se archivó un objetivo recurrente. |
 | **Registro semanal** | `WeeklyGoalEntry` | Total apuntado de un objetivo semanal en una semana. |
 | **Aviso de progreso** | `ProgressDigest` | Aviso a una hora fija de la semana que nombra los objetivos aún sin conseguir y cuánto llevan. |
 | **Aviso final** | `finalNotice` | Aviso que pide abrir la aplicación cuando los recordatorios ya preparados están a punto de acabarse. |
 
-La columna "En el código" es el nombre en inglés con el que cada término aparece en el código y en el modelo de datos ([ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)). Cada término se traduce siempre igual; uno nuevo se añade aquí antes de usarlo en el código. `goal` queda reservado para los objetivos de la [visión a futuro](#6-visión-a-futuro-tres-horizontes), y `Record` se evita porque ya tiene otro significado en el lenguaje de programación.
+La columna "En el código" es el nombre en inglés con el que cada término aparece en el código y en el modelo de datos ([ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)). Cada término se traduce siempre igual; uno nuevo se añade aquí antes de usarlo en el código. `goal` abrevia `WeeklyGoal` en el código de los objetivos semanales; los objetivos a largo plazo de la [visión a futuro](#6-visión-a-futuro-tres-horizontes) tendrán un nombre propio. `Record` se evita porque ya tiene otro significado en el lenguaje de programación.
 
-## 3. Funcionalidades del MVP
+## 3. Funcionalidades
 
 Cada requisito conserva su número aunque cambie de sección, y el número de uno retirado no se reutiliza, porque el código y los tests los citan.
 
@@ -168,7 +172,7 @@ Es la pantalla principal de la aplicación (ver 3.1).
   - Cualquier otro toque que apunta algo (sumar sin llegar a la meta, superarla o desmarcar) da un toque sutil.
   - Mantener pulsado un hábito para abrir sus opciones (RF-34) da un golpe ligero, como los menús del sistema.
   - Nada más vibra: ni el menú, ni el calendario, ni lo que se hace desde las opciones. Si el usuario ha desactivado las vibraciones del sistema, la aplicación tampoco vibra.
-- **RF-17.** Un hábito aparece en los días programados a partir de la fecha en que se creó, nunca en días anteriores.
+- **RF-17.** Un hábito aparece en los días programados a partir del día en que empieza (RF-06), nunca en días anteriores.
 - **RF-34.** Al mantener pulsado un hábito se abren sus opciones. Las que aparecen dependen del día y del hábito:
 
   | Opción | Hoy y días pasados | Días futuros | Hábito archivado |
@@ -227,7 +231,7 @@ Es la pantalla principal de la aplicación (ver 3.1).
 ### 3.7 Disponibilidad y datos
 
 - **RF-28.** Todas las funciones de registro (marcar, sumar, consultar días) funcionan sin conexión. Los cambios se sincronizan con la cuenta cuando vuelve la conexión.
-- **RF-29.** Se conserva el historial completo de registros desde el primer día, aunque en el MVP no se muestren estadísticas.
+- **RF-29.** Se conserva el historial completo de registros desde el primer día, aunque por ahora no se muestren estadísticas.
 - **RF-53.** El usuario puede saber si sus datos están a salvo en su cuenta.
   - Ajustes muestra el **estado de la copia**: cuándo se copiaron por última vez ("Copiado en tu cuenta hace 5 min") o que hay cambios pendientes de copiar.
   - Si hay cambios que llevan 3 días o más sin poder copiarse, Ajustes y la pantalla principal lo dicen con una línea discreta ("Sin copiar en tu cuenta desde hace 3 días. Comprueba la conexión."), hasta que se copien.
@@ -282,7 +286,7 @@ Un objetivo semanal se mide por la semana completa, de lunes a domingo: cuenta l
   - Al tocarlo se abre la aplicación en la página semanal de la semana actual, aunque se toque más tarde y la semana del aviso ya haya terminado. No tiene botones, porque reúne varios objetivos.
   - Las horas son fijas.
 
-## 4. Fuera del alcance del MVP
+## 4. Fuera del alcance
 
 Funcionalidades descartadas por ahora, en orden aproximado de interés:
 
@@ -341,7 +345,7 @@ Los tres horizontes podrían relacionarse: un objetivo a largo plazo se consigue
 - **Recordatorios en cada horizonte.** Siguiendo el principio de que el recordatorio es el punto fuerte, cada parte podría tener los suyos: a una hora para los hábitos, de progreso para la semana ("llevas 2 de 5 horas y es jueves") y de cuenta atrás para el largo plazo ("quedan 40 días").
 - **Minimalismo.** Cada parte nueva tendrá que justificar su presencia cuando llegue, como cualquier otra funcionalidad.
 - **Visión del producto.** Hoy el problema que se resuelve es el olvido. Con los tres horizontes se ampliaría a no perder de vista lo que uno quiere hacer, hoy, esta semana y a largo plazo. Si se adopta, habrá que revisar la sección 1.
-- **Nombres.** "Meta" ya significa la cantidad diaria de un hábito cuantitativo (ver el glosario), así que la tercera parte no debe llamarse "metas". Por ahora: "Objetivos a largo plazo" (alternativa: "Propósitos").
+- **Nombres.** "Meta" ya significa la cantidad de un hábito o de un objetivo semanal (ver el glosario), así que la tercera parte no debe llamarse "metas". Por ahora: "Objetivos a largo plazo" (alternativa: "Propósitos").
 
 ### Preguntas abiertas
 
