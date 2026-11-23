@@ -9,10 +9,12 @@
 // in the checkout of main.
 
 import { execFileSync, execSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+
+import { ghPath } from "../../lib/gh-path.mjs";
 
 const BASE = "main";
-const GH_WINDOWS = "C:/Program Files/GitHub CLI/gh.exe";
+const ADR_INDEX = "docs/adr/README.md";
 // A Node script that answers for GitHub in the tests (src/__tests__/sync-script.test.js).
 const GH_STUB = process.env.SYNC_GH_STUB;
 
@@ -32,11 +34,6 @@ function attempt(fn) {
 }
 
 const git = (...args) => run("git", args);
-
-function ghPath() {
-  if (attempt(() => run("gh", ["--version"])) !== null) return "gh";
-  return existsSync(GH_WINDOWS) ? GH_WINDOWS : null;
-}
 
 function stop(message, details) {
   console.log(`BLOCKER: ${message}`);
@@ -360,3 +357,14 @@ console.log(
 );
 console.log(`Kept branches: ${kept.length ? kept.join(", ") : "none"}`);
 if (!gh) console.log("WARNING: GitHub CLI (gh) not found; no branch deleted.");
+
+// Only the user accepts an ADR, so the ones still waiting are brought up after each merge.
+if (existsSync(ADR_INDEX)) {
+  const proposed = readFileSync(ADR_INDEX, "utf8")
+    .split(/\r?\n/)
+    .map((line) => /^\| \[(\d{4})\].*\| Propuesto \|$/.exec(line)?.[1])
+    .filter(Boolean);
+  if (proposed.length) {
+    console.log(`ADRs waiting for acceptance: ${proposed.join(", ")}`);
+  }
+}

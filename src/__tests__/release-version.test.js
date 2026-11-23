@@ -183,6 +183,21 @@ test("with nothing new it stops, unless a level is named", () => {
   expect(versionIn("app.json").expo.version).toBe("0.1.1");
 });
 
+test("stops if the files disagree, without touching a dependency", () => {
+  const lockFile = path.join(clone, "package-lock.json");
+  const before = readFileSync(lockFile, "utf8").replace(
+    '"version": "0.1.0"',
+    '"version": "0.0.9"',
+  );
+  writeFileSync(lockFile, before);
+  commit("feat: something new");
+
+  const result = runScript("bump-version.mjs");
+
+  expect(result.status).toBe(1);
+  expect(readFileSync(lockFile, "utf8")).toBe(before);
+});
+
 test("--check changes nothing", () => {
   commit("feat: something new");
 

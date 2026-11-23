@@ -4,14 +4,14 @@
 // Exits with code 1 if a check fails or the checks never appear.
 
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
 import { setTimeout as sleep } from "node:timers/promises";
 
-const GH_WINDOWS = "C:/Program Files/GitHub CLI/gh.exe";
+import { ghPath } from "../../lib/gh-path.mjs";
+
 const POLL_SECONDS = 15;
 // GitHub takes a few seconds to register the checks after a push.
 const ATTEMPTS_TO_APPEAR = 8;
-// A whole CI run takes about two minutes; this is only a guard against waiting forever.
+// A whole CI run takes a few minutes; this is only a guard against waiting forever.
 const ATTEMPTS_TO_FINISH = 60;
 
 function attempt(fn) {
@@ -20,15 +20,6 @@ function attempt(fn) {
   } catch {
     return null;
   }
-}
-
-function ghPath() {
-  if (
-    attempt(() => execFileSync("gh", ["--version"], { stdio: "ignore" })) !==
-    null
-  )
-    return "gh";
-  return existsSync(GH_WINDOWS) ? GH_WINDOWS : null;
 }
 
 const gh = ghPath();

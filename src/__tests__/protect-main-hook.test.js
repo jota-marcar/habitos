@@ -82,6 +82,30 @@ describe("on main", () => {
 describe("on another branch", () => {
   beforeAll(() => git("switch", "--quiet", "feat/work"));
 
+  const decisionOf = (command) =>
+    spawnSync(process.execPath, [HOOK], {
+      input: JSON.stringify({ tool_input: { command }, cwd: repo }),
+      encoding: "utf8",
+    }).stdout;
+
+  test.each([
+    "git push -uf origin feat/work",
+    "git push -fu origin feat/work",
+    "git push -ud origin feat/work",
+    "git push --prune origin refs/heads/*:refs/heads/*",
+  ])("asks before %s", (command) => {
+    expect(JSON.parse(decisionOf(command))).toMatchObject({
+      hookSpecificOutput: { permissionDecision: "ask" },
+    });
+  });
+
+  test.each(["git push -u origin feat/work", "git push origin HEAD"])(
+    "does not ask before %s",
+    (command) => {
+      expect(decisionOf(command)).toBe("");
+    },
+  );
+
   test.each([
     "git commit -m change",
     "git push",

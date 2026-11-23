@@ -4,7 +4,8 @@
 // Prints a report and exits with code 1 if there is any blocker.
 
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+
+import { ghPath } from "../../lib/gh-path.mjs";
 
 const BASE = "main";
 const TYPES = [
@@ -17,7 +18,6 @@ const TYPES = [
   "chore",
   "ci",
 ];
-const GH_WINDOWS = "C:/Program Files/GitHub CLI/gh.exe";
 
 function git(...args) {
   return execFileSync("git", args, {
@@ -32,15 +32,6 @@ function attempt(fn) {
   } catch {
     return null;
   }
-}
-
-function ghPath() {
-  if (
-    attempt(() => execFileSync("gh", ["--version"], { stdio: "ignore" })) !==
-    null
-  )
-    return "gh";
-  return existsSync(GH_WINDOWS) ? GH_WINDOWS : null;
 }
 
 const blockers = [];

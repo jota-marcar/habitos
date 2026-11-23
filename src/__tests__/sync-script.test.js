@@ -10,6 +10,7 @@ import { afterEach, beforeEach, expect, jest, test } from "@jest/globals";
 import { execFileSync, spawnSync } from "node:child_process";
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -174,6 +175,25 @@ test("keeps a branch whose Pull Request is still open", () => {
 
   expect(output).toContain(`${BRANCH} (its Pull Request is OPEN)`);
   expect(localBranches()).toContain(BRANCH);
+});
+
+test("brings up the ADRs that wait for the user to accept them", () => {
+  mkdirSync(path.join(clone, "docs/adr"), { recursive: true });
+  writeFileSync(
+    path.join(clone, "docs/adr/README.md"),
+    [
+      "| ADR | Decisión | Estado |",
+      "| [0001](0001-a.md) | Una | Aceptado |",
+      "| [0002](0002-b.md) | Otra | Propuesto |",
+      "| [0003](0003-c.md) | Otra más | Propuesto |",
+      "- **Estado:** Propuesto | Aceptado",
+      "",
+    ].join("\n"),
+  );
+  commit("file.txt", "adr\n", "docs: adds the ADRs");
+  git("push", "--quiet", "origin", "main");
+
+  expect(runSync()).toContain("ADRs waiting for acceptance: 0002, 0003");
 });
 
 test("keeps a branch without a Pull Request", () => {
