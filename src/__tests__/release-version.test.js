@@ -66,6 +66,32 @@ function stubEas(code) {
   chmodSync(path.join(stubs, "eas"), 0o755);
 }
 
+/** EAS CLI answering the native-code check, with a notice before its JSON like the real one. */
+function stubEasCheck(buildHash, localHash, listOutput) {
+  const list =
+    listOutput ??
+    `Notice\n${JSON.stringify([{ id: "b", appVersion: "0.1.0", appBuildVersion: "2" }], null, 2)}`;
+  const compare = JSON.stringify(
+    { fingerprint1: { hash: buildHash }, fingerprint2: { hash: localHash } },
+    null,
+    2,
+  );
+  const stub = path.join(stubs, "eas-stub.js");
+  writeFileSync(
+    stub,
+    `console.log(process.argv[2] === "build:list" ? ${JSON.stringify(list)} : ${JSON.stringify(`Notice\n${compare}`)});\n`,
+  );
+  writeFileSync(
+    path.join(stubs, "eas.cmd"),
+    `@"${process.execPath}" "${stub}" %*\r\n`,
+  );
+  writeFileSync(
+    path.join(stubs, "eas"),
+    `#!/bin/sh\nexec "${process.execPath}" "${stub}" "$@"\n`,
+  );
+  chmodSync(path.join(stubs, "eas"), 0o755);
+}
+
 function setVersion(version) {
   writeFileSync(
     path.join(clone, "app.json"),
@@ -224,12 +250,29 @@ test.each([
   setVersion("0.2.0");
   commit("chore: prepares the version");
   git("push", "--quiet", "origin", "main");
+  stubEasCheck("same", "same");
 
   const result = runScript(script, "production", "--check");
 
   expect(result.status).toBe(0);
   expect(result.output).toContain("Version: 0.2.0");
   expect(result.output).toContain(ready);
+});
+
+test.each([
+  ["its native code differs", ["build", "local"], "would reach nobody"],
+  ["there is no build", ["same", "same", "[]"], "no finished build"],
+  ["EAS does not answer JSON", ["same", "same", "Oops"], "did not return JSON"],
+])("update.mjs refuses to publish when %s", (_name, answer, message) => {
+  setVersion("0.2.0");
+  commit("chore: prepares the version");
+  git("push", "--quiet", "origin", "main");
+  stubEasCheck(...answer);
+
+  const result = runScript("update.mjs", "production", "--check");
+
+  expect(result.status).toBe(1);
+  expect(result.output).toContain(message);
 });
 
 test("a production build that goes well tags its version on GitHub", () => {

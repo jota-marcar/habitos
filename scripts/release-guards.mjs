@@ -92,8 +92,14 @@ function easJson(variant, command) {
   if (status !== 0) {
     fail(`Could not check the native code with EAS: eas ${command} failed.`);
   }
-  // EAS can print a notice about the environment before the JSON.
-  return JSON.parse(stdout.slice(stdout.search(/^[[{]/m)));
+  // EAS can print notices before the JSON, which starts on a line of its own.
+  try {
+    return JSON.parse(stdout.slice(stdout.search(/^(?:\[\]|[[{])\s*$/m)));
+  } catch {
+    return fail(
+      `Could not check the native code with EAS: eas ${command} did not return JSON.`,
+    );
+  }
 }
 
 /**
@@ -121,7 +127,7 @@ export function requireCompatibleBuild(variant) {
     );
   }
   console.log(
-    `Native code: matches the build ${build.appVersion} (${build.appBuildVersion}).`,
+    `Native code: matches the latest ${variant} build, ${build.appVersion} (${build.appBuildVersion}). Older builds with other native code will not get this update.`,
   );
 }
 
