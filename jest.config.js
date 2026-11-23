@@ -6,8 +6,10 @@ module.exports = {
   resolver: "react-native-reanimated/jest/resolver",
   // The tests of supabase/tests need the local Supabase: they only run in the CI, with their
   // own configuration (`npm run test:schema`, jest.supabase.config.js, ADR-0015). Those of
-  // the Edge Functions (supabase/functions) do not, and run here.
-  testPathIgnorePatterns: ["/node_modules/", "<rootDir>/supabase/tests/"],
+  // the Edge Functions (supabase/functions) do not, and run here. These patterns are regular
+  // expressions and Jest inserts <rootDir> unescaped: on Windows, the "\." of a folder like
+  // .claude stops matching a separator, so they must not use <rootDir>.
+  testPathIgnorePatterns: ["/node_modules/", "/supabase/tests/"],
   // Coverage is only measured, and required in full, for the domain (pure rules where
   // every branch is a business rule), the data layer (where a wrong query loses data), the
   // synchronization (where a wrong step loses data too) and the Edge Functions (where a
