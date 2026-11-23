@@ -124,12 +124,26 @@ const WEEKLY_GOALS = `
     ON weekly_goal_entries (weekly_goal_id, week) WHERE deleted = 0;
 `;
 
+// The indexes of the frequent queries: reading a day or a week, and the rows to upload of the
+// table that grows the most. The last one is on `deleted` and not filtered by it because the
+// query receives it as a parameter, and a partial index cannot match a parameter.
+const QUERY_INDEXES = `
+  CREATE INDEX entries_date ON entries (date) WHERE deleted = 0;
+
+  CREATE INDEX weekly_goal_entries_week
+    ON weekly_goal_entries (week) WHERE deleted = 0;
+
+  CREATE INDEX entries_pending_sync
+    ON entries (deleted, id) WHERE pending_sync = 1;
+`;
+
 /** Every migration, in order. The version of the schema is the position, starting at 1. */
 export const MIGRATIONS: readonly string[] = [
   INITIAL_SCHEMA,
   HABIT_COLOR,
   SYNC_STATE,
   WEEKLY_GOALS,
+  QUERY_INDEXES,
 ];
 
 /** The version of the schema of `db`: 0 for a new database. */
