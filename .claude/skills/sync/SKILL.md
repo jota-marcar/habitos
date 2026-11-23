@@ -27,6 +27,8 @@ El script:
 - **RESTACK PROBLEMS:** explica cada una al usuario. Conflicto: el PR de abajo cambió después de crear la rama y hay que resolverlo a mano. `verify` falla: la rama está rebasada en local pero sin subir; investiga el error antes de subirla (en un worktree sin `node_modules` falla siempre: ejecuta antes `npm ci`). Rama distinta de la remota: tenía commits sin subir o la remota tenía otros; no fuerces nada sin preguntar. Apilada sobre una rama abierta en otro worktree: se pondrá al día cuando esa rama quede libre.
 - **Kept branches:** menciónalas con su motivo. Si dice que tiene commits fuera de su Pull Request, avisa al usuario: es trabajo que no ha llegado a `main`. Si dice que está abierta en un worktree, no la toques: pertenece a esa sesión. No las borres a mano: si el usuario quiere borrarlas, que lo diga.
 
+- **ADRs waiting for acceptance:** recuérdale al usuario cuáles siguen en Propuesto. No los aceptes sin que lo diga de forma expresa.
+
 ## 3. Informar
 
 Resume en una o dos líneas qué ha entrado en `main`, qué ramas se han puesto al día y cuáles se han borrado. Después continúa con lo que el usuario haya pedido.

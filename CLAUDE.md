@@ -36,7 +36,7 @@ Responde siempre en español.
 
 - Una sesión por tarea o Pull Request. Lo que deba sobrevivir a la sesión va en la documentación, los ADR o la memoria, no en la conversación. Si el usuario cambia de tarea en una sesión larga, sugiérele empezar una nueva.
 - Lo voluminoso se investiga aparte: para leer registros de build o de CI, documentación extensa o muchos ficheros a la vez, usa un subagente de exploración (`Explore`) y trae solo la conclusión. Nunca vuelques una salida entera en la conversación: filtra antes.
-- Usa las skills del proyecto en lugar de repetir sus pasos a mano: `/sync` tras un merge, `/pr` para abrir el PR y esperar a la CI, `/adr` para crear o aceptar un ADR.
+- Usa las skills del proyecto en lugar de repetir sus pasos a mano: `/sync` tras un merge, `/pr` para revisar, abrir el PR y esperar a la CI, `/adr` para crear o aceptar un ADR.
 
 ## Desarrollo
 
@@ -63,20 +63,22 @@ npm run update:prod          # actualización OTA para producción, desde main a
 
 - Expo cambia mucho entre versiones de SDK: antes de usar una API de Expo o React Native, consulta la documentación de la versión instalada (`https://docs.expo.dev/versions/v58.0.0/`) en lugar de fiarte de la memoria.
 - Las pantallas viven en `src/app/` (Expo Router: cada fichero es una ruta). Fuera de ahí va todo lo demás, también los tests.
-- `src/domain` son reglas puras: no importa paquetes ni otras capas (lo impone ESLint) y su cobertura de tests debe ser del 100 %. Los tests van junto al código (`x.ts` y `x.test.ts`).
-- `src/data` es el acceso a la base local: SQL directo en repositorios que solo dependen del dominio y de la interfaz `Database` (lo impone ESLint), también con cobertura del 100 %. Sus tests usan el SQLite integrado en Node (`src/data/testing`). Un cambio de esquema es una migración nueva al final de `migrations.ts`; nunca edites una ya publicada ([ADR-0009](docs/adr/0009-sql-directo-y-migraciones-propias-en-la-capa-de-datos-local.md)).
-- `src/sync` es la sincronización con Supabase ([ADR-0018](docs/adr/0018-sincronizacion-con-pull-antes-que-push-y-union-por-clave-natural.md)): el motor depende de la interfaz `Remote` y se prueba con la cuenta en memoria de `src/sync/testing`, con cobertura del 100 %. El adaptador de Supabase se prueba de punta a punta en la CI (`supabase/tests/sync.test.ts`). Una tabla sincronizada nueva va en `SYNC_TABLES` y sus columnas en `src/data/sync-repository.ts`.
-- `supabase/` es el esquema de la nube ([ADR-0003](docs/adr/0003-supabase-como-backend.md)). Un cambio de esquema es un fichero nuevo `supabase/migrations/<AAAAMMDDhhmmss>_<nombre>.sql`, en el mismo PR que la migración local equivalente; nunca edites uno ya aplicado. Sus tests son pgTAP en `supabase/tests/database/` y, con `supabase/tests/schema-alignment.test.ts` y `supabase/tests/sync.test.ts`, solo corren en el job `Database` de la CI, porque necesitan Docker ([ADR-0015](docs/adr/0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md)). Tras tocar `supabase/`, espera a la CI antes de dar el cambio por bueno.
-- `supabase/functions/` son las Edge Functions (Deno) ([ADR-0019](docs/adr/0019-eliminacion-de-la-cuenta-con-una-edge-function-que-revoca-sign-in-with-apple-antes-de-borrar-al-usuario.md)). Su lógica no importa nada de Deno, para probarla con Jest con cobertura del 100 %; `index.ts` solo la conecta y se prueba de punta a punta en la CI (`supabase/tests/`). Las importaciones relativas llevan la extensión `.ts` y los paquetes salen del `deno.json` de cada función. Nunca las despliegues: lo hace el usuario siguiendo `docs/supabase.md`.
-- `updated_at` en la nube lo asigna el trigger `set_updated_at` con un bloqueo por usuario ([ADR-0016](docs/adr/0016-cursor-de-sincronizacion-serializado-por-usuario.md)). Toda tabla sincronizada nueva lleva ese trigger, Row Level Security y sus tests.
-- Nunca ejecutes comandos de la CLI de Supabase contra los proyectos de la nube (`db push`, `link`…): los hace el usuario siguiendo `docs/supabase.md`.
-- Imports con el alias `@/` → `src/` (por ejemplo, `@/domain/habitos`).
+- Las reglas de dominio, datos, sincronización y Supabase están en `.claude/rules/` y se cargan al tocar esos ficheros.
+- Imports con el alias `@/` → `src/` (por ejemplo, `@/domain/habits`).
 - Las carpetas `ios/` y `android/` se generan; no se crean ni se editan a mano. La configuración nativa común va en `app.json` y lo que cambia entre desarrollo y producción, en `app.config.ts` ([ADR-0008](docs/adr/0008-variantes-de-desarrollo-y-produccion.md)).
 - Nunca mezcles valores de desarrollo y de producción: todo lo que dependa del entorno sale de la variante (`APP_VARIANT`) o de variables de entorno de EAS.
-- Los comandos de `eas` reescriben `app.json` con valores que no deben quedarse ahí. Después de cualquiera de ellos, revisa `git diff app.json`; un test lo comprueba (`src/__tests__/app-json.test.ts`).
-- Los builds de EAS son limitados (15 de iOS en el plan gratuito). Solo hace falta uno nuevo cuando cambia algo nativo (una dependencia con código nativo, `app.json`, `app.config.ts`): agrupa esos cambios y propón el build al usuario, que es quien lo lanza.
-- Los cambios solo de JavaScript llegan con una actualización OTA ([ADR-0020](docs/adr/0020-actualizaciones-ota-con-eas-update-primero-en-desarrollo-y-despues-en-produccion.md)): al terminar uno, indica al usuario si basta una actualización o hace falta un build ([docs/despliegue.md](docs/despliegue.md)). Publicar en producción afecta a los probadores: nunca lo hagas por tu cuenta.
 - Tras cada edición, un hook formatea el fichero y pasa ESLint (ver `docs/ecosistema-ia.md`). Si te devuelve errores, corrígelos.
+
+## Publicación y nube
+
+Qué hay publicado y qué viene después está en `docs/estado.md`; actualízalo en el PR que lo cambie. Los pasos están en `docs/despliegue.md`.
+
+- Nunca ejecutes comandos de la CLI de Supabase contra los proyectos de la nube (`db push`, `link`…) ni despliegues Edge Functions: los hace el usuario siguiendo `docs/supabase.md`.
+- Publicar en producción afecta a los probadores: nunca lo hagas por tu cuenta.
+- Al terminar un cambio, indica al usuario si basta una actualización OTA o hace falta un build. Los builds de EAS son limitados (15 de iOS en el plan gratuito): agrupa los cambios nativos y propón el build, que lanza el usuario.
+- Los `scripts` de `package.json` y `.gitignore` forman parte de la huella nativa: tocarlos impide que las OTA lleguen a los builds instalados. Avisa antes de cambiarlos.
+- Cada publicación de producción lleva una versión nueva, que se prepara en un PR con `node scripts/bump-version.mjs` ([ADR-0024](docs/adr/0024-versiones-visibles-con-versionado-semantico-y-un-tag-por-publicacion.md)).
+- Los comandos de `eas` reescriben `app.json` con valores que no deben quedarse ahí. Después de cualquiera de ellos, revisa `git diff app.json`; un test lo comprueba (`src/__tests__/app-json.test.ts`).
 
 ## Arquitectura
 
