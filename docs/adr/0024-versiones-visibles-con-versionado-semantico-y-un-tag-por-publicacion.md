@@ -1,6 +1,6 @@
 # ADR-0024: Versiones visibles con versionado semántico y un tag por publicación
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-23
 
 ## Contexto

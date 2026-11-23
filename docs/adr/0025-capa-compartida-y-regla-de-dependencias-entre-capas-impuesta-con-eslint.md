@@ -1,6 +1,6 @@
 # ADR-0025: Capa compartida y regla de dependencias entre capas impuesta con ESLint
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-23
 
 ## Contexto
