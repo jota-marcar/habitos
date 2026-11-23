@@ -6,10 +6,10 @@ import { useLocalSearchParams } from "expo-router";
 import { addHabit } from "@/data/habits-repository";
 import { parseLocalDate } from "@/domain/dates";
 import { startOfNewHabit } from "@/domain/habits";
-import { newId, today } from "@/ui/clock";
+import { newId, today } from "@/shared/clock";
 import { useDatabase } from "@/ui/database";
 import { showDayOnReturn } from "@/ui/day-on-return";
-import { formatFullDate } from "@/ui/format";
+import { formatFullDate } from "@/shared/format";
 import {
   EMPTY_HABIT_FORM,
   buildHabit,

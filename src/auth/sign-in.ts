@@ -14,8 +14,8 @@ import {
   randomUUID,
 } from "expo-crypto";
 
-import { readAuthConfig } from "./config";
-import { supabase } from "./supabase";
+import { readAuthConfig } from "@/shared/config";
+import { supabase } from "@/shared/supabase";
 
 export type SignInProvider = "apple" | "google";
 

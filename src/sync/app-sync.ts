@@ -2,7 +2,7 @@
 // opening the app and coming back to it, a moment after each local change, from the task in
 // the background, and again later if it fails. Without a session it does nothing.
 
-import { supabase } from "@/auth/supabase";
+import { supabase } from "@/shared/supabase";
 import type { Database } from "@/data/database";
 
 import { createSyncScheduler } from "./scheduler";

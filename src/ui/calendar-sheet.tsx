@@ -22,7 +22,11 @@ import { monthAt, monthIndex, monthOf, monthWeeks } from "@/domain/calendar";
 import type { LocalDate, Weekday } from "@/domain/dates";
 import { isInWeek, weekOf } from "@/domain/weeks";
 
-import { WEEKDAY_INITIALS, formatFullDate, formatMonthTitle } from "./format";
+import {
+  WEEKDAY_INITIALS,
+  formatFullDate,
+  formatMonthTitle,
+} from "@/shared/format";
 import { Sheet, type SheetState } from "./sheet";
 import { ACTIVATION_DISTANCE, SPRING, monthStep } from "./sheet-motion";
 import { fontSize, radius, spacing, useColors } from "./theme";

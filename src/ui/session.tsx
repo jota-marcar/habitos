@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { supabase } from "@/auth/supabase";
+import { supabase } from "@/shared/supabase";
 
 /** The session, or null without one. Tests provide it without Supabase. */
 export const SessionContext = createContext<Session | null>(null);

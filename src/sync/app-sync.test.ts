@@ -13,7 +13,7 @@ import { recordSyncFailure, recordSyncSuccess } from "./sync-record";
 import { synchronize } from "./synchronize";
 
 const mockGetSession = jest.fn();
-jest.mock("@/auth/supabase", () => ({
+jest.mock("@/shared/supabase", () => ({
   supabase: () => ({ auth: { getSession: mockGetSession } }),
 }));
 jest.mock("./supabase-remote", () => ({ supabaseRemote: () => "remote" }));

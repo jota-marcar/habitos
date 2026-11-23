@@ -11,7 +11,7 @@ import type { WeeklyGoalError } from "@/domain/weekly-goals";
 import { refreshReminders } from "@/notifications/reminders";
 import { syncSoon } from "@/sync/app-sync";
 
-import { today } from "./clock";
+import { today } from "@/shared/clock";
 import { HeaderButton, Section, SwitchRow } from "./components";
 import { useDatabase } from "./database";
 import {

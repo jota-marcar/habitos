@@ -31,7 +31,7 @@ import {
   NameSection,
   messagesByField,
 } from "./form-sections";
-import { WEEKDAY_INITIALS, WEEKDAY_NAMES } from "./format";
+import { WEEKDAY_INITIALS, WEEKDAY_NAMES } from "@/shared/format";
 import {
   addReminderTime,
   withPickedTime,

@@ -6,7 +6,7 @@ import { IosAuthorizationStatus } from "expo-notifications";
 
 import { parseLocalDate } from "@/domain/dates";
 import { parseLocalTime } from "@/domain/times";
-import type { Horizon } from "@/ui/horizons";
+import type { Horizon } from "@/shared/horizon-request";
 
 import { horizonOfNotification, instantOf } from "./planner";
 import type {

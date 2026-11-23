@@ -21,7 +21,7 @@ import {
 } from "@/domain/weekly-goals";
 import { weekOf } from "@/domain/weeks";
 
-import { formatAmount, formatWeekRange } from "./format";
+import { formatAmount, formatWeekRange } from "@/shared/format";
 
 export interface WeeklyGoalFormValues {
   readonly name: string;

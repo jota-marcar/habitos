@@ -81,6 +81,7 @@ src/
   app/            Pantallas y navegación (Expo Router: cada fichero es una ruta)
   domain/         Reglas de negocio puras, sin dependencias de React ni de la base de datos
   data/           Acceso a la base de datos local (esquema, migraciones, repositorios)
+  shared/         Lo que usan varias capas: reloj, formato, horizontes, apertura de la base y cliente de Supabase
   sync/           Sincronización con Supabase
   notifications/  Planificador de recordatorios y gestión de acciones
   auth/           Inicio y cierre de sesión, eliminación de cuenta
@@ -88,7 +89,7 @@ src/
 supabase/         Migraciones SQL, políticas de seguridad y Edge Functions del backend
 ```
 
-Regla de dependencias: `app` y `ui` pueden usar todo; `domain` no depende de nada. Así las reglas más delicadas (qué hábitos tocan un día, cuándo está cumplido, qué recordatorios hay que programar) son funciones puras que se prueban con tests unitarios rápidos. ESLint impone esta regla en `src/domain`.
+Regla de dependencias ([ADR-0025](adr/0025-capa-compartida-y-regla-de-dependencias-entre-capas-impuesta-con-eslint.md)): cada capa solo puede usar las anteriores en el orden `domain` → `data` → `shared` → `sync` → `notifications` → `auth` → `ui` → `app`. Así las reglas más delicadas (qué hábitos tocan un día, cuándo está cumplido, qué recordatorios hay que programar) son funciones puras que se prueban con tests unitarios rápidos. ESLint impone este orden.
 
 Convenciones del dominio:
 

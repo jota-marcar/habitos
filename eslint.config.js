@@ -3,6 +3,38 @@ const { defineConfig } = require("eslint/config");
 const expoConfig = require("eslint-config-expo/flat");
 const prettierConfig = require("eslint-config-prettier/flat");
 
+// The layers, from the bottom up (ADR-0025): each one can only depend on those before it.
+const LAYERS = [
+  "domain",
+  "data",
+  "shared",
+  "sync",
+  "notifications",
+  "auth",
+  "ui",
+  "app",
+];
+
+function layerRule(layer) {
+  const above = LAYERS.slice(LAYERS.indexOf(layer) + 1);
+  return {
+    files: [`src/${layer}/**`],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: `^(@/|(\\.\\./)+)(${above.join("|")})(/|$)`,
+              message: `The ${layer} layer cannot depend on the layers above it (${above.join(", ")}).`,
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
 module.exports = defineConfig([
   expoConfig,
   prettierConfig,
@@ -27,7 +59,8 @@ module.exports = defineConfig([
             },
             {
               // Relative paths that leave src/domain towards another layer.
-              regex: "^(\\.\\./)+(app|data|sync|notifications|auth|ui)(/|$)",
+              regex:
+                "^(\\.\\./)+(app|data|shared|sync|notifications|auth|ui)(/|$)",
               message:
                 "The domain does not depend on other layers: it can only import from src/domain.",
             },
@@ -36,23 +69,5 @@ module.exports = defineConfig([
       ],
     },
   },
-  {
-    // The data layer only knows the domain: it does not depend on the screens or on the
-    // layers that use it.
-    files: ["src/data/**"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              regex: "^(@/|(\.\./)+)(app|sync|notifications|auth|ui)(/|$)",
-              message:
-                "The data layer can only depend on the domain, not on other layers.",
-            },
-          ],
-        },
-      ],
-    },
-  },
+  ...["data", "shared", "sync", "notifications", "auth"].map(layerRule),
 ]);

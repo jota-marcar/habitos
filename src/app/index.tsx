@@ -24,17 +24,15 @@ import type { DayHabit } from "@/domain/day";
 import type { WeekGoal } from "@/domain/weekly-goals";
 import { isInWeek, weekOf } from "@/domain/weeks";
 import { CalendarSheet } from "@/ui/calendar-sheet";
-import { today as currentDay } from "@/ui/clock";
-import { formatDayTitle, formatWeekRange } from "@/ui/format";
+import { today as currentDay } from "@/shared/clock";
+import { formatDayTitle, formatWeekRange } from "@/shared/format";
 import { HabitOptionsSheet } from "@/ui/habit-options-sheet";
 import { playOptionsOpened } from "@/ui/haptics";
-import { listenToHorizonRequests } from "@/ui/horizon-request";
 import {
-  HorizonPager,
-  HorizonTitles,
-  useHorizons,
+  listenToHorizonRequests,
   type Horizon,
-} from "@/ui/horizons";
+} from "@/shared/horizon-request";
+import { HorizonPager, HorizonTitles, useHorizons } from "@/ui/horizons";
 import { Sheet, SheetOption, useOpenSheetGesture, useSheet } from "@/ui/sheet";
 import { SyncWarning } from "@/ui/sync-status";
 import { fontSize, radius, spacing, topGap, useColors } from "@/ui/theme";

@@ -5,8 +5,8 @@ import * as Notifications from "expo-notifications";
 
 import type { Database } from "@/data/database";
 import { syncNow } from "@/sync/app-sync";
-import { newId, now } from "@/ui/clock";
-import { requestHorizon } from "@/ui/horizon-request";
+import { newId, now } from "@/shared/clock";
+import { requestHorizon } from "@/shared/horizon-request";
 
 import { answerReminder, notifyReminderRecorded } from "./actions";
 import {

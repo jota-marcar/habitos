@@ -2,7 +2,9 @@
 // The tap may arrive before the screen exists, when it is what starts the app, so the request
 // waits here until the screen is there to take it.
 
-import type { Horizon } from "./horizons";
+/** The pages of the main screen, in the order they are swiped through. */
+export const HORIZONS = ["habits", "weekly"] as const;
+export type Horizon = (typeof HORIZONS)[number];
 
 let requested: Horizon | null = null;
 let listener: ((horizon: Horizon) => void) | null = null;
