@@ -2,9 +2,9 @@
 // Starts an iOS build on EAS for one variant (ADR-0008), with guards:
 // - before: refuses to build with uncommitted changes, so that what is built is what is in git;
 //   a production build must also come from main, up to date with GitHub, because it goes to
-//   TestFlight;
+//   TestFlight, with a version that has not been released yet (ADR-0024);
 // - after: warns if EAS CLI has rewritten app.json, which it does with values that must not
-//   be committed.
+//   be committed, and tags the version of a production build that went well.
 // The production build is sent to TestFlight when it finishes (`--auto-submit`), with the
 // production submit profile of eas.json. See docs/testflight.md.
 // Usage: npm run build:dev             development build
@@ -18,6 +18,8 @@ import {
   printSource,
   requireCommitted,
   requireMainUpToDate,
+  requireUnreleasedVersion,
+  tagRelease,
   warnIfAppJsonChanged,
 } from "./release-guards.mjs";
 
@@ -36,7 +38,10 @@ if (profile === undefined) {
 const checkOnly = process.argv.includes("--check");
 
 requireCommitted();
-if (profile.fromMain) requireMainUpToDate(`A ${profileName} build`);
+if (profile.fromMain) {
+  requireMainUpToDate(`A ${profileName} build`);
+  requireUnreleasedVersion(`A ${profileName} build`);
+}
 printSource(profileName);
 
 if (checkOnly) {
@@ -51,5 +56,7 @@ const build = spawnSync(
 );
 
 warnIfAppJsonChanged();
+
+if (profile.fromMain && build.status === 0) tagRelease("TestFlight build");
 
 process.exit(build.status ?? 1);

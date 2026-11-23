@@ -1,6 +1,8 @@
 // app.json only holds what both variants share (ADR-0008). EAS CLI rewrites this file with
 // values resolved for one variant, so these tests catch them before they are committed.
 import appJson from "../../app.json";
+import packageLock from "../../package-lock.json";
+import packageJson from "../../package.json";
 
 const expo: Record<string, unknown> = appJson.expo;
 const ios = (expo.ios ?? {}) as Record<string, unknown>;
@@ -31,6 +33,14 @@ describe("app.json", () => {
       "expo-notifications",
       { enableRemoteNotifications: false },
     ]);
+  });
+
+  // app.json decides the version, and scripts/bump-version.mjs keeps the others in step (ADR-0024).
+  test("has a semantic version, the same in package.json and its lockfile", () => {
+    expect(appJson.expo.version).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(packageJson.version).toBe(appJson.expo.version);
+    expect(packageLock.version).toBe(appJson.expo.version);
+    expect(packageLock.packages[""].version).toBe(appJson.expo.version);
   });
 
   test("keeps the link with the EAS project", () => {

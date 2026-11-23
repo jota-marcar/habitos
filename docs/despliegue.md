@@ -31,17 +31,39 @@ Un cambio es **nativo** si añade o actualiza una dependencia con código nativo
 
 1. Probarlo con `npm start` en Hábitos Dev.
 2. Con el código en una rama o en `main`, publicar con `npm run update:dev` y probarlo en Hábitos Dev desde el lanzador ([testflight.md, 6.1](testflight.md#61-probarla-en-hábitos-dev)).
-3. Fusionar el PR y poner `main` al día (`/sync`).
+3. [Preparar la versión](#versiones) en el PR, fusionarlo y poner `main` al día (`/sync`).
 4. Si necesita una migración de la nube o cambia `delete-account`, aplicarlo antes a producción ([supabase.md, secciones 5 y 9.3](supabase.md#5-aplicar-el-esquema)).
-5. `npm run update:prod`. Los probadores la descargan al abrir la aplicación y la usan la siguiente vez que la abren.
+5. `npm run update:prod`. Los probadores la descargan al abrir la aplicación y la usan la siguiente vez que la abren. Se comprueba en **Ajustes**, que muestra la versión.
 
 ### Cambio nativo
 
-1. Fusionar el PR y poner `main` al día (`/sync`).
+1. [Preparar la versión](#versiones) en el PR, fusionarlo y poner `main` al día (`/sync`).
 2. `npm run build:dev`, instalarlo y probarlo con `npm start`.
 3. Si necesita una migración de la nube o cambia `delete-account`, aplicarlo antes a producción.
 4. `npm run build:prod`. Se compila y se envía solo a TestFlight.
 5. Cuando App Store Connect lo procese, añadirlo al grupo **Amigos** y esperar la revisión beta si la pide ([testflight.md, 3.1](testflight.md#31-probadores-externos)).
+
+## Versiones
+
+Cada publicación de producción, build u OTA, tiene una versión nueva y un tag en git ([ADR-0024](adr/0024-versiones-visibles-con-versionado-semantico-y-un-tag-por-publicacion.md)).
+
+| Desde la última publicación hay… | Sube | Ejemplo |
+|----------------------------------|------|---------|
+| Alguna funcionalidad nueva (`feat`) | La menor | `0.2.0` → `0.3.0` |
+| Solo correcciones u otros cambios (`fix`, `docs`, `chore`…) | El parche | `0.2.0` → `0.2.1` |
+| Un cambio incompatible (`feat!`, `fix!`) | La mayor, o la menor antes de la `1.0.0` | `0.2.0` → `0.3.0` |
+
+Para prepararla, en una rama:
+
+```powershell
+node scripts/bump-version.mjs
+```
+
+Calcula la versión con los commits desde el último tag y la escribe en `app.json`, `package.json` y `package-lock.json`. No gasta un build ni cambia la huella nativa. Si no hay commits nuevos, como al renovar un build que caduca, se indica el nivel: `node scripts/bump-version.mjs patch`.
+
+`build:prod` y `update:prod` se niegan a publicar una versión que ya tiene tag, y crean el suyo cuando la publicación termina bien.
+
+**Dónde se ve:** **Ajustes** muestra la versión que está funcionando, también tras una OTA. **TestFlight** muestra la del último build, y solo cambia con otro build.
 
 ## Antes de lanzar nada
 
