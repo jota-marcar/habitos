@@ -58,8 +58,27 @@ describe("fromExpoSQLite", () => {
 
     await db.transaction(task);
 
-    expect(expo.withTransactionAsync).toHaveBeenCalledWith(task);
-    expect(task).toHaveBeenCalled();
+    expect(expo.withTransactionAsync).toHaveBeenCalledTimes(1);
+    expect(task).toHaveBeenCalledTimes(1);
+  });
+
+  test("a statement sent during a transaction waits for it to end", async () => {
+    const expo = fakeExpoDatabase();
+    const db = fromExpoSQLite(expo as unknown as ExpoSQLiteDatabase);
+    let finish!: () => void;
+    const held = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+
+    const transaction = db.transaction(() => held);
+    const statement = db.run("UPDATE t SET id = 'b'");
+    await new Promise<void>((resolve) => setImmediate(() => resolve()));
+    expect(expo.runAsync).not.toHaveBeenCalled();
+
+    finish();
+    await Promise.all([transaction, statement]);
+
+    expect(expo.runAsync).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -75,6 +94,37 @@ describe("prepareDatabase", () => {
     );
     expect(pragma.foreign_keys).toBe(1);
     expect(await schemaVersion(db)).toBe(MIGRATIONS.length);
+    db.close();
+  });
+
+  test("asks for the write-ahead log before migrating", async () => {
+    const db = openTestDatabase();
+    const execute = jest.spyOn(db, "execute");
+
+    await prepareDatabase(db);
+
+    const statements = execute.mock.calls.map(([sql]) => sql);
+    expect(statements.slice(0, 2)).toEqual([
+      "PRAGMA foreign_keys = ON",
+      "PRAGMA journal_mode = WAL",
+    ]);
+    db.close();
+  });
+
+  test("still opens if the write-ahead log cannot be enabled", async () => {
+    const db = openTestDatabase();
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const execute = db.execute;
+    db.execute = async (sql) => {
+      if (sql.includes("journal_mode")) throw new Error("locked");
+      await execute(sql);
+    };
+
+    await prepareDatabase(db);
+
+    expect(await schemaVersion(db)).toBe(MIGRATIONS.length);
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
     db.close();
   });
 });

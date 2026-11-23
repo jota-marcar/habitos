@@ -12,7 +12,11 @@ import {
   deleteReminder,
   listReminders,
 } from "@/data/reminders-repository";
-import { SYNC_TABLES, adoptSyncAccount } from "@/data/sync-repository";
+import {
+  SYNC_TABLES,
+  adoptSyncAccount,
+  readCursor,
+} from "@/data/sync-repository";
 import {
   habit,
   openMigratedDatabase,
@@ -297,6 +301,28 @@ describe("synchronize", () => {
     expect(result.changed).toBe(true);
     expect(await habitNames(phone)).toEqual([]);
     expect(remote.rows.habits.size).toBe(0);
+  });
+
+  test("a page that fails half way leaves nothing behind, and its cursor stays", async () => {
+    const updated_at = "2026-11-12T10:00:00.000Z";
+    jest.spyOn(remote, "pull").mockResolvedValueOnce([
+      {
+        id: "whole",
+        name: "Whole",
+        type: "boolean",
+        color: null,
+        created_on: DAY,
+        archived_on: null,
+        deleted: false,
+        updated_at,
+      },
+      { id: "broken", updated_at },
+    ]);
+
+    await expect(synchronize(phone, remote, USER)).rejects.toThrow("broken");
+
+    expect(await habitNames(phone)).toEqual([]);
+    expect(await readCursor(phone, "habits")).toBeNull();
   });
 
   test("a failed upload is retried on the next synchronization", async () => {

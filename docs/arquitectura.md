@@ -93,6 +93,7 @@ Convenciones del dominio:
 - **Las reglas que pueden rechazar una operación devuelven códigos de error** (por ejemplo, `name_empty`), no textos. La interfaz decide el mensaje.
 - **Los tests van junto al código** (`dates.ts` y `dates.test.ts`) y la cobertura del dominio, de la capa de datos, de la sincronización (salvo su adaptador de Supabase) y de las Edge Functions (salvo su punto de entrada, `index.ts`) debe ser del 100 %: `npm run verify` falla si baja. Lo que queda fuera se prueba de punta a punta en la CI.
 - **La capa de datos** (`src/data`) solo depende del dominio, y sus repositorios usan una interfaz mínima de base de datos en lugar de `expo-sqlite`. Así los tests ejecutan el SQL real con el SQLite integrado en Node ([ADR-0009](adr/0009-sql-directo-y-migraciones-propias-en-la-capa-de-datos-local.md)). ESLint impone también esta dependencia.
+- **Una operación cada vez en la conexión** (`src/data/serialized-database.ts`). En `expo-sqlite`, una sentencia lanzada durante una transacción entra en ella y se pierde si esta falla, y dos transacciones a la vez dan error. Por eso todas las operaciones esperan su turno en una cola, y lo que se hace dentro de una transacción va por el `tx` que esta recibe: usar la base exterior se quedaría esperando para siempre. Los tests usan la misma cola, así que ese error los haría fallar. La base funciona en modo WAL, que abarata cada commit y no necesita migración.
 
 Las pantallas están en `src/app/` porque es la ubicación de la plantilla de Expo; dentro solo van rutas, y los tests van fuera (en `src/__tests__/` o junto al código que prueban, fuera de `src/app/`). Los imports usan el alias `@/` → `src/`.
 
@@ -268,7 +269,7 @@ Cada sincronización (`src/sync/synchronize.ts`) hace primero el pull y después
    - Se suben las filas con `pending_sync = 1` y se guarda el `updated_at` que asigna el servidor.
    - En cada tabla, las borradas van primero. El servidor comprueba las claves únicas fila a fila: un recordatorio quitado y vuelto a poner a la misma hora chocaría con el anterior si llegara antes que su borrado.
    - Una fila que ha cambiado mientras subía sigue pendiente.
-4. **Sin transacciones largas:** cada paso se puede repetir sin daño, y el cursor solo avanza cuando la página entera está en el dispositivo. Una sincronización que falla a medias la completa la siguiente.
+4. **Sin transacciones largas:** cada página se escribe en una transacción corta, que nunca espera a la red, y la bajada guarda en ella también su cursor, que así solo avanza con la página entera en el dispositivo. Cada paso se puede repetir sin daño, y una sincronización que falla a medias la completa la siguiente.
 5. **Conflictos:** gana el último cambio en llegar a la cuenta. Es aceptable porque cada cuenta tiene un solo usuario.
 6. **Cuándo se lanza** (`src/sync/app-sync.ts` y `src/sync/scheduler.ts`):
    - al abrir la app o iniciar sesión y al volver a primer plano;

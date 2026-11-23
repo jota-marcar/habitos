@@ -4,6 +4,7 @@
 import { DatabaseSync } from "node:sqlite";
 
 import type { Database, SqlValue } from "../database";
+import { serializedDatabase } from "../serialized-database";
 
 export interface TestDatabase extends Database {
   close(): void;
@@ -17,7 +18,9 @@ export function openTestDatabase(): TestDatabase {
   const all = <Row>(sql: string, params: readonly SqlValue[] = []) =>
     db.prepare(sql).all(...params) as Row[];
 
-  return {
+  // The same queue as on the device: a transaction that used the outer database by mistake
+  // would never end here either, so its test fails instead of hiding it.
+  const serialized = serializedDatabase({
     async execute(sql) {
       db.exec(sql);
     },
@@ -41,6 +44,10 @@ export function openTestDatabase(): TestDatabase {
         throw error;
       }
     },
+  });
+
+  return {
+    ...serialized,
     close() {
       db.close();
     },

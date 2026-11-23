@@ -156,9 +156,9 @@ export async function migrate(
   }
 
   for (let version = current + 1; version <= migrations.length; version++) {
-    await db.transaction(async () => {
-      await db.execute(migrations[version - 1]);
-      await db.execute(`PRAGMA user_version = ${version}`);
+    await db.transaction(async (tx) => {
+      await tx.execute(migrations[version - 1]);
+      await tx.execute(`PRAGMA user_version = ${version}`);
     });
   }
 }

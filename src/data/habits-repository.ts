@@ -137,11 +137,11 @@ export async function addHabit(
   version: HabitVersion,
   reminders: readonly Reminder[] = [],
 ): Promise<void> {
-  await db.transaction(async () => {
-    await saveHabit(db, habit);
-    await saveHabitVersion(db, version);
+  await db.transaction(async (tx) => {
+    await saveHabit(tx, habit);
+    await saveHabitVersion(tx, version);
     for (const reminder of reminders) {
-      await addReminder(db, reminder);
+      await addReminder(tx, reminder);
     }
   });
 }
@@ -161,14 +161,14 @@ export async function saveHabitChanges(
   db: Database,
   changes: HabitChanges,
 ): Promise<void> {
-  await db.transaction(async () => {
-    await saveHabit(db, changes.habit);
-    if (changes.version !== null) await saveHabitVersion(db, changes.version);
+  await db.transaction(async (tx) => {
+    await saveHabit(tx, changes.habit);
+    if (changes.version !== null) await saveHabitVersion(tx, changes.version);
     for (const reminderId of changes.removedReminderIds) {
-      await deleteReminder(db, reminderId);
+      await deleteReminder(tx, reminderId);
     }
     for (const reminder of changes.addedReminders) {
-      await addReminder(db, reminder);
+      await addReminder(tx, reminder);
     }
   });
 }
@@ -182,10 +182,10 @@ export async function deleteHabit(
   habitId: string,
 ): Promise<void> {
   const mark = "SET deleted = 1, pending_sync = 1";
-  await db.transaction(async () => {
-    await db.run(`UPDATE habits ${mark} WHERE id = ?`, [habitId]);
+  await db.transaction(async (tx) => {
+    await tx.run(`UPDATE habits ${mark} WHERE id = ?`, [habitId]);
     for (const table of ["habit_versions", "entries", "reminders"]) {
-      await db.run(
+      await tx.run(
         `UPDATE ${table} ${mark} WHERE habit_id = ? AND deleted = 0`,
         [habitId],
       );
