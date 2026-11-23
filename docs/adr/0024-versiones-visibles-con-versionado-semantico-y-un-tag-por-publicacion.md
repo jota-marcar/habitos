@@ -69,4 +69,5 @@ Lo que condiciona la decisión:
 - ✅ Mirando Ajustes se sabe si una actualización ya ha llegado, y con los tags, qué commit hay en cada versión.
 - ✅ No se puede volver a publicar dos veces la misma versión.
 - ❌ Tras una OTA, TestFlight sigue mostrando la versión del último build. Las dos solo coinciden después de un build nuevo.
+- ❌ Como cada build lleva una versión nueva, conviene contar con la revisión beta de Apple para los probadores externos en cada uno. Las OTA no pasan por ella.
 - ❌ El número de build lo sigue llevando EAS y no se muestra en la aplicación.

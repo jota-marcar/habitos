@@ -63,6 +63,9 @@ flowchart LR
 | Inicio de sesión | Sign in with Apple (`expo-apple-authentication`) y Google (`@react-native-google-signin/google-signin`) nativos, con el token enviado a Supabase; la sesión, en el llavero de iOS (`expo-secure-store`) | [ADR-0003](adr/0003-supabase-como-backend.md), [ADR-0017](adr/0017-inicio-de-sesion-nativo-con-apple-y-google-y-sesion-en-el-llavero.md) |
 | Recordatorios | Notificaciones locales (`expo-notifications`) y tarea en segundo plano (`expo-background-task`) | [ADR-0005](adr/0005-recordatorios-locales-en-ventana-deslizante.md) |
 | Compilación y publicación | EAS Build, EAS Submit y TestFlight | [ADR-0002](adr/0002-expo-como-plataforma.md) |
+| Actualizaciones | EAS Update (OTA), con la versión de runtime por huella nativa | [ADR-0020](adr/0020-actualizaciones-ota-con-eas-update-primero-en-desarrollo-y-despues-en-produccion.md) |
+| Versiones | Versionado semántico, con un tag por publicación | [ADR-0024](adr/0024-versiones-visibles-con-versionado-semantico-y-un-tag-por-publicacion.md) |
+| Vibraciones | Generadores de iOS con `expo-haptics` (RF-39) | Estándar de Expo |
 | Tests | Jest y React Native Testing Library | Estándar de Expo |
 | Tests del esquema de la nube | pgTAP contra la base local de Supabase, en la CI | [ADR-0015](adr/0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md) |
 | Calidad de código | ESLint y Prettier | Estándar de Expo |
@@ -230,7 +233,7 @@ Decisiones del modelo:
 6. Al guardar un hábito con recordatorios sin permiso, un diálogo lo avisa y ofrece abrir los ajustes (RF-36). El hábito se guarda igualmente: como la app refresca al volver a primer plano, los recordatorios se programan en cuanto el usuario da el permiso.
 7. Los recordatorios que llegan con la app abierta también se muestran.
 
-El planificador usa el dominio, la capa de datos y, de la interfaz, solo el reloj y el formato de cantidades. Su lógica depende de la interfaz `Notifier`, y no de `expo-notifications`, para que los tests se ejecuten sin iOS.
+El planificador usa el dominio y la capa de datos. De `src/ui` usa el reloj, el formato de cantidades, la apertura de la base y la petición de horizonte, que deberían vivir en una capa compartida ([estado](estado.md#qué-viene-después)). Su lógica depende de la interfaz `Notifier`, y no de `expo-notifications`, para que los tests se ejecuten sin iOS.
 
 ### Acción desde un recordatorio
 
@@ -319,7 +322,7 @@ El motor depende de la interfaz `Remote`, no de Supabase. En los tests, la imple
 | iOS solo mantiene 64 notificaciones locales pendientes por app | Ventana deslizante de recordatorios, que se recalcula en cada apertura y cambio ([ADR-0005](adr/0005-recordatorios-locales-en-ventana-deslizante.md)) |
 | Si la app no se abre en varios días, la ventana de recordatorios se agota | Tarea en segundo plano que la rellena; aviso final antes de que se agote (RF-51); aviso en la app si los permisos están desactivados |
 | El plan gratuito de Supabase pausa el proyecto tras 7 días sin peticiones | Con el uso diario de la app no ocurre; si ocurre, se reactiva desde el panel sin perder datos |
-| Apple puede rechazar la app en la revisión por obligar a iniciar sesión: pide que, si las funciones no dependen de una cuenta, se pueda usar sin ella ([App Store Review Guidelines 5.1.1(v)](https://developer.apple.com/app-store/review/guidelines/#5.1.1)) | La copia en la nube y el uso en varios dispositivos (RF-05) son funciones de cuenta, lo que justifica pedirla. No afecta al uso personal ni a TestFlight interno. Se revisará antes de enviar la app a la App Store; la alternativa es permitir usarla sin cuenta |
+| Apple puede rechazar la app en la revisión por obligar a iniciar sesión: pide que, si las funciones no dependen de una cuenta, se pueda usar sin ella ([App Store Review Guidelines 5.1.1(v)](https://developer.apple.com/app-store/review/guidelines/#5.1.1)) | La copia en la nube y el uso en varios dispositivos (RF-05) son funciones de cuenta, lo que justifica pedirla. No afecta al uso personal ni a TestFlight, también con probadores externos. Se revisará antes de enviar la app a la App Store; la alternativa es permitir usarla sin cuenta |
 | Con el inicio de sesión obligatorio, una configuración incorrecta de Apple, Google o Supabase deja la app inutilizable | Probar el inicio de sesión en el iPhone en cuanto haya un build con él, antes de seguir con la sincronización. Los pasos están en [docs/supabase.md](supabase.md#8-inicio-de-sesión-con-apple-y-google) |
 | El token de Google se acepta sin nonce: uno interceptado podría reutilizarse durante su hora de validez | Riesgo bajo en una app personal con Row Level Security; si la app se abre a más usuarios, se reconsiderará la versión de pago de la librería ([ADR-0017](adr/0017-inicio-de-sesion-nativo-con-apple-y-google-y-sesion-en-el-llavero.md)) |
 | Dependencia de EAS para compilar iOS (no hay Mac) | Asumida en [ADR-0002](adr/0002-expo-como-plataforma.md); alternativa: alquilar un Mac en la nube |

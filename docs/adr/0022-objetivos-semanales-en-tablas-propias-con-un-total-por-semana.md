@@ -1,6 +1,6 @@
 # ADR-0022: Objetivos semanales en tablas propias con un total por semana
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-22
 
 ## Contexto

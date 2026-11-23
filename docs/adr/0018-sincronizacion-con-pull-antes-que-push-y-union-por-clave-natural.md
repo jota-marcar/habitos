@@ -1,6 +1,6 @@
 # ADR-0018: Sincronización con pull antes que push y unión por clave natural
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-18
 
 ## Contexto

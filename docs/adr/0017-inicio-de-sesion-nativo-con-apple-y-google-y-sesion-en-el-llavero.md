@@ -1,6 +1,6 @@
 # ADR-0017: Inicio de sesión nativo con Apple y Google y sesión en el llavero
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-17
 
 ## Contexto

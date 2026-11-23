@@ -18,15 +18,15 @@ Cada ADR documenta una decisión técnica importante: el contexto, las opciones 
 | [0012](0012-botones-de-los-recordatorios-en-segundo-plano-con-javascript.md) | Botones de los recordatorios en segundo plano con JavaScript | Aceptado |
 | [0013](0013-estetica-oscura-unica-con-acento-violeta.md) | Estética oscura única con acento violeta | Aceptado |
 | [0014](0014-colores-de-habito-como-dato-del-usuario-guardados-como-clave-de-paleta.md) | Colores de hábito como dato del usuario, guardados como clave de paleta | Aceptado |
-| [0015](0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md) | Pruebas del esquema de Supabase con pgTAP en la CI | Propuesto |
-| [0016](0016-cursor-de-sincronizacion-serializado-por-usuario.md) | Cursor de sincronización serializado por usuario | Propuesto |
-| [0017](0017-inicio-de-sesion-nativo-con-apple-y-google-y-sesion-en-el-llavero.md) | Inicio de sesión nativo con Apple y Google y sesión en el llavero | Propuesto |
-| [0018](0018-sincronizacion-con-pull-antes-que-push-y-union-por-clave-natural.md) | Sincronización con pull antes que push y unión por clave natural | Propuesto |
-| [0019](0019-eliminacion-de-la-cuenta-con-una-edge-function-que-revoca-sign-in-with-apple-antes-de-borrar-al-usuario.md) | Eliminación de la cuenta con una Edge Function que revoca Sign in with Apple antes de borrar al usuario | Propuesto |
-| [0020](0020-actualizaciones-ota-con-eas-update-primero-en-desarrollo-y-despues-en-produccion.md) | Actualizaciones OTA con EAS Update, primero en desarrollo y después en producción | Propuesto |
-| [0021](0021-carrusel-de-horizontes-con-scrollview-horizontal-paginado.md) | Carrusel de horizontes con ScrollView horizontal paginado | Propuesto |
-| [0022](0022-objetivos-semanales-en-tablas-propias-con-un-total-por-semana.md) | Objetivos semanales en tablas propias con un total por semana | Propuesto |
-| [0023](0023-vaciar-las-filas-borradas-y-hacer-definitivo-el-borrado.md) | Vaciar las filas borradas y hacer definitivo el borrado | Propuesto |
+| [0015](0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md) | Pruebas del esquema de Supabase con pgTAP en la CI | Aceptado |
+| [0016](0016-cursor-de-sincronizacion-serializado-por-usuario.md) | Cursor de sincronización serializado por usuario | Aceptado |
+| [0017](0017-inicio-de-sesion-nativo-con-apple-y-google-y-sesion-en-el-llavero.md) | Inicio de sesión nativo con Apple y Google y sesión en el llavero | Aceptado |
+| [0018](0018-sincronizacion-con-pull-antes-que-push-y-union-por-clave-natural.md) | Sincronización con pull antes que push y unión por clave natural | Aceptado |
+| [0019](0019-eliminacion-de-la-cuenta-con-una-edge-function-que-revoca-sign-in-with-apple-antes-de-borrar-al-usuario.md) | Eliminación de la cuenta con una Edge Function que revoca Sign in with Apple antes de borrar al usuario | Aceptado |
+| [0020](0020-actualizaciones-ota-con-eas-update-primero-en-desarrollo-y-despues-en-produccion.md) | Actualizaciones OTA con EAS Update, primero en desarrollo y después en producción | Aceptado |
+| [0021](0021-carrusel-de-horizontes-con-scrollview-horizontal-paginado.md) | Carrusel de horizontes con ScrollView horizontal paginado | Aceptado |
+| [0022](0022-objetivos-semanales-en-tablas-propias-con-un-total-por-semana.md) | Objetivos semanales en tablas propias con un total por semana | Aceptado |
+| [0023](0023-vaciar-las-filas-borradas-y-hacer-definitivo-el-borrado.md) | Vaciar las filas borradas y hacer definitivo el borrado | Aceptado |
 | [0024](0024-versiones-visibles-con-versionado-semantico-y-un-tag-por-publicacion.md) | Versiones visibles con versionado semántico y un tag por publicación | Propuesto |
 
 ## Plantilla
