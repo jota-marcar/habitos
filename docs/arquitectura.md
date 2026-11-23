@@ -177,7 +177,7 @@ Decisiones del modelo:
 - **Edición desde cualquier día:** la configuración nueva siempre entra en vigor el día actual (`effective_from` = hoy), aunque se edite desde un día pasado o futuro (RF-09). Lo que pertenece al día que se está viendo es su registro. La excepción es un hábito que aún no ha empezado: sus cambios entran en vigor el día en que empieza, para no crear versiones anteriores al hábito.
 - **Color:** `color` guarda la clave de un color de la paleta (`blue`, `teal`…) o nada, no su valor; el tono de cada clave lo decide la interfaz ([ADR-0014](adr/0014-colores-de-habito-como-dato-del-usuario-guardados-como-clave-de-paleta.md)). Como el nombre, no tiene versiones: cambia en todo el historial.
 - **Días programados:** máscara de 7 bits en `scheduled_days`, con el lunes en el bit 0 y el domingo en el bit 6.
-- **Cantidades:** `target`, `increment` y `value` tienen 2 decimales como máximo y nunca son negativas. Un registro con valor 0 equivale a no tener registro.
+- **Cantidades:** `target`, `increment` y `value` tienen 2 decimales como máximo y nunca son negativas. Un registro con valor 0 cuenta como no hecho, pero sigue siendo un registro: mantiene el hábito o el objetivo a la vista ese día o esa semana aunque ya no toque o se haya archivado, para poder volver a marcarlo (RF-09, RF-10, RF-44). Los recordatorios y los avisos solo cuentan los días programados (`scheduledHabitsForDay`).
 - **Un registro por hábito y día** (clave única `habit_id + date`). Si no hay registro, el hábito está pendiente.
 - **Las horas son horas del día** (`08:30`), con precisión de minuto y sin zona horaria, igual que las fechas.
 - **Los recordatorios no tienen versiones**: solo afectan al futuro. Un hábito no puede tener dos a la misma hora (clave única `habit_id + time`).
@@ -215,7 +215,7 @@ Decisiones del modelo:
 
 1. El dominio decide qué opciones tiene un hábito según el día que se ve y si está archivado (RF-34). La interfaz las muestra en la misma hoja inferior que el menú.
 2. Restar el incremento y escribir la cantidad exacta siguen el flujo de "Marcar un hábito". La cantidad se pide con el diálogo nativo de iOS (`Alert.prompt`), y archivar y eliminar se confirman con una alerta nativa.
-3. Editar abre el formulario como modal, el mismo que el de crear. Al guardar, el nombre y el color cambian en el hábito y la configuración entra en vigor hoy: se añade una versión nueva o, si ya había una de hoy, se actualiza. Los recordatorios añadidos y quitados se guardan en la misma transacción.
+3. Editar abre el formulario como modal, el mismo que el de crear. Al guardar, el nombre y el color cambian en el hábito y la configuración entra en vigor hoy: se añade una versión nueva o, si ya había una de hoy, se actualiza. Los recordatorios añadidos y quitados se guardan en la misma transacción. Un formulario con cambios pide confirmación antes de cerrarse (RF-52): `usePreventRemove` de Expo Router intercepta tanto "Cancelar" como el gesto nativo de deslizar el modal.
 
 ### Programar los recordatorios
 

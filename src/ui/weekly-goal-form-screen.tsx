@@ -21,6 +21,7 @@ import {
   messagesByField,
 } from "./form-sections";
 import { fontSize, spacing, useColors } from "./theme";
+import { hasFormChanges, useDiscardGuard } from "./use-discard-guard";
 import { repetitionNote, type WeeklyGoalFormValues } from "./weekly-goal-form";
 
 export function WeeklyGoalFormScreen({
@@ -51,6 +52,7 @@ export function WeeklyGoalFormScreen({
   const [saving, setSaving] = useState(false);
   const editing = firstWeek === undefined;
   const messages = messagesByField(errors);
+  const closeSaved = useDiscardGuard(hasFormChanges(values, initialValues));
 
   const update = (changes: Partial<WeeklyGoalFormValues>) =>
     setValues((current) => ({ ...current, ...changes }));
@@ -65,7 +67,7 @@ export function WeeklyGoalFormScreen({
       // The goal may change what the progress digests name or how they say it (RF-49).
       void refreshReminders(db);
       syncSoon(db);
-      router.back();
+      closeSaved();
     } finally {
       setSaving(false);
     }

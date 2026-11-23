@@ -40,6 +40,7 @@ import {
 import { REMINDER_ERROR_MESSAGES } from "./messages";
 import { warnIfRemindersNotAllowed } from "./reminders";
 import { fontSize, spacing, useColors } from "./theme";
+import { hasFormChanges, useDiscardGuard } from "./use-discard-guard";
 
 const WEEKDAYS: readonly Weekday[] = [0, 1, 2, 3, 4, 5, 6];
 
@@ -85,6 +86,10 @@ export function HabitFormScreen({
   const scrollY = useRef(0);
 
   const messages = messagesByField(errors);
+  // An open picker counts: saving would add its time (RF-22).
+  const closeSaved = useDiscardGuard(
+    pickedTime !== null || hasFormChanges(values, initialValues),
+  );
 
   const update = (changes: Partial<HabitFormValues>) =>
     setValues((current) => ({ ...current, ...changes }));
@@ -142,7 +147,7 @@ export function HabitFormScreen({
       if (submitted.reminderTimes.length > 0) await warnIfRemindersNotAllowed();
       void refreshReminders(db);
       syncSoon(db);
-      router.back();
+      closeSaved();
     } finally {
       setSaving(false);
     }

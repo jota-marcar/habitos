@@ -1069,14 +1069,87 @@ describe("new habit", () => {
     expect(screen.queryByText("08:30")).toBeNull();
   });
 
-  test("cancel goes back to the day without saving", async () => {
+  test("cancel without changes goes back to the day without asking", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     await openForm();
 
-    await fireEvent.changeText(screen.getByLabelText("Nombre"), "Meditar");
     await fireEvent.press(screen.getByLabelText("Cancelar"));
 
+    expect(alert).not.toHaveBeenCalled();
     expect(screen).toHavePathname("/");
-    expect(await listHabits(db)).toEqual([]);
+  });
+
+  describe("with changes (RF-52)", () => {
+    async function pressDialogButton(alert: jest.SpyInstance, label: string) {
+      const buttons = alert.mock.lastCall?.[2] as AlertButton[];
+      await act(async () => {
+        buttons.find((b) => b.text === label)?.onPress?.();
+      });
+    }
+
+    test("cancel asks first, and keeping on editing loses nothing", async () => {
+      const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+      await openForm();
+      await fireEvent.changeText(screen.getByLabelText("Nombre"), "Meditar");
+
+      await fireEvent.press(screen.getByLabelText("Cancelar"));
+
+      expect(alert).toHaveBeenCalledTimes(1);
+      expect(alert.mock.lastCall?.[0]).toBe("¿Descartar los cambios?");
+      expect(screen).toHavePathname("/habits/new");
+
+      await pressDialogButton(alert, "Seguir editando");
+
+      expect(screen).toHavePathname("/habits/new");
+      expect(screen.getByLabelText("Nombre").props.value).toBe("Meditar");
+    });
+
+    test("discarding goes back to the day without saving", async () => {
+      const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+      await openForm();
+      await fireEvent.changeText(screen.getByLabelText("Nombre"), "Meditar");
+      await fireEvent.press(screen.getByLabelText("Cancelar"));
+
+      await pressDialogButton(alert, "Descartar");
+
+      expect(screen).toHavePathname("/");
+      expect(await listHabits(db)).toEqual([]);
+    });
+
+    test("an open reminder picker counts as a change", async () => {
+      const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+      await openForm();
+      await fireEvent.press(screen.getByText("Añadir recordatorio"));
+
+      await fireEvent.press(screen.getByLabelText("Cancelar"));
+
+      expect(alert).toHaveBeenCalledTimes(1);
+      expect(screen).toHavePathname("/habits/new");
+    });
+
+    test("undoing the change by hand no longer asks", async () => {
+      const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+      await openForm();
+      await fireEvent.changeText(screen.getByLabelText("Nombre"), "Meditar");
+      await fireEvent.changeText(screen.getByLabelText("Nombre"), "");
+
+      await fireEvent.press(screen.getByLabelText("Cancelar"));
+
+      expect(alert).not.toHaveBeenCalled();
+      expect(screen).toHavePathname("/");
+    });
+
+    test("saving closes the form without asking", async () => {
+      const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+      await openForm();
+      await fireEvent.changeText(screen.getByLabelText("Nombre"), "Meditar");
+
+      await fireEvent.press(screen.getByLabelText("Guardar"));
+
+      await waitFor(() => expect(screen).toHavePathname("/"));
+      expect(alert).not.toHaveBeenCalled();
+      expect((await listHabits(db)).map((h) => h.name)).toEqual(["Meditar"]);
+    });
   });
 });
 
@@ -1897,6 +1970,23 @@ describe("weekly goals (RF-42 to RF-50)", () => {
       await screen.findByText("La meta debe ser un número mayor que 0."),
     ).toBeTruthy();
     expect(screen).toHavePathname("/weekly-goals/new");
+    expect(await listWeeklyGoals(db)).toEqual([]);
+  });
+
+  test("cancelling a goal with changes asks first (RF-52)", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    await renderWeek();
+    await screen.findByText("Todavía no tienes objetivos semanales.");
+    await openNewGoal("Proyectos");
+
+    await fireEvent.press(screen.getByLabelText("Cancelar"));
+
+    expect(alert.mock.lastCall?.[0]).toBe("¿Descartar los cambios?");
+    expect(screen).toHavePathname("/weekly-goals/new");
+
+    await pressAlertButton(alert, "Descartar");
+
+    expect(screen).toHavePathname("/");
     expect(await listWeeklyGoals(db)).toEqual([]);
   });
 

@@ -376,6 +376,12 @@ describe("goalsForWeek", () => {
     expect(namesIn([archived], MONDAY, [entry(1)])).toEqual(["goal"]);
   });
 
+  test("the week it was archived keeps it after bringing its total back to 0", () => {
+    const archived = goal({ archivedWeek: MONDAY });
+
+    expect(namesIn([archived], MONDAY, [entry(0)])).toEqual(["goal"]);
+  });
+
   test("keeps the order of the goals", () => {
     expect(namesIn([goal({ id: "b" }), goal({ id: "a" })])).toEqual(["b", "a"]);
   });
