@@ -26,13 +26,13 @@ import {
   syncNotifications,
 } from "./planner";
 
-let database: Database | null = null;
+// Set by `refreshReminders`, the only way to reach `refresh`.
+let database!: Database;
 // The categories registered since the app started: iOS keeps them, but they are registered
 // again once per run in case they changed.
 const knownCategories = new Map<string, string>();
 
 const refresh = serialized(async () => {
-  if (database === null) return;
   const gestureHint = await readGestureHint();
   const plan = await planReminders(
     database,

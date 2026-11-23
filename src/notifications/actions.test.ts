@@ -92,6 +92,19 @@ describe("answerReminder", () => {
     ]);
   });
 
+  test("a quantitative habit with no increment keeps its amount", async () => {
+    await addHabit(
+      db,
+      habit("steps", { type: "quantitative" }),
+      version("steps", { target: 2 }),
+    );
+    await saveEntry(db, { id: "e1", habitId: "steps", date: TODAY, value: 1 });
+
+    await press("add", "steps").answered;
+
+    expect(await valueOf("steps")).toBe(1);
+  });
+
   test("the increment button adds it to a quantitative habit (RF-25)", async () => {
     await saveEntry(db, { id: "e1", habitId: "water", date: TODAY, value: 1 });
 

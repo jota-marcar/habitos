@@ -42,7 +42,7 @@ Nada de esto se ha probado todavía en un dispositivo:
 ## Qué viene después
 
 - **Puntos menores de la auditoría:** pantalla de error propia en español, la lectura que puede pisar una ordenación, límites de los campos al escribir, el botón Posponer a última hora y el criterio de los objetivos archivados.
-- **Antes del tercer horizonte:** tests de notificaciones, dividir `arquitectura.md` y, después de publicar la `0.2.0`, el núcleo común de hábitos y objetivos.
+- **Antes del tercer horizonte:** dividir `arquitectura.md` y, después de publicar la `0.2.0`, el núcleo común de hábitos y objetivos.
 - **En el próximo build:** informes de errores (Sentry), con su ADR, y la limpieza de los restos de web y Android.
 
 ## Decisiones pendientes
