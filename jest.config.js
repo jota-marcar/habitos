@@ -4,6 +4,10 @@ module.exports = {
   // Loads the web implementation of Reanimated and Worklets, as Reanimated's testing guide
   // describes. Without it, the Reanimated mock of expo-router/testing-library fails to load.
   resolver: "react-native-reanimated/jest/resolver",
+  // Only the code of this checkout: by default Jest walks all of <rootDir>, which in the main
+  // checkout includes the worktrees of .claude/worktrees. An ignore pattern for that folder
+  // would leave no tests when running from a worktree, whose path contains it.
+  roots: ["<rootDir>/src", "<rootDir>/supabase"],
   // The tests of supabase/tests need the local Supabase: they only run in the CI, with their
   // own configuration (`npm run test:schema`, jest.supabase.config.js, ADR-0015). Those of
   // the Edge Functions (supabase/functions) do not, and run here. These patterns are regular
