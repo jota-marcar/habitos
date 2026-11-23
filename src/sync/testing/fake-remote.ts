@@ -5,7 +5,9 @@
 // - An upload is all or nothing.
 // - The children need their parent, and the natural keys are unique among live rows, row by row
 //   in the order of the upload.
+// - A deleted row is emptied and stays deleted, and so does a row of a deleted parent (ADR-0023).
 
+import { EMPTIED_VALUES } from "@/data/emptied-rows";
 import type {
   CloudRow,
   Cursor,
@@ -96,7 +98,10 @@ export class FakeRemote implements Remote {
 
     const next = new Map(this.rows[table]);
     for (const row of rows) {
-      next.set(row.id, { ...row, updated_at: updatedAt });
+      next.set(row.id, {
+        ...this.stored(table, row, next.get(row.id)),
+        updated_at: updatedAt,
+      });
       // Like Postgres, each row is checked as it is written, not the upload as a whole.
       this.check(table, next);
     }
@@ -110,6 +115,24 @@ export class FakeRemote implements Remote {
     if (row === undefined) return undefined;
     const { updated_at: _updatedAt, ...values } = row;
     return values as CloudRow;
+  }
+
+  /** What the trigger `tombstone_deleted_row` leaves of an uploaded row (ADR-0023). */
+  private stored(
+    table: SyncTable,
+    row: CloudRow,
+    current: PulledRow | undefined,
+  ): CloudRow {
+    const parent = PARENTS[table];
+    const parentRow =
+      parent === undefined
+        ? undefined
+        : this.rows[parent.table].get(String(row[parent.column]));
+    const deleted =
+      row.deleted === true ||
+      current?.deleted === true ||
+      parentRow?.deleted === true;
+    return deleted ? { ...row, ...EMPTIED_VALUES[table], deleted: true } : row;
   }
 
   private check(table: SyncTable, rows: Map<string, PulledRow>): void {

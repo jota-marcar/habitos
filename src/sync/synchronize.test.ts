@@ -1,5 +1,6 @@
 import { localDate, type LocalDate } from "@/domain/dates";
 import { localTime } from "@/domain/times";
+import { EMPTIED_VALUES } from "@/data/emptied-rows";
 import { listEntries, saveEntry } from "@/data/entries-repository";
 import {
   addHabit,
@@ -323,6 +324,109 @@ describe("synchronize", () => {
 
     expect(await habitNames(phone)).toEqual([]);
     expect(await readCursor(phone, "habits")).toBeNull();
+  });
+
+  describe("a deletion is for good (ADR-0023)", () => {
+    test("the account keeps nothing of a deleted habit", async () => {
+      await addFullHabit(phone, "water");
+      await synchronize(phone, remote, USER);
+
+      await deleteHabit(phone, "water");
+      await synchronize(phone, remote, USER);
+
+      expect(remote.row("habits", "water")).toMatchObject({
+        deleted: true,
+        ...EMPTIED_VALUES.habits,
+      });
+      expect(remote.row("entries", "water-entry")).toMatchObject({
+        deleted: true,
+        ...EMPTIED_VALUES.entries,
+      });
+      expect(await pendingCount(phone)).toBe(0);
+    });
+
+    test("the other devices empty their copy too", async () => {
+      await addFullHabit(phone, "water");
+      await synchronize(phone, remote, USER);
+      await synchronize(tablet, remote, USER);
+
+      await deleteHabit(phone, "water");
+      await synchronize(phone, remote, USER);
+      await synchronize(tablet, remote, USER);
+
+      expect(
+        await tablet.first(
+          "SELECT name, deleted FROM habits WHERE id = 'water'",
+        ),
+      ).toEqual({ name: "", deleted: 1 });
+      expect(
+        await tablet.first(
+          "SELECT value FROM entries WHERE id = 'water-entry'",
+        ),
+      ).toEqual({ value: 0 });
+    });
+
+    test("an older change on another device does not bring it back", async () => {
+      await addFullHabit(phone, "water");
+      await synchronize(phone, remote, USER);
+      await synchronize(tablet, remote, USER);
+
+      await deleteHabit(phone, "water");
+      await synchronize(phone, remote, USER);
+      await saveHabit(tablet, habit("water", { name: "Changed offline" }));
+      await synchronize(tablet, remote, USER);
+      await synchronize(tablet, remote, USER);
+
+      expect(remote.row("habits", "water")).toMatchObject({
+        deleted: true,
+        name: "",
+      });
+      expect(await habitNames(tablet)).toEqual([]);
+      expect(await pendingCount(tablet)).toBe(0);
+    });
+
+    test("a new entry of a habit deleted elsewhere ends up deleted", async () => {
+      await addFullHabit(phone, "water");
+      await synchronize(phone, remote, USER);
+      await synchronize(tablet, remote, USER);
+
+      await deleteHabit(phone, "water");
+      await synchronize(phone, remote, USER);
+      await saveEntry(tablet, {
+        id: "offline-entry",
+        habitId: "water",
+        date: NEXT_DAY,
+        value: 3,
+      });
+      await synchronize(tablet, remote, USER);
+
+      expect(remote.row("entries", "offline-entry")).toMatchObject({
+        deleted: true,
+        ...EMPTIED_VALUES.entries,
+      });
+    });
+
+    test("a deleted reminder can be set again at the same time", async () => {
+      await addFullHabit(phone, "water");
+      await synchronize(phone, remote, USER);
+
+      await deleteReminder(phone, "water-reminder");
+      await addReminder(phone, {
+        id: "water-reminder-2",
+        habitId: "water",
+        time: localTime("08:00"),
+      });
+      await synchronize(phone, remote, USER);
+
+      expect(remote.row("reminders", "water-reminder")).toMatchObject({
+        deleted: true,
+        time: "00:00",
+      });
+      expect(remote.row("reminders", "water-reminder-2")).toMatchObject({
+        deleted: false,
+        time: "08:00",
+      });
+    });
   });
 
   test("a failed upload is retried on the next synchronization", async () => {

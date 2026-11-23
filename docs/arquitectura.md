@@ -270,7 +270,7 @@ Cada sincronización (`src/sync/synchronize.ts`) hace primero el pull y después
    - En cada tabla, las borradas van primero. El servidor comprueba las claves únicas fila a fila: un recordatorio quitado y vuelto a poner a la misma hora chocaría con el anterior si llegara antes que su borrado.
    - Una fila que ha cambiado mientras subía sigue pendiente.
 4. **Sin transacciones largas:** cada página se escribe en una transacción corta, que nunca espera a la red, y la bajada guarda en ella también su cursor, que así solo avanza con la página entera en el dispositivo. Cada paso se puede repetir sin daño, y una sincronización que falla a medias la completa la siguiente.
-5. **Conflictos:** gana el último cambio en llegar a la cuenta. Es aceptable porque cada cuenta tiene un solo usuario.
+5. **Conflictos:** gana el último cambio en llegar a la cuenta. Es aceptable porque cada cuenta tiene un solo usuario. La excepción es borrar, que es definitivo: una fila borrada no vuelve aunque un dispositivo la suba como viva, y una fila nueva de un padre borrado nace borrada ([ADR-0023](adr/0023-vaciar-las-filas-borradas-y-hacer-definitivo-el-borrado.md)).
 6. **Cuándo se lanza** (`src/sync/app-sync.ts` y `src/sync/scheduler.ts`):
    - al abrir la app o iniciar sesión y al volver a primer plano;
    - 2 segundos después de un cambio local, para subir juntos los toques seguidos;
@@ -286,6 +286,7 @@ El motor depende de la interfaz `Remote`, no de Supabase. En los tests, la imple
 
 - Cada fila de Supabase lleva `user_id`, y las políticas de **Row Level Security** impiden que un usuario lea o modifique datos de otro. Sin sesión (rol `anon`) no hay acceso a ninguna tabla.
 - **La app no borra filas en la nube:** las eliminaciones viajan como `deleted = true`. Los usuarios no tienen permiso de `delete` ni de `truncate`, que además no pasa por Row Level Security. Las filas solo desaparecen al borrarse la cuenta.
+- **Lo eliminado no conserva contenido:** de una fila borrada solo quedan su identificador, su dueño, su padre y la marca de borrado. Lo vacía el dispositivo al borrar y, para cualquier versión de la app, el trigger `tombstone_deleted_row` de la nube ([ADR-0023](adr/0023-vaciar-las-filas-borradas-y-hacer-definitivo-el-borrado.md)).
 - Los tests pgTAP de `supabase/tests` comprueban estas reglas en cada Pull Request ([ADR-0015](adr/0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md)).
 - La app usa solo la clave pública (*publishable key*) de Supabase. Ninguna clave privada vive en la app ni en el repositorio.
 - La sesión vive en el llavero de iOS, no en un fichero de la app, así que no entra en las copias sin cifrar ([ADR-0017](adr/0017-inicio-de-sesion-nativo-con-apple-y-google-y-sesion-en-el-llavero.md)). El llavero sobrevive a desinstalar la app: al reinstalarla, la sesión sigue abierta.

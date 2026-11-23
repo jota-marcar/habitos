@@ -11,6 +11,7 @@ import {
 import type { Reminder } from "@/domain/reminders";
 
 import type { Database } from "./database";
+import { markDeleted } from "./emptied-rows";
 import { addReminder, deleteReminder } from "./reminders-repository";
 
 interface HabitRow {
@@ -174,21 +175,17 @@ export async function saveHabitChanges(
 }
 
 /**
- * Deletes a habit with all its history (RF-11). The rows are only marked as deleted, so that
- * the synchronization can propagate it (ADR-0004).
+ * Deletes a habit with all its history (RF-11). Only an empty marker of each row stays, so that
+ * the synchronization can propagate it (ADR-0004, ADR-0023).
  */
 export async function deleteHabit(
   db: Database,
   habitId: string,
 ): Promise<void> {
-  const mark = "SET deleted = 1, pending_sync = 1";
   await db.transaction(async (tx) => {
-    await tx.run(`UPDATE habits ${mark} WHERE id = ?`, [habitId]);
-    for (const table of ["habit_versions", "entries", "reminders"]) {
-      await tx.run(
-        `UPDATE ${table} ${mark} WHERE habit_id = ? AND deleted = 0`,
-        [habitId],
-      );
+    await markDeleted(tx, "habits", "id = ?", [habitId]);
+    for (const table of ["habit_versions", "entries", "reminders"] as const) {
+      await markDeleted(tx, table, "habit_id = ? AND deleted = 0", [habitId]);
     }
   });
 }

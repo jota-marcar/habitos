@@ -135,7 +135,7 @@ La aplicación tiene una sola pantalla principal, con una página por horizonte:
   - Deja de aparecer en los días siguientes y deja de recordarse, pero su historial se conserva y sigue visible en los días pasados. El día en que se archiva solo aparece si ya tenía algo registrado.
   - Archivar pide confirmación, porque no se puede deshacer: para retomar el hábito se crea uno nuevo.
   - En los días en que aparece, lo registrado se puede seguir corrigiendo, pero el hábito ya no se puede editar ni archivar (RF-34).
-- **RF-11.** El usuario puede eliminar un hábito de forma permanente, tras una confirmación explícita. Eliminar sirve para borrarlo como si no hubiera existido: desaparece de todos los días, también de los pasados, junto con todo su historial.
+- **RF-11.** El usuario puede eliminar un hábito de forma permanente, tras una confirmación explícita. Eliminar sirve para borrarlo como si no hubiera existido: desaparece de todos los días, también de los pasados, junto con todo su historial. No se conserva nada de su contenido, ni en el dispositivo ni en la cuenta, y no vuelve aunque otro dispositivo tuviera cambios sin copiar.
 
 ### 3.4 Vista de un día
 
@@ -253,7 +253,7 @@ Un objetivo semanal se mide por la semana completa, de lunes a domingo: cuenta l
   - Deja de aparecer en las semanas siguientes. La semana en que se archiva solo aparece si ya tenía algo apuntado.
   - Archivar pide confirmación, porque no se puede deshacer.
   - Un objetivo puntual no se archiva: termina con su semana.
-- **RF-45.** El usuario puede eliminar un objetivo de forma permanente, tras una confirmación explícita. Desaparece de todas las semanas junto con lo apuntado.
+- **RF-45.** El usuario puede eliminar un objetivo de forma permanente, tras una confirmación explícita. Desaparece de todas las semanas junto con lo apuntado, y como en RF-11 no se conserva nada de su contenido.
 - **RF-46.** La página semanal muestra los objetivos de la semana que se está viendo, cada uno con su nombre y su progreso, en dos grupos como los hábitos (RF-12): los pendientes arriba y los conseguidos abajo.
 - **RF-47.** Un objetivo de sí o no se marca y desmarca con un toque, y uno de cantidad suma su incremento. Se consigue al alcanzar la meta, que se puede superar.
   - Se guarda un único total por objetivo y semana, sin el día en que se hizo.

@@ -26,6 +26,7 @@ Cada ADR documenta una decisión técnica importante: el contexto, las opciones 
 | [0020](0020-actualizaciones-ota-con-eas-update-primero-en-desarrollo-y-despues-en-produccion.md) | Actualizaciones OTA con EAS Update, primero en desarrollo y después en producción | Propuesto |
 | [0021](0021-carrusel-de-horizontes-con-scrollview-horizontal-paginado.md) | Carrusel de horizontes con ScrollView horizontal paginado | Propuesto |
 | [0022](0022-objetivos-semanales-en-tablas-propias-con-un-total-por-semana.md) | Objetivos semanales en tablas propias con un total por semana | Propuesto |
+| [0023](0023-vaciar-las-filas-borradas-y-hacer-definitivo-el-borrado.md) | Vaciar las filas borradas y hacer definitivo el borrado | Propuesto |
 
 ## Plantilla
 

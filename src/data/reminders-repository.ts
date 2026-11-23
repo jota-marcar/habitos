@@ -4,6 +4,7 @@ import type { Reminder } from "@/domain/reminders";
 import { localTime } from "@/domain/times";
 
 import type { Database } from "./database";
+import { markDeleted } from "./emptied-rows";
 
 interface ReminderRow {
   id: string;
@@ -38,13 +39,12 @@ export async function addReminder(
   ]);
 }
 
-/** Deletes a reminder. It is only marked as deleted, to propagate it (ADR-0004). */
+/**
+ * Deletes a reminder. Only its marker stays, empty, to propagate it (ADR-0004, ADR-0023).
+ */
 export async function deleteReminder(
   db: Database,
   reminderId: string,
 ): Promise<void> {
-  await db.run(
-    `UPDATE reminders SET deleted = 1, pending_sync = 1 WHERE id = ?`,
-    [reminderId],
-  );
+  await markDeleted(db, "reminders", "id = ?", [reminderId]);
 }
