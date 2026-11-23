@@ -2,54 +2,26 @@
 
 Qué hay publicado, qué viene ahora y qué falta por decidir. Una sesión nueva puede empezar por aquí. Se actualiza en el mismo Pull Request que cambia algo de lo que cuenta, y al publicar.
 
-**Última actualización:** 2026-11-23.
+**Última actualización:** 2026-11-24.
 
 ## Qué hay publicado
 
 | Entorno | Binario | Actualización OTA | Nube |
 |---------|---------|-------------------|------|
-| **Producción** (Hábitos, TestFlight) | `0.1.0 (2)`, tag `v0.1.0+2`. Caduca hacia el **2027-02-19** | Ninguna | `habitos`: le faltan `20261122120000_weekly_goals` y `20261123120000_empty_deleted_rows` |
+| **Producción** (Hábitos, TestFlight) | `0.1.0 (2)`, tag `v0.1.0+2`. Caduca hacia el **2027-02-19** | `0.2.0`, tag `v0.2.0`, del 2026-11-24 | `habitos`: al día hasta `20261123120000_empty_deleted_rows` |
 | **Desarrollo** (Hábitos Dev) | `0.1.0 (1)`, del 2026-11-21 | Se publica para probar | `habitos-dev`: comprobar con `supabase migration list --remote` |
 
 Las migraciones de la nube las aplica el usuario. Lo que dice esta tabla sobre ellas es lo último registrado: antes de publicar, compruébalo con `supabase migration list`.
 
-## Próxima publicación: `0.2.0`
-
-Es una actualización OTA, sin build: el código nativo coincide con el del build `0.1.0 (2)`. **No se puede deshacer**, porque lleva una migración local ([despliegue.md](despliegue.md#actualizaciones-con-una-migración-local)).
-
-Trae los objetivos semanales con sus avisos de progreso, el aviso antes de quedarse sin recordatorios, el estado de la copia en Ajustes, el borrado definitivo, la versión visible y las correcciones de la auditoría del 2026-11-22.
-
-### Pasos
-
-1. Aplicar las migraciones que falten en `habitos-dev`.
-2. `npm run update:dev` y probar en Hábitos Dev la lista de abajo.
-3. Exportar los datos de `habitos`, porque el plan gratuito no tiene copias automáticas. El fichero contiene datos de los probadores: guárdalo fuera del repositorio y bórralo cuando la publicación esté comprobada.
-
-   ```powershell
-   supabase db dump --remote=REF_PROD --data-only --schema public -f ..\habitos-antes-de-0.2.0.sql
-   ```
-
-4. Aplicar las migraciones en `habitos`. La de vaciar lo eliminado es irreversible.
-5. `npm run update:prod`, que crea el tag `v0.2.0`.
-6. Abrir Hábitos dos veces y comprobar en **Ajustes** que dice "Versión 0.2.0". TestFlight seguirá mostrando `0.1.0 (2)`.
-
-### Qué probar en el iPhone
-
-Nada de esto se ha probado todavía en un dispositivo:
-
-- Guardar un hábito con el selector de hora abierto: la hora se añade.
-- Cerrar un formulario con cambios: pide confirmación.
-- Cambiar la zona horaria en los ajustes del iPhone: los recordatorios siguen a su hora local.
-- Quitar un recordatorio y volver a ponerlo sin conexión: al recuperarla, se sincroniza.
-- Cambiar los días de un hábito con algo registrado hoy: sigue viéndose hoy.
-- Eliminar un hábito y sincronizar: desaparece también del otro dispositivo.
-- Ajustes muestra el estado de la copia y la versión.
+La `0.2.0` se comprobó en producción el 2026-11-24. TestFlight sigue mostrando `0.1.0 (2)` porque llegó por OTA: la versión real es la que aparece en **Ajustes**. Esta actualización **no se puede deshacer**, porque lleva una migración local: cualquier fallo se corrige publicando otra hacia delante ([despliegue.md](despliegue.md#actualizaciones-con-una-migración-local)).
 
 ## Qué viene después
 
-- **Puntos menores de la auditoría:** pantalla de error propia en español, la lectura que puede pisar una ordenación, límites de los campos al escribir, el botón Posponer a última hora y el criterio de los objetivos archivados.
-- **Después de publicar la `0.2.0`, antes del tercer horizonte:** el núcleo común de hábitos y objetivos.
-- **En el próximo build:** informes de errores (Sentry), con su ADR, y la limpieza de los restos de web y Android.
+1. **`0.2.1`, por OTA:** los puntos menores de la auditoría. Son la pantalla de error propia en español, la lectura que puede pisar una ordenación, los límites de los campos al escribir, el botón Posponer a última hora y el criterio de los objetivos archivados.
+2. **Próximo build, antes de finales de enero de 2027:** informes de errores (Sentry), con su ADR, y la limpieza de los restos de web y Android. El build de producción caduca hacia el 2027-02-19.
+3. **Decidir el rumbo del producto** con lo que digan los probadores: objetivos a largo plazo, estadísticas o preparar la App Store.
+4. **Antes del tercer horizonte, si es el rumbo elegido:** el núcleo común de hábitos y objetivos.
+5. **Al tocar los ficheros afectados:** TypeScript más estricto, dividir los ficheros más grandes, quitar lo que sobra y revisar la regla de separar los textos.
 
 ## Decisiones pendientes
 
