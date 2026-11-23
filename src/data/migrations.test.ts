@@ -1,5 +1,10 @@
+import { localDate } from "@/domain/dates";
+
+import { listEntries } from "./entries-repository";
 import { MIGRATIONS, migrate, schemaVersion } from "./migrations";
+import { pendingRows } from "./sync-repository";
 import { openTestDatabase, type TestDatabase } from "./testing/node-database";
+import { listWeeklyGoalEntries } from "./weekly-goals-repository";
 
 let db: TestDatabase;
 
@@ -53,6 +58,53 @@ describe("migrate", () => {
     expect(await db.all("SELECT id FROM habits")).toEqual([{ id: "h" }]);
     expect(await db.all("SELECT id FROM weekly_goals")).toEqual([]);
     expect(await schemaVersion(db)).toBe(MIGRATIONS.length);
+  });
+
+  test("a database of the previous version keeps its data and gains the query indexes", async () => {
+    await migrate(db, MIGRATIONS.slice(0, 4));
+    await db.run(
+      "INSERT INTO habits (id, name, type, created_on) VALUES ('h', 'Read', 'boolean', '2026-11-01')",
+    );
+    await db.run(
+      "INSERT INTO entries (id, habit_id, date, value) VALUES ('e', 'h', '2026-11-02', 1)",
+    );
+
+    await migrate(db);
+
+    expect(await db.all("SELECT id FROM entries")).toEqual([{ id: "e" }]);
+    expect(await schemaVersion(db)).toBe(MIGRATIONS.length);
+  });
+
+  test.each([
+    [
+      "reading the entries of a day",
+      () => listEntries(db, localDate("2026-11-02"), localDate("2026-11-02")),
+      "entries_date",
+    ],
+    [
+      "reading the entries of a week of goals",
+      () => listWeeklyGoalEntries(db, localDate("2026-11-02")),
+      "weekly_goal_entries_week",
+    ],
+    [
+      "reading the entries to upload",
+      () => pendingRows(db, "entries", false, "", 100),
+      "entries_pending_sync",
+    ],
+  ])("%s uses its index", async (_name, read, index) => {
+    await migrate(db);
+    // The query the repository really runs, so that this test follows it if it changes.
+    const all = jest.spyOn(db, "all");
+    await read();
+    const [query, params] = all.mock.calls[0];
+    all.mockRestore();
+
+    const plan = await db.all<{ detail: string }>(
+      `EXPLAIN QUERY PLAN ${query}`,
+      params,
+    );
+
+    expect(plan.map((step) => step.detail).join("\n")).toContain(index);
   });
 
   test("does nothing on a database that is already up to date", async () => {

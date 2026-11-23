@@ -41,7 +41,7 @@ Nada de esto se ha probado todavía en un dispositivo:
 
 ## Qué viene después
 
-- **Puntos menores de la auditoría:** índices de las consultas frecuentes, pantalla de error propia en español, la lectura que puede pisar una ordenación, límites de los campos al escribir, el botón Posponer a última hora y el criterio de los objetivos archivados.
+- **Puntos menores de la auditoría:** pantalla de error propia en español, la lectura que puede pisar una ordenación, límites de los campos al escribir, el botón Posponer a última hora y el criterio de los objetivos archivados.
 - **Antes del tercer horizonte:** tests de notificaciones, separación de capas, núcleo común de hábitos y objetivos, empaquetar la app en la CI y dividir `arquitectura.md`.
 - **En el próximo build:** informes de errores (Sentry), con su ADR, y la limpieza de los restos de web y Android.
 
