@@ -17,7 +17,7 @@ import { progressOf } from "@/domain/day";
 import type { Amounts, HabitColor, HabitType } from "@/domain/habits";
 import type { DayGroups } from "@/domain/order";
 
-import { formatProgress } from "./format";
+import { formatProgress } from "@/shared/format";
 import { PROGRESS_DOT_SIZE, ProgressDot } from "./progress-dot";
 import { fontSize, spacing, useColors } from "./theme";
 import { SETTLE_DELAY_MS } from "./use-day";

@@ -81,6 +81,7 @@ src/
   app/            Pantallas y navegación (Expo Router: cada fichero es una ruta)
   domain/         Reglas de negocio puras, sin dependencias de React ni de la base de datos
   data/           Acceso a la base de datos local (esquema, migraciones, repositorios)
+  shared/         Lo que usan varias capas: reloj, formato, horizontes, apertura de la base y cliente de Supabase
   sync/           Sincronización con Supabase
   notifications/  Planificador de recordatorios y gestión de acciones
   auth/           Inicio y cierre de sesión, eliminación de cuenta
@@ -88,7 +89,7 @@ src/
 supabase/         Migraciones SQL, políticas de seguridad y Edge Functions del backend
 ```
 
-Regla de dependencias: `app` y `ui` pueden usar todo; `domain` no depende de nada. Así las reglas más delicadas (qué hábitos tocan un día, cuándo está cumplido, qué recordatorios hay que programar) son funciones puras que se prueban con tests unitarios rápidos. ESLint impone esta regla en `src/domain`.
+Regla de dependencias ([ADR-0025](adr/0025-capa-compartida-y-regla-de-dependencias-entre-capas-impuesta-con-eslint.md)): cada capa solo puede usar las anteriores en el orden `domain` → `data` → `shared` → `sync` → `notifications` → `auth` → `ui` → `app`. Así las reglas más delicadas (qué hábitos tocan un día, cuándo está cumplido, qué recordatorios hay que programar) son funciones puras que se prueban con tests unitarios rápidos. ESLint impone este orden.
 
 Convenciones del dominio:
 
@@ -228,7 +229,7 @@ Decisiones del modelo:
 4. Los avisos de pendientes (RF-37) van en la misma ventana. El dominio calcula los próximos de cada día con hábitos sin cumplir, y nombra esos hábitos en el orden en que la vista del día los mostraría a esa hora (RF-12). Como no se puede ejecutar código justo antes de que iOS muestre una notificación, el aviso de hoy se cancela al refrescar en cuanto ya no queda nada pendiente, y su texto cambia con cada registro. Los de días futuros nombran todos los hábitos de ese día y se corrigen al refrescar ese día. Tienen su propio identificador (`digest.<fecha>.<hora>`), no tienen categoría ni botones, porque reúnen varios hábitos, y no llevan hábito en sus datos. Por eso, al tocarlos solo se abre la app en el día actual. La ventana junta recordatorios y avisos por cercanía y se queda con los 60 primeros. A la misma hora va antes el recordatorio. Los dos avisos diarios acortan los días que cubre la ventana: con 5 recordatorios al día, pasa de unos 12 días a unos 8.
    Los avisos de progreso (RF-49) funcionan igual, con identificador `progress.<fecha>.<hora>`. Se calculan los 4 próximos momentos (dos semanas), para que no queden meses de avisos programados si la app deja de abrirse. No tienen hueco reservado: el siguiente solo quedaría fuera de la ventana con 14 notificaciones o más al día. Los objetivos archivados no cuentan, aunque sigan a la vista esa semana (RF-44).
    El **aviso final** (RF-51) ocupa el último hueco cuando los avisos llenan la ventana, es decir, cuando hay más por llegar de los que iOS puede guardar. Suena a las 12:00 del día anterior al último aviso o, si ese momento ya ha pasado, con él. Su identificador es fijo (`final-notice`), así que cada refresco lo aplaza sustituyéndolo, sin cancelarlo antes. Por eso solo suena si durante toda la ventana no se ha abierto la app, no se ha usado un botón y no ha corrido la tarea en segundo plano. Quien solo tiene objetivos no lo recibe: sus avisos de progreso no llenan la ventana.
-   Al tocar una notificación, la pantalla principal va a su horizonte: Objetivos semanales para un aviso de progreso y Hábitos para lo demás, siempre en el día actual. La petición espera en `src/ui/horizon-request.ts` si el toque es lo que arranca la app. Un formulario abierto se queda encima, sin perder lo escrito, y los botones de la notificación no mueven la pantalla.
+   Al tocar una notificación, la pantalla principal va a su horizonte: Objetivos semanales para un aviso de progreso y Hábitos para lo demás, siempre en el día actual. La petición espera en `src/shared/horizon-request.ts` si el toque es lo que arranca la app. Un formulario abierto se queda encima, sin perder lo escrito, y los botones de la notificación no mueven la pantalla.
 5. Las ejecuciones van una detrás de otra, y las peticiones que llegan mientras otra espera se agrupan en una sola. Un aviso que falla al programarse (iOS rechaza un momento que acaba de pasar) no detiene los siguientes, y se reintenta en la próxima ejecución.
 6. Al guardar un hábito con recordatorios sin permiso, un diálogo lo avisa y ofrece abrir los ajustes (RF-36). El hábito se guarda igualmente: como la app refresca al volver a primer plano, los recordatorios se programan en cuanto el usuario da el permiso.
 7. Los recordatorios que llegan con la app abierta también se muestran.

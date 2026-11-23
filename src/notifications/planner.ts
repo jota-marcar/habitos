@@ -32,8 +32,8 @@ import {
 import { localTimeOf, type LocalDateTime } from "@/domain/times";
 import type { WeekGoal } from "@/domain/weekly-goals";
 import { weekOf } from "@/domain/weeks";
-import { formatAmount } from "@/ui/format";
-import type { Horizon } from "@/ui/horizons";
+import { formatAmount } from "@/shared/format";
+import type { Horizon } from "@/shared/horizon-request";
 
 import type {
   NotificationButton,

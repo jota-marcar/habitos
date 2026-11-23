@@ -9,7 +9,7 @@ import { syncStatusOf, type SyncStatus } from "@/domain/sync-status";
 import { onSyncFinished } from "@/sync/app-sync";
 import { readSyncRecord } from "@/sync/sync-record";
 
-import { now } from "./clock";
+import { now } from "@/shared/clock";
 import { useDatabase } from "./database";
 import { syncStatusText } from "./sync-status-text";
 import { fontSize, spacing, useColors } from "./theme";

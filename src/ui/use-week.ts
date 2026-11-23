@@ -37,7 +37,7 @@ import { weekOf } from "@/domain/weeks";
 import { refreshReminders } from "@/notifications/reminders";
 import { onSyncedChanges, syncSoon } from "@/sync/app-sync";
 
-import { newId, today } from "./clock";
+import { newId, today } from "@/shared/clock";
 import { useDatabase } from "./database";
 import { playRecorded, recordedFeedback } from "./haptics";
 import { SETTLE_DELAY_MS } from "./use-day";

@@ -8,7 +8,7 @@ import { addWeeklyGoal } from "@/data/weekly-goals-repository";
 import { parseLocalDate } from "@/domain/dates";
 import { firstWeekOfNewGoal } from "@/domain/weekly-goals";
 import { weekOf } from "@/domain/weeks";
-import { newId, today } from "@/ui/clock";
+import { newId, today } from "@/shared/clock";
 import { useDatabase } from "@/ui/database";
 import { showDayOnReturn } from "@/ui/day-on-return";
 import {

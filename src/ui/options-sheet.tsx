@@ -9,7 +9,7 @@ import { exactAmount } from "@/domain/entries";
 import type { Amounts } from "@/domain/habits";
 import type { HabitOption } from "@/domain/options";
 
-import { formatAmount, formatProgress } from "./format";
+import { formatAmount, formatProgress } from "@/shared/format";
 import { AMOUNT_ERROR_MESSAGES } from "./messages";
 import { Sheet, SheetOption, SheetTitle, type SheetState } from "./sheet";
 

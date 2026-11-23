@@ -11,7 +11,7 @@ import {
 } from "@/domain/habits";
 
 import { ColorSwatch, Field, Section, SegmentedControl } from "./components";
-import { HABIT_COLOR_NAMES } from "./format";
+import { HABIT_COLOR_NAMES } from "@/shared/format";
 import { fieldOf, type HabitFormField } from "./habit-form";
 import { HABIT_ERROR_MESSAGES } from "./messages";
 import { spacing, useColors } from "./theme";

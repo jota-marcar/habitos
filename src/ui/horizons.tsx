@@ -24,12 +24,13 @@ import Animated, {
   type SharedValue,
 } from "react-native-reanimated";
 
-import { requestedHorizon } from "./horizon-request";
-import { fontSize, radius, spacing, useColors } from "./theme";
+import {
+  HORIZONS,
+  requestedHorizon,
+  type Horizon,
+} from "@/shared/horizon-request";
 
-/** The pages of the main screen, in the order they are swiped through. */
-export const HORIZONS = ["habits", "weekly"] as const;
-export type Horizon = (typeof HORIZONS)[number];
+import { fontSize, radius, spacing, useColors } from "./theme";
 
 const LAST_PAGE = HORIZONS.length - 1;
 

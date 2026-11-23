@@ -9,7 +9,7 @@ import { resumeSync, suspendSync } from "@/sync/app-sync";
 import { clearSyncRecord } from "@/sync/sync-record";
 
 import { signOutOfGoogle } from "./sign-in";
-import { supabase } from "./supabase";
+import { supabase } from "@/shared/supabase";
 
 /**
  * The data go first: if anything fails before the end, the session is still open and the user

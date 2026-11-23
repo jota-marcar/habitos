@@ -58,16 +58,16 @@ import { localTime } from "@/domain/times";
 import type { WeeklyGoal, WeeklyGoalVersion } from "@/domain/weekly-goals";
 import { AppStack, STACK_SETTINGS } from "@/ui/app-stack";
 import { DatabaseContext } from "@/ui/database";
-import { requestHorizon } from "@/ui/horizon-request";
-import type { Horizon } from "@/ui/horizons";
+import { requestHorizon } from "@/shared/horizon-request";
+import type { Horizon } from "@/shared/horizon-request";
 import { SessionContext } from "@/ui/session";
 import { SETTLE_DELAY_MS } from "@/ui/use-day";
 
 // Thursday, 12 November 2026: after the day the fixtures are created (2026-11-01).
 const TODAY = localDate("2026-11-12");
 let mockToday: string = TODAY;
-jest.mock("@/ui/clock", () => ({
-  ...jest.requireActual("@/ui/clock"),
+jest.mock("@/shared/clock", () => ({
+  ...jest.requireActual("@/shared/clock"),
   today: () => jest.requireActual("@/domain/dates").localDate(mockToday),
   // 10:00 of the current day, for the reminders.
   now: () => new Date(`${mockToday}T10:00:00`),
@@ -87,7 +87,7 @@ const mockAuth = {
   signOut: jest.fn(),
 };
 const mockFunctions = { invoke: jest.fn() };
-jest.mock("@/auth/supabase", () => ({
+jest.mock("@/shared/supabase", () => ({
   supabase: () => ({ auth: mockAuth, functions: mockFunctions }),
 }));
 // The synchronization: the screens only ask for it and listen to what it changes.
@@ -117,7 +117,7 @@ jest.mock("@/sync/sync-record", () => ({
   readSyncRecord: async () => mockSyncRecord,
   clearSyncRecord: () => mockClearSyncRecord(),
 }));
-jest.mock("@/auth/config", () => ({
+jest.mock("@/shared/config", () => ({
   readAuthConfig: () => ({
     supabaseUrl: "https://project.supabase.co",
     supabaseKey: "sb_publishable_key",

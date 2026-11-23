@@ -11,7 +11,7 @@ import { resumeSync, suspendSync } from "@/sync/app-sync";
 import { clearSyncRecord } from "@/sync/sync-record";
 
 import { authorizeWithApple, revokeGoogleAccess } from "./sign-in";
-import { supabase } from "./supabase";
+import { supabase } from "@/shared/supabase";
 
 /**
  * How deleting the account ended:

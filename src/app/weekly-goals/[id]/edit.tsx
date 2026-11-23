@@ -19,9 +19,9 @@ import {
   type WeeklyGoalVersion,
 } from "@/domain/weekly-goals";
 import { weekOf } from "@/domain/weeks";
-import { newId, today } from "@/ui/clock";
+import { newId, today } from "@/shared/clock";
 import { useDatabase } from "@/ui/database";
-import { formatWeekRange } from "@/ui/format";
+import { formatWeekRange } from "@/shared/format";
 import {
   buildWeeklyGoalChanges,
   weeklyGoalFormOf,

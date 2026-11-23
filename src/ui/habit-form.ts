@@ -26,7 +26,7 @@ import {
 import type { Result } from "@/domain/result";
 import type { LocalTime } from "@/domain/times";
 
-import { formatAmount } from "./format";
+import { formatAmount } from "@/shared/format";
 
 export interface HabitFormValues {
   readonly name: string;

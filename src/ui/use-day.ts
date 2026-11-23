@@ -40,7 +40,7 @@ import { onReminderRecorded } from "@/notifications/actions";
 import { refreshReminders } from "@/notifications/reminders";
 import { onSyncedChanges, syncSoon } from "@/sync/app-sync";
 
-import { msUntilTomorrow, newId, now, today } from "./clock";
+import { msUntilTomorrow, newId, now, today } from "@/shared/clock";
 import { useDatabase } from "./database";
 import { takeDayOnReturn } from "./day-on-return";
 import { playRecorded, recordedFeedback } from "./haptics";

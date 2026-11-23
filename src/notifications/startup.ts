@@ -2,7 +2,7 @@
 // may start the app in the background only to deliver the button of a reminder (RF-25) or to
 // run the task that refreshes them.
 
-import { openAppDatabase } from "@/ui/database";
+import { openAppDatabase } from "@/shared/app-database";
 
 import { refreshRemindersInBackground } from "./background";
 import { showRemindersInForeground } from "./expo-notifier";
