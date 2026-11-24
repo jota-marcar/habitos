@@ -9,7 +9,7 @@ Qué hay publicado, qué viene ahora y qué falta por decidir. Una sesión nueva
 | Entorno | Binario | Actualización OTA | Nube |
 |---------|---------|-------------------|------|
 | **Producción** (Hábitos, TestFlight) | `0.1.0 (2)`, tag `v0.1.0+2`. Caduca hacia el **2027-02-19** | `0.2.0`, tag `v0.2.0`, del 2026-11-24 | `habitos`: al día hasta `20261123120000_empty_deleted_rows` |
-| **Desarrollo** (Hábitos Dev) | `0.1.0 (1)`, del 2026-11-21 | Se publica para probar | `habitos-dev`: comprobar con `supabase migration list --remote` |
+| **Desarrollo** (Hábitos Dev) | `0.1.0 (1)`, del 2026-11-21. Hay un build nuevo en marcha, con Sentry, del 2026-11-24 | `0.2.1`, del 2026-11-24, solo para probar | `habitos-dev`: comprobar con `supabase migration list --remote` |
 
 Las migraciones de la nube las aplica el usuario. Lo que dice esta tabla sobre ellas es lo último registrado: antes de publicar, compruébalo con `supabase migration list`.
 
@@ -17,11 +17,13 @@ La `0.2.0` se comprobó en producción el 2026-11-24. TestFlight sigue mostrando
 
 ## Qué viene después
 
-1. **`0.2.1`, por OTA:** los puntos menores de la auditoría. Son la pantalla de error propia en español, la lectura que puede pisar una ordenación, los límites de los campos al escribir, el botón Posponer a última hora y el criterio de los objetivos archivados.
-2. **Próximo build, antes de finales de enero de 2027:** la limpieza de los restos de web y Android, e informes de errores con Sentry ([ADR-0026](adr/0026-informes-de-errores-anonimos-con-sentry.md), propuesto). Son dos PR que van en el mismo build. Cambian la huella nativa: publica la `0.2.1` antes de fusionarlos, porque desde ese momento las OTA de `main` solo llegan a builds nuevos. Antes del build, Sentry necesita su puesta en marcha ([despliegue.md](despliegue.md#informes-de-errores-sentry)). El build de producción caduca hacia el 2027-02-19.
-3. **Decidir el rumbo del producto** con lo que digan los probadores: objetivos a largo plazo, estadísticas o preparar la App Store.
-4. **Antes del tercer horizonte, si es el rumbo elegido:** el núcleo común de hábitos y objetivos.
-5. **Al tocar los ficheros afectados:** TypeScript más estricto, dividir los ficheros más grandes, quitar lo que sobra y revisar la regla de separar los textos.
+1. **Build nuevo, con Sentry ([ADR-0026](adr/0026-informes-de-errores-anonimos-con-sentry.md)) y sin los restos de web y Android:** ya está en `main` (PR 104 y 105), y Sentry está configurado ([despliegue.md](despliegue.md#informes-de-errores-sentry)).
+   - **Huella nativa:** `main` ya tiene otra, así que sus OTA no llegan a los builds instalados.
+   - **La `0.2.1`:** solo llegó a Hábitos Dev; producción sigue en la `0.2.0`. Lleva los puntos menores de la auditoría: la pantalla de error propia en español, la lectura que puede pisar una ordenación, los límites de los campos al escribir, el botón Posponer a última hora y el criterio de los objetivos archivados. **Pendiente de decidir:** que llegue a producción con el build nuevo, que llevaría la versión `0.3.0`, o publicarla antes por OTA revirtiendo el PR 104 en `main`.
+   - **Pasos:** probar `build:dev` con un error forzado ([despliegue.md](despliegue.md#comprobarlo)), preparar la versión y lanzar `build:prod`. El build de producción actual caduca hacia el 2027-02-19.
+2. **Decidir el rumbo del producto** con lo que digan los probadores: objetivos a largo plazo, estadísticas o preparar la App Store.
+3. **Antes del tercer horizonte, si es el rumbo elegido:** el núcleo común de hábitos y objetivos.
+4. **Al tocar los ficheros afectados:** TypeScript más estricto, dividir los ficheros más grandes, quitar lo que sobra y revisar la regla de separar los textos.
 
 ## Decisiones pendientes
 
