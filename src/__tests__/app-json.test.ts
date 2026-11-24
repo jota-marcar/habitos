@@ -78,6 +78,20 @@ describe("app.json", () => {
     ]);
   });
 
+  // ADR-0026: the organization token carries the address of Sentry, and sentry-cli uses it
+  // instead of the configured one, with a warning on every upload if they differ. The region
+  // (EU) comes from the organization, not from this URL.
+  test("uploads to Sentry through its main address, which the token carries", () => {
+    expect(expo.plugins).toContainEqual([
+      "@sentry/react-native/expo",
+      {
+        url: "https://sentry.io/",
+        organization: "jota-marcar",
+        project: "habitos",
+      },
+    ]);
+  });
+
   test("the texts of iOS, like the sign-in buttons, are in Spanish", () => {
     const infoPlist = ios.infoPlist as Record<string, unknown>;
     expect(infoPlist.CFBundleDevelopmentRegion).toBe("es");
