@@ -95,7 +95,7 @@ No es una pieza de Claude Code, pero cumple el mismo principio de imponer lo det
 Los comandos de EAS reescriben `app.json` con valores ya resueltos para una variante (el bundle identifier de desarrollo, por ejemplo), que no deben llegar al repositorio ([ADR-0008](adr/0008-variantes-de-desarrollo-y-produccion.md)). Dos piezas lo vigilan:
 
 - El test [app-json.test.ts](../src/__tests__/app-json.test.ts) falla si `app.json` contiene `name`, `scheme`, el bundle identifier o el bloque que genera Expo Router.
-- [scripts/build.mjs](../scripts/build.mjs) (`npm run build:dev` y `npm run build:prod`) no lanza el build si hay cambios sin commit, y avisa si EAS ha tocado `app.json`. El de producción, además, solo compila `main` al día con GitHub. [scripts/update.mjs](../scripts/update.mjs) (`npm run update:dev` y `npm run update:prod`) aplica las mismas comprobaciones a las actualizaciones OTA.
+- [scripts/build.mjs](../scripts/build.mjs) (`npm run build:dev` y `npm run build:prod`) no lanza el build si hay cambios sin commit, y avisa si EAS ha tocado `app.json`. El de producción, además, solo compila `main` al día con GitHub. [scripts/update.mjs](../scripts/update.mjs) (`npm run update:dev` y `npm run update:prod`) aplica las mismas comprobaciones a las actualizaciones OTA. Además, se niega a publicar sin `SENTRY_AUTH_TOKEN` y, después de publicar, sube los source maps a Sentry ([ADR-0026](adr/0026-informes-de-errores-anonimos-con-sentry.md)).
 
 ### CI con GitHub Actions
 

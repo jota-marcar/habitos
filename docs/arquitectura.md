@@ -65,6 +65,7 @@ flowchart LR
 | Compilación y publicación | EAS Build, EAS Submit y TestFlight | [ADR-0002](adr/0002-expo-como-plataforma.md) |
 | Actualizaciones | EAS Update (OTA), con la versión de runtime por huella nativa | [ADR-0020](adr/0020-actualizaciones-ota-con-eas-update-primero-en-desarrollo-y-despues-en-produccion.md) |
 | Versiones | Versionado semántico, con un tag por publicación | [ADR-0024](adr/0024-versiones-visibles-con-versionado-semantico-y-un-tag-por-publicacion.md) |
+| Informes de errores | Sentry (`@sentry/react-native`), anónimo y sin tracing ni replay, en la región de la UE | [ADR-0026](adr/0026-informes-de-errores-anonimos-con-sentry.md) |
 | Vibraciones | Generadores de iOS con `expo-haptics` (RF-39) | Estándar de Expo |
 | Tests | Jest y React Native Testing Library | Estándar de Expo |
 | Tests del esquema de la nube | pgTAP contra la base local de Supabase, en la CI | [ADR-0015](adr/0015-pruebas-del-esquema-de-supabase-con-pgtap-en-la-ci.md) |
@@ -81,7 +82,7 @@ src/
   app/            Pantallas y navegación (Expo Router: cada fichero es una ruta)
   domain/         Reglas de negocio puras, sin dependencias de React ni de la base de datos
   data/           Acceso a la base de datos local (esquema, migraciones, repositorios)
-  shared/         Lo que usan varias capas: reloj, formato, horizontes, apertura de la base y cliente de Supabase
+  shared/         Lo que usan varias capas: reloj, formato, horizontes, versión, apertura de la base, cliente de Supabase e informes de errores
   sync/           Sincronización con Supabase
   notifications/  Planificador de recordatorios y gestión de acciones
   auth/           Inicio y cierre de sesión, eliminación de cuenta
@@ -95,7 +96,7 @@ Convenciones del dominio:
 
 - **No consulta el reloj ni genera identificadores.** "Hoy" y los UUID se le pasan como datos, así que el mismo dato de entrada da siempre el mismo resultado.
 - **Las reglas que pueden rechazar una operación devuelven códigos de error** (por ejemplo, `name_empty`), no textos. La interfaz decide el mensaje.
-- **Los tests van junto al código** (`dates.ts` y `dates.test.ts`) y la cobertura del dominio, de la capa de datos, de la sincronización (salvo su adaptador de Supabase), de las notificaciones (salvo su arranque, `startup.ts`, que solo conecta las piezas) y de las Edge Functions (salvo su punto de entrada, `index.ts`) debe ser del 100 %: `npm run verify` falla si baja. Lo que queda fuera se prueba de punta a punta en la CI, salvo `startup.ts`, que solo puede comprobarse en el iPhone.
+- **Los tests van junto al código** (`dates.ts` y `dates.test.ts`) y la cobertura del dominio, de la capa de datos, de la sincronización (salvo su adaptador de Supabase), de las notificaciones (salvo su arranque, `startup.ts`, que solo conecta las piezas), de lo que sale en un informe de errores (`src/shared/error-reporting.ts`) y de las Edge Functions (salvo su punto de entrada, `index.ts`) debe ser del 100 %: `npm run verify` falla si baja. Lo que queda fuera se prueba de punta a punta en la CI, salvo `startup.ts`, que solo puede comprobarse en el iPhone.
 - **La capa de datos** (`src/data`) solo depende del dominio, y sus repositorios usan una interfaz mínima de base de datos en lugar de `expo-sqlite`. Así los tests ejecutan el SQL real con el SQLite integrado en Node ([ADR-0009](adr/0009-sql-directo-y-migraciones-propias-en-la-capa-de-datos-local.md)). ESLint impone también esta dependencia.
 - **Una operación cada vez en la conexión** (`src/data/serialized-database.ts`). En `expo-sqlite`, una sentencia lanzada durante una transacción entra en ella y se pierde si esta falla, y dos transacciones a la vez dan error. Por eso todas las operaciones esperan su turno en una cola, y lo que se hace dentro de una transacción va por el `tx` que esta recibe: usar la base exterior se quedaría esperando para siempre. Los tests usan la misma cola, así que ese error los haría fallar. La base funciona en modo WAL, que abarata cada commit y no necesita migración.
 
@@ -242,6 +243,7 @@ Primero baja y después sube, tabla a tabla, y gana el último cambio en llegar 
 - La app usa solo la clave pública (*publishable key*) de Supabase. Ninguna clave privada vive en la app ni en el repositorio.
 - La sesión vive en el llavero de iOS, no en un fichero de la app, así que no entra en las copias sin cifrar ([ADR-0017](adr/0017-inicio-de-sesion-nativo-con-apple-y-google-y-sesion-en-el-llavero.md)). El llavero sobrevive a desinstalar la app: al reinstalarla, la sesión sigue abierta.
 - Los secretos y la configuración por entorno van en variables de entorno de EAS, nunca en git (ver `.gitignore`). La URL de Supabase, su clave pública y los clientes de Google llegan como `EXPO_PUBLIC_*` del entorno de EAS de cada perfil; en el PC, `eas env:pull` las deja en `.env.local` (ver [docs/supabase.md](supabase.md#8-inicio-de-sesión-con-apple-y-google)).
+- **Los informes de errores son anónimos** ([ADR-0026](adr/0026-informes-de-errores-anonimos-con-sentry.md)). No llevan usuario, dirección IP, capturas, grabaciones ni rastro de toques o de consola. Las filas llevan el nombre del hábito como etiqueta de accesibilidad, así que un toque lo enviaría. Solo salen las categorías de una lista cerrada (pantallas por su patrón de ruta y peticiones sin parámetros), y unos tests comprueban que no sale ningún nombre de hábito ni de objetivo. Los guarda Sentry en la UE.
 - Eliminar la cuenta (RF-04) borra al usuario y, en cascada, todos sus datos. La App Store lo exige a toda app que permita crear una cuenta ([App Store Review Guidelines 5.1.1(v)](https://developer.apple.com/app-store/review/guidelines/#5.1.1)), y Apple pide además [revocar el token de Sign in with Apple](https://developer.apple.com/support/offering-account-deletion-in-your-app/). Las dos cosas necesitan claves privadas, así que las hace una Edge Function de Supabase, nunca la app. La clave `.p8` de Apple es un secreto de cada proyecto de Supabase ([ADR-0019](adr/0019-eliminacion-de-la-cuenta-con-una-edge-function-que-revoca-sign-in-with-apple-antes-de-borrar-al-usuario.md)).
 
 ## 8. Entornos y publicación
@@ -255,6 +257,7 @@ Primero baja y después sube, tabla a tabla, y gana el último cambio en llegar 
 - La variante la decide `APP_VARIANT`, que fija cada perfil de `eas.json`. Si falta, es desarrollo; un valor desconocido detiene la compilación.
 - Cada perfil de `eas.json` toma las variables de su entorno de EAS (`"environment"`), que un test obliga a coincidir con su `APP_VARIANT`. Un build de EAS sin el cliente de iOS de Google se detiene (`EAS_BUILD`). En el PC la configuración se genera igualmente, porque EAS CLI la lee antes de cualquier comando, también de `eas env:pull`, que es el que trae ese valor.
 - Lo que cambia entre variantes está en `app.config.ts`; lo común, en `app.json`.
+- Los errores de las dos variantes van al mismo proyecto de Sentry, separados por `environment`, que sale de la variante. Un build sin el DSN de Sentry se detiene. Cada build y cada actualización suben sus source maps ([docs/despliegue.md](despliegue.md#informes-de-errores-sentry)).
 
 - Los cambios solo de JavaScript llegan a los builds instalados con **EAS Update**, sin pasar por una nueva compilación: primero a Hábitos Dev (`npm run update:dev`), para probarlos, y después a producción desde `main` (`npm run update:prod`). Cada variante tiene su canal, y la versión de runtime por *fingerprint* impide que una actualización llegue a un build con otro código nativo ([ADR-0020](adr/0020-actualizaciones-ota-con-eas-update-primero-en-desarrollo-y-despues-en-produccion.md), [docs/testflight.md](testflight.md#6-actualizaciones-ota)).
 - Los cambios nativos (dependencias nuevas, permisos) requieren una compilación con EAS Build y una nueva versión en TestFlight. El build de producción se lanza con `npm run build:prod` desde `main` y se envía solo a TestFlight (ver [docs/testflight.md](testflight.md)).

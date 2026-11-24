@@ -44,6 +44,14 @@
         {
           "faceIDPermission": false
         }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://de.sentry.io/",
+          "organization": "jota-marcar",
+          "project": "habitos"
+        }
       ]
     ],
     "experiments": {

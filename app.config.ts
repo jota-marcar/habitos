@@ -77,11 +77,31 @@ export function resolveGoogleUrlScheme(
   return `com.googleusercontent.apps.${id}`;
 }
 
+/**
+ * Stops a build on EAS without the DSN of Sentry (ADR-0026): the app would start without
+ * reporting its errors, and nobody would notice. On the PC the app runs without it.
+ */
+export function requireSentryDsn(
+  dsn: string | undefined,
+  onEasBuild: boolean,
+): void {
+  if (onEasBuild && (dsn === undefined || dsn === "")) {
+    throw new Error(
+      'EXPO_PUBLIC_SENTRY_DSN is missing from the EAS environment of the build profile (see "environment" in eas.json and docs/despliegue.md).',
+    );
+  }
+}
+
 export default function appConfig({ config }: ConfigContext): ExpoConfig {
-  const variant = VARIANTS[resolveVariant(process.env.APP_VARIANT)];
+  const variantName = resolveVariant(process.env.APP_VARIANT);
+  const variant = VARIANTS[variantName];
   // EAS Build sets EAS_BUILD on its servers.
   const googleUrlScheme = resolveGoogleUrlScheme(
     process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    Boolean(process.env.EAS_BUILD),
+  );
+  requireSentryDsn(
+    process.env.EXPO_PUBLIC_SENTRY_DSN,
     Boolean(process.env.EAS_BUILD),
   );
 
@@ -101,6 +121,8 @@ export default function appConfig({ config }: ConfigContext): ExpoConfig {
             ] as [string, { iosUrlScheme: string }],
           ]),
     ],
+    // The app reads it to tell Sentry which environment an error comes from (ADR-0026).
+    extra: { ...config.extra, appVariant: variantName },
     ios: {
       ...config.ios,
       bundleIdentifier: variant.bundleIdentifier,

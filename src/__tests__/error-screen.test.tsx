@@ -1,5 +1,6 @@
 // The error screen with the real navigation: a layout that fails shows it, and retrying renders
 // the layout again.
+import * as Sentry from "@sentry/react-native";
 import { fireEvent, renderRouter, screen } from "expo-router/testing-library";
 import { Slot } from "expo-router";
 import { Text } from "react-native";
@@ -41,6 +42,16 @@ describe("error screen", () => {
     expect(screen.getByText("Algo ha fallado")).toBeTruthy();
     expect(screen.getByText(/Este error no borra tus datos/)).toBeTruthy();
     expect(screen.queryByText("Inicio")).toBeNull();
+  });
+
+  // The boundary catches the error before Sentry could see it (ADR-0026).
+  test("sends the error to the error reports", async () => {
+    await renderFailingApp();
+
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      new Error("The database did not open."),
+      { tags: { area: "error-screen" } },
+    );
   });
 
   test("retrying opens the app once the failure is over", async () => {

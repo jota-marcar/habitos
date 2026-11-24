@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react-native";
 import type { Database } from "@/data/database";
 
 import {
@@ -94,6 +95,10 @@ test("a session that cannot be read is reported, and never fails", async () => {
     expect(warn).toHaveBeenCalledWith(
       "The data could not be synchronized.",
       new Error("Refresh token not found"),
+    );
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      new Error("Refresh token not found"),
+      { tags: { area: "sync" } },
     );
     // Its retry waits until the next test, which resets the timers.
     signedIn("user-1");

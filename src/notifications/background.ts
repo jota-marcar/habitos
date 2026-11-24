@@ -6,6 +6,7 @@ import * as BackgroundTask from "expo-background-task";
 import * as TaskManager from "expo-task-manager";
 
 import type { Database } from "@/data/database";
+import { reportError } from "@/shared/error-reporting";
 import { syncNow } from "@/sync/app-sync";
 
 import { refreshAndSync } from "./background-refresh";
@@ -32,7 +33,8 @@ export function refreshRemindersInBackground(
         () => syncNow(db),
       );
       return BackgroundTask.BackgroundTaskResult.Success;
-    } catch {
+    } catch (error) {
+      reportError(error, "background");
       return BackgroundTask.BackgroundTaskResult.Failed;
     }
   });
@@ -43,7 +45,8 @@ export function refreshRemindersInBackground(
       minimumInterval: MINIMUM_INTERVAL_MINUTES,
     });
   };
-  register().catch((error: unknown) =>
-    console.warn("The background refresh could not be registered.", error),
-  );
+  register().catch((error: unknown) => {
+    console.warn("The background refresh could not be registered.", error);
+    reportError(error, "background");
+  });
 }

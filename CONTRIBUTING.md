@@ -179,6 +179,7 @@ Paquetes denegados:
 |---------|--------|-----------------------|
 | `@parcel/watcher` | Compila desde el código fuente | Solo actúa si se pide compilar desde el código fuente; el binario precompilado llega como dependencia opcional |
 | `unrs-resolver` | Descarga el binario nativo | Solo actúa si falta el binario, que ya llega como dependencia opcional |
+| `@sentry/cli` | Descarga el binario de `sentry-cli` | Solo actúa si falta el binario, que ya llega como dependencia opcional (`@sentry/cli-<plataforma>`) |
 
 ### Avisos de seguridad
 

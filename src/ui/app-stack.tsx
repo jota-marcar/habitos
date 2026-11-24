@@ -2,7 +2,10 @@
 // with the forms as modals over it. Without a session, only the sign-in screen exists (RF-01).
 // Its own file so the tests can use it.
 
-import { Stack } from "expo-router";
+import { Stack, useSegments } from "expo-router";
+import { useEffect } from "react";
+
+import { recordScreen } from "@/shared/error-reporting";
 
 import { useSession } from "./session";
 import { useColors } from "./theme";
@@ -16,6 +19,7 @@ export const STACK_SETTINGS = { anchor: "index" };
 export function AppStack() {
   const colors = useColors();
   const signedIn = useSession() !== null;
+  useScreenTrail();
   return (
     <Stack
       screenOptions={{
@@ -54,4 +58,13 @@ export function AppStack() {
       </Stack.Protected>
     </Stack>
   );
+}
+
+/**
+ * Leaves the trail of the screens for the error reports (ADR-0026). The segments are the
+ * pattern of the route (`habits/[id]/edit`), never its values.
+ */
+function useScreenTrail() {
+  const route = `/${useSegments().join("/")}`;
+  useEffect(() => recordScreen(route), [route]);
 }

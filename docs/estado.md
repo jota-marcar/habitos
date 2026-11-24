@@ -18,7 +18,7 @@ La `0.2.0` se comprobó en producción el 2026-11-24. TestFlight sigue mostrando
 ## Qué viene después
 
 1. **`0.2.1`, por OTA:** los puntos menores de la auditoría. Son la pantalla de error propia en español, la lectura que puede pisar una ordenación, los límites de los campos al escribir, el botón Posponer a última hora y el criterio de los objetivos archivados.
-2. **Próximo build, antes de finales de enero de 2027:** la limpieza de los restos de web y Android, e informes de errores (Sentry) con su ADR, en dos PR que van en el mismo build. Cambian la huella nativa: publica la `0.2.1` antes de fusionarlos, porque desde ese momento las OTA de `main` solo llegan a builds nuevos. El build de producción caduca hacia el 2027-02-19.
+2. **Próximo build, antes de finales de enero de 2027:** la limpieza de los restos de web y Android, e informes de errores con Sentry ([ADR-0026](adr/0026-informes-de-errores-anonimos-con-sentry.md), propuesto). Son dos PR que van en el mismo build. Cambian la huella nativa: publica la `0.2.1` antes de fusionarlos, porque desde ese momento las OTA de `main` solo llegan a builds nuevos. Antes del build, Sentry necesita su puesta en marcha ([despliegue.md](despliegue.md#informes-de-errores-sentry)). El build de producción caduca hacia el 2027-02-19.
 3. **Decidir el rumbo del producto** con lo que digan los probadores: objetivos a largo plazo, estadísticas o preparar la App Store.
 4. **Antes del tercer horizonte, si es el rumbo elegido:** el núcleo común de hábitos y objetivos.
 5. **Al tocar los ficheros afectados:** TypeScript más estricto, dividir los ficheros más grandes, quitar lo que sobra y revisar la regla de separar los textos.
@@ -34,6 +34,6 @@ Aplazadas en su momento hasta que la app se abriera a más gente, cosa que ya ha
 | Purgar las filas borradas, ya vacías | No hace falta aún: ocupan poco y sin ellas un dispositivo antiguo no sabría qué se borró | [ADR-0009](adr/0009-sql-directo-y-migraciones-propias-en-la-capa-de-datos-local.md), [ADR-0023](adr/0023-vaciar-las-filas-borradas-y-hacer-definitivo-el-borrado.md) |
 | Mismo correo con Apple y con Google | Comprobar si da una sola cuenta. Con "Ocultar mi correo" de Apple serían dos | [ADR-0017](adr/0017-inicio-de-sesion-nativo-con-apple-y-google-y-sesion-en-el-llavero.md) |
 | Inicio de sesión obligatorio en la App Store | Revisarlo antes de enviarla | [Riesgos](arquitectura.md#9-riesgos-conocidos) |
-| Política de privacidad | Necesaria antes de la App Store: la app guarda datos de otras personas | Sin escribir |
+| Política de privacidad | Necesaria antes de la App Store: la app guarda datos de otras personas y envía informes de errores anónimos a Sentry | Sin escribir |
 
 **Huella nativa, comprobada el 2026-11-23:** la calculada en Windows con las variables de EAS coincide con la de los builds de desarrollo y de producción, hechos en macOS ([ADR-0020](adr/0020-actualizaciones-ota-con-eas-update-primero-en-desarrollo-y-despues-en-produccion.md)). `update:dev` y `update:prod` lo vuelven a comprobar antes de publicar.

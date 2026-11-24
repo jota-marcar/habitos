@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react-native";
 import * as BackgroundTask from "expo-background-task";
 import * as TaskManager from "expo-task-manager";
 
@@ -55,6 +56,10 @@ test("the task reports a failure if the database does not open", async () => {
   expect(await task()).toBe(BackgroundTask.BackgroundTaskResult.Failed);
 
   expect(refreshReminders).not.toHaveBeenCalled();
+  expect(Sentry.captureException).toHaveBeenCalledWith(
+    new Error("no database"),
+    { tags: { area: "background" } },
+  );
 });
 
 test("registers the task with iOS, twice a day at most", async () => {
@@ -89,5 +94,8 @@ test("a failed registration only leaves a warning", async () => {
     "The background refresh could not be registered.",
     expect.any(Error),
   );
+  expect(Sentry.captureException).toHaveBeenCalledWith(new Error("denied"), {
+    tags: { area: "background" },
+  });
   warn.mockRestore();
 });
