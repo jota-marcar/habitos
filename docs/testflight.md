@@ -127,7 +127,7 @@ Publica en el canal `development`, con las variables del entorno `development` d
 
 ### 6.2 Publicarla en producción
 
-`npm run update:prod`, siguiendo los [pasos de despliegue.md](despliegue.md#cambio-solo-de-javascript). Comprueba que es `main` al día y que la versión es nueva, pide confirmar que se ha probado en Hábitos Dev, publica en el canal `production` con las variables del entorno `production` de EAS y crea el tag de la versión.
+`npm run update:prod`, siguiendo los [pasos de despliegue.md](despliegue.md#cambio-solo-de-javascript). Comprueba que es `main` al día y que la versión es nueva, pide confirmar que se ha probado en Hábitos Dev, publica en el canal `production` con las variables del entorno `production` de EAS, crea el tag de la versión y sube los source maps a Sentry. Necesita `SENTRY_AUTH_TOKEN` en Windows ([despliegue.md](despliegue.md#informes-de-errores-sentry)).
 
 ### 6.3 Si falla
 

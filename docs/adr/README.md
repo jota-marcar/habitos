@@ -29,6 +29,7 @@ Cada ADR documenta una decisión técnica importante: el contexto, las opciones 
 | [0023](0023-vaciar-las-filas-borradas-y-hacer-definitivo-el-borrado.md) | Vaciar las filas borradas y hacer definitivo el borrado | Aceptado |
 | [0024](0024-versiones-visibles-con-versionado-semantico-y-un-tag-por-publicacion.md) | Versiones visibles con versionado semántico y un tag por publicación | Aceptado |
 | [0025](0025-capa-compartida-y-regla-de-dependencias-entre-capas-impuesta-con-eslint.md) | Capa compartida y regla de dependencias entre capas impuesta con ESLint | Aceptado |
+| [0026](0026-informes-de-errores-anonimos-con-sentry.md) | Informes de errores anónimos con Sentry | Propuesto |
 
 ## Plantilla
 

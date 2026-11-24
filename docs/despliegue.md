@@ -83,10 +83,59 @@ La app no abre una base con un esquema más nuevo que su código: muestra una pa
 
 Puede ir junto con la funcionalidad que la usa, para no enseñar a los probadores una pantalla a medias. Las actualizaciones siguientes sí se pueden deshacer, porque la versión anterior ya conoce el esquema.
 
+## Informes de errores (Sentry)
+
+Los errores de los dos entornos llegan a Sentry de forma anónima ([ADR-0026](adr/0026-informes-de-errores-anonimos-con-sentry.md)). Para que se lean con su código fuente, cada build y cada actualización suben sus *source maps*.
+
+### Puesta en marcha (una vez, la hace el usuario)
+
+1. **Cuenta y proyecto.**
+   - En [sentry.io](https://sentry.io), crea la cuenta y la organización con **Data Storage Location: EU**. No se puede cambiar después: habría que crear otra organización.
+   - Crea un proyecto **React Native** llamado `habitos`. Es uno para los dos entornos, que se distinguen por `environment`.
+   - En los ajustes del proyecto, activa **Prevent Storing of IP Addresses**. La app ya no las envía; esto lo asegura también en el servidor.
+2. **Slug de la organización.** Pon el de tu organización (aparece en la URL) en `organization` del plugin `@sentry/react-native/expo` de `app.json`.
+3. **Token.** Crea un token de organización en **Settings → Developer Settings → Organization Tokens**. Sirve para subir los source maps y crear las releases.
+4. **Variables de EAS.** El DSN está en **Project Settings → Client Keys (DSN)**:
+
+   ```powershell
+   eas env:create --name SENTRY_AUTH_TOKEN --value <token> --environment development --environment production --visibility sensitive
+   ```
+
+   ```powershell
+   eas env:create --name EXPO_PUBLIC_SENTRY_DSN --value <dsn> --environment development --visibility plaintext
+   ```
+
+   ```powershell
+   eas env:create --name EXPO_PUBLIC_SENTRY_DSN --value <dsn> --environment production --visibility plaintext
+   ```
+
+   El DSN se crea en cada entorno por separado, aunque hoy coincida, para no mezclar valores de las dos variantes ([ADR-0008](adr/0008-variantes-de-desarrollo-y-produccion.md)). No es secreto: viaja dentro de la app.
+5. **Token en Windows.** Guárdalo como variable de entorno de tu usuario, porque las actualizaciones suben sus source maps desde el PC. Abre después una terminal nueva:
+
+   ```powershell
+   [Environment]::SetEnvironmentVariable("SENTRY_AUTH_TOKEN", "<token>", "User")
+   ```
+
+6. **En el PC, si quieres probar Sentry con `npm start`:** ejecuta `eas env:pull` y el DSN de desarrollo llegará a `.env.local`. Sin DSN, la app funciona igual y no envía nada.
+
+### Qué hace cada comando
+
+- **`build:dev` y `build:prod`:** la fase de Xcode que añade el plugin sube los source maps y los símbolos nativos con el token del entorno de EAS. Si falta el token, el build falla, y si falta el DSN, se detiene al leer la configuración. Así ningún build sale sin informes.
+- **`update:dev` y `update:prod`:** se niegan a publicar sin `SENTRY_AUTH_TOKEN` en Windows. Después de `eas update`, suben los source maps de `dist`. Si la subida falla, la actualización ya está publicada: el script indica cómo repetir solo la subida.
+
+### Comprobarlo
+
+Con un build nuevo de Hábitos Dev, fuerza un error (por ejemplo, un `throw` temporal en una pantalla, publicado con `update:dev`). Después comprueba en Sentry tres cosas:
+
+- el error aparece en el entorno `development`, con las líneas de `src/`;
+- en el rastro hay pantallas, pero no toques ni nombres de hábitos;
+- no aparece ningún usuario ni ninguna dirección IP.
+
 ## Límites
 
 - **Los builds son limitados:** 15 de iOS en el plan gratuito de EAS. Conviene agrupar los cambios nativos.
 - **Un build de TestFlight caduca a los 90 días.** Antes hay que subir otro, aunque no haya cambios nativos.
+- **El plan gratuito de Sentry** admite 5000 errores al mes y una sola persona. Los fallos de conexión no se envían.
 - **Una actualización solo llega a los builds con su mismo código nativo.** Si no coincide, no llega y tampoco rompe nada. El build `0.1.0 (1)`, anterior a `expo-updates`, nunca recibe actualizaciones.
 
 ## Si algo sale mal
