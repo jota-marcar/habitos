@@ -121,7 +121,7 @@ Los errores de los dos entornos llegan a Sentry de forma anónima ([ADR-0026](ad
 ### Qué hace cada comando
 
 - **`build:dev` y `build:prod`:** la fase de Xcode que añade el plugin sube los source maps y los símbolos nativos con el token del entorno de EAS. Si falta el token, el build falla, y si falta el DSN, se detiene al leer la configuración. Así ningún build sale sin informes.
-- **`update:dev` y `update:prod`:** se niegan a publicar sin `SENTRY_AUTH_TOKEN` en Windows. El DSN no lo comprueban: si se borra del entorno de EAS, la actualización sale sin informes de errores. Después de `eas update`, suben los source maps de `dist`. Si la subida falla, la actualización ya está publicada: el script indica cómo repetir solo la subida.
+- **`update:dev` y `update:prod`:** se niegan a publicar sin `SENTRY_AUTH_TOKEN` en Windows. El DSN no lo comprueban: si se borra del entorno de EAS, la actualización sale sin informes de errores. Después de `eas update`, suben los source maps de `dist`. Si la subida falla, la actualización ya está publicada. En ese caso, se repite solo la subida, sin volver a publicar, con `npm run update:dev -- --upload-sourcemaps` (o `update:prod`). Hay que hacerlo antes de cualquier otro `eas update` o `expo export`, porque `dist` tiene que seguir siendo el de esa actualización.
 
 ### Comprobarlo
 

@@ -19,6 +19,8 @@
 // Usage: npm run update:dev             update for Hábitos Dev
 //        npm run update:prod            update for Hábitos (TestFlight), asks first
 //        add `-- --check`               only runs the guards
+//        add `-- --upload-sourcemaps`   only uploads to Sentry the source maps that the last
+//                                       update left in dist, if that upload failed
 
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
@@ -66,6 +68,42 @@ if (variant === undefined) {
 }
 const checkOnly = process.argv.includes("--check");
 
+function requireSentryToken() {
+  if (!process.env.SENTRY_AUTH_TOKEN) {
+    fail(
+      "SENTRY_AUTH_TOKEN is missing: without it, the source maps of the update would not reach",
+      "Sentry and its errors would be unreadable. See docs/despliegue.md.",
+    );
+  }
+}
+
+/**
+ * Uploads to Sentry the bundles and source maps that `eas update` leaves in dist. The uploader
+ * reads the organization and the project from the Sentry plugin of the Expo config.
+ */
+function uploadSourceMaps() {
+  const require = createRequire(import.meta.url);
+  const uploader =
+    require.resolve("@sentry/react-native/scripts/expo-upload-sourcemaps.js");
+  // The uploader runs @sentry/cli/bin/sentry-cli, a Node script that Windows cannot run as a
+  // program (ENOENT): it is given the binary of the platform instead.
+  const { SentryCli } = require("@sentry/cli");
+  return spawnSync(process.execPath, [uploader, "dist"], {
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      APP_VARIANT: variantName,
+      EXPO_NO_DOTENV: "1",
+      SENTRY_CLI_EXECUTABLE: SentryCli.getPath(),
+    },
+  }).status;
+}
+
+if (process.argv.includes("--upload-sourcemaps")) {
+  requireSentryToken();
+  process.exit(uploadSourceMaps() ?? 1);
+}
+
 requireCommitted();
 if (variant.fromMain) {
   requireMainUpToDate(`A ${variantName} update`);
@@ -74,12 +112,7 @@ if (variant.fromMain) {
 printSource(variantName);
 requireCompatibleBuild(variantName);
 warnIfAppJsonChanged();
-if (!process.env.SENTRY_AUTH_TOKEN) {
-  fail(
-    "SENTRY_AUTH_TOKEN is missing: without it, the source maps of the update would not reach",
-    "Sentry and its errors would be unreadable. See docs/despliegue.md.",
-  );
-}
+requireSentryToken();
 
 if (checkOnly) {
   console.log("Ready to publish.");
@@ -124,21 +157,12 @@ if (publish.status !== 0) process.exit(publish.status ?? 1);
 
 if (variant.fromMain) tagRelease("over-the-air update");
 
-// `eas update` leaves the bundles and their source maps in dist. The uploader reads the
-// organization and the project from the Sentry plugin of the Expo config.
-const uploader = createRequire(import.meta.url).resolve(
-  "@sentry/react-native/scripts/expo-upload-sourcemaps.js",
-);
-const upload = spawnSync(process.execPath, [uploader, "dist"], {
-  stdio: "inherit",
-  env: { ...process.env, APP_VARIANT: variantName, EXPO_NO_DOTENV: "1" },
-});
-if (upload.status !== 0) {
+if (uploadSourceMaps() !== 0) {
   fail(
     "",
     "The update is published, but its source maps did not reach Sentry: its errors will be",
     "unreadable. Fix the cause and upload them again, without publishing again:",
-    `  $env:APP_VARIANT = "${variantName}"; node ${uploader} dist`,
+    `  node scripts/update.mjs ${variantName} --upload-sourcemaps`,
   );
 }
 

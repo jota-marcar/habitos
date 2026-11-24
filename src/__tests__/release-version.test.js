@@ -300,6 +300,18 @@ test("update.mjs refuses to publish without the token of Sentry", () => {
   expect(result.output).toContain("SENTRY_AUTH_TOKEN is missing");
 });
 
+test("update.mjs does not upload the source maps alone without the token of Sentry", () => {
+  const result = runScriptWithEnv(
+    { SENTRY_AUTH_TOKEN: undefined },
+    "update.mjs",
+    "development",
+    "--upload-sourcemaps",
+  );
+
+  expect(result.status).toBe(1);
+  expect(result.output).toContain("SENTRY_AUTH_TOKEN is missing");
+});
+
 test("a production build that goes well tags its version on GitHub", () => {
   setVersion("0.2.0");
   commit("chore: prepares the version");
