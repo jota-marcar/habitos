@@ -98,15 +98,15 @@ Los errores de los dos entornos llegan a Sentry de forma anónima ([ADR-0026](ad
 4. **Variables de EAS.** El DSN está en **Project Settings → Client Keys (DSN)**:
 
    ```powershell
-   eas env:create --name SENTRY_AUTH_TOKEN --value <token> --environment development --environment production --visibility sensitive
+   eas env:set --name SENTRY_AUTH_TOKEN --value <token> --environment development --environment production --visibility sensitive
    ```
 
    ```powershell
-   eas env:create --name EXPO_PUBLIC_SENTRY_DSN --value <dsn> --environment development --visibility plaintext
+   eas env:set --name EXPO_PUBLIC_SENTRY_DSN --value <dsn> --environment development --visibility plaintext
    ```
 
    ```powershell
-   eas env:create --name EXPO_PUBLIC_SENTRY_DSN --value <dsn> --environment production --visibility plaintext
+   eas env:set --name EXPO_PUBLIC_SENTRY_DSN --value <dsn> --environment production --visibility plaintext
    ```
 
    El DSN se crea en cada entorno por separado, aunque hoy coincida, para no mezclar valores de las dos variantes ([ADR-0008](adr/0008-variantes-de-desarrollo-y-produccion.md)). No es secreto: viaja dentro de la app.

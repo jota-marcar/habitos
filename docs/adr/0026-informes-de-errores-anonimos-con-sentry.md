@@ -1,6 +1,6 @@
 # ADR-0026: Informes de errores anónimos con Sentry
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-24
 
 ## Contexto
