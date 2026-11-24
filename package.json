@@ -1,6 +1,6 @@
 {
   "name": "habitos",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": "jota_marcar",
   "license": "PolyForm-Strict-1.0.0",
   "main": "index.ts",
