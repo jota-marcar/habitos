@@ -48,7 +48,7 @@
       [
         "@sentry/react-native/expo",
         {
-          "url": "https://de.sentry.io/",
+          "url": "https://sentry.io/",
           "organization": "jota-marcar",
           "project": "habitos"
         }

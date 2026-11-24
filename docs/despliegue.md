@@ -118,6 +118,8 @@ Los errores de los dos entornos llegan a Sentry de forma anónima ([ADR-0026](ad
 
 6. **En el PC, si quieres probar Sentry con `npm start`:** ejecuta `eas env:pull` y el DSN de desarrollo llegará a `.env.local`. Sin DSN, la app funciona igual y no envía nada.
 
+**La URL del plugin es `https://sentry.io/`, no la de la región (`de.sentry.io`).** El token de organización lleva su propia dirección, y `sentry-cli` la usa en lugar de la configurada: con otra, avisa en cada subida. Sentry dirige cada petición a la región de la organización, la UE. La app envía los errores a la dirección del DSN (`ingest.de.sentry.io`).
+
 ### Qué hace cada comando
 
 - **`build:dev` y `build:prod`:** la fase de Xcode que añade el plugin sube los source maps y los símbolos nativos con el token del entorno de EAS. Si falta el token, el build falla, y si falta el DSN, se detiene al leer la configuración. Así ningún build sale sin informes.

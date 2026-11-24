@@ -20,7 +20,7 @@ La `0.2.0` se comprobó en producción el 2026-11-24. TestFlight sigue mostrando
 1. **Versión `0.3.0`, con un build nuevo, la misma en los dos entornos:** Sentry ([ADR-0026](adr/0026-informes-de-errores-anonimos-con-sentry.md)), la limpieza de web y Android (PR 104 y 105) y los puntos menores de la auditoría. Estos últimos son la pantalla de error propia en español, la lectura que puede pisar una ordenación, los límites de los campos al escribir, el botón Posponer a última hora y el criterio de los objetivos archivados. Sentry ya está configurado ([despliegue.md](despliegue.md#informes-de-errores-sentry)).
    - **La `0.2.1`** fue una candidata que solo se probó en Hábitos Dev y no tiene tag: su contenido entra en la `0.3.0`. Se descartó revertir los PR 104 y 105 para publicarla por OTA, porque los probadores no tienen prisa y prima la coherencia.
    - **Pasos:**
-     1. `build:dev`, ya lanzado. Con él se prueba Sentry con un error forzado ([despliegue.md](despliegue.md#comprobarlo)) y se repasa la app entera.
+     1. `build:dev`, otra vez. El primero se hizo con la URL de Sentry de la región (`de.sentry.io`), que el token ignora y que solo producía un aviso. Corregirla cambió la huella nativa. Con el build nuevo se prueba Sentry con un error forzado ([despliegue.md](despliegue.md#comprobarlo)) y se repasa la app entera.
      2. `update:dev` desde `main`, para que Hábitos Dev muestre la `0.3.0` con el código exacto de producción. Se prueba sin prisa.
      3. `build:prod`. El build de producción actual caduca hacia el 2027-02-19.
 2. **Decidir el rumbo del producto** con lo que digan los probadores: objetivos a largo plazo, estadísticas o preparar la App Store.
