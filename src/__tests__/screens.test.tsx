@@ -958,6 +958,23 @@ describe("new habit", () => {
     expect(valueOf("Incremento")).toBe("5");
   });
 
+  test("an older amount above the maximum can be corrected digit by digit", async () => {
+    await addHabit(
+      db,
+      habit("big", { name: "Pasos", type: "quantitative" }),
+      version("big", { target: 20_000_000, unit: "p", increment: 30_000_000 }),
+    );
+    await renderApp("/habits/big/edit");
+    const meta = await screen.findByLabelText("Meta");
+    const increment = screen.getByLabelText("Incremento");
+
+    await fireEvent.changeText(meta, "2000000");
+    await fireEvent.changeText(increment, "3000000");
+
+    expect(screen.getByLabelText("Meta").props.value).toBe("2000000");
+    expect(screen.getByLabelText("Incremento").props.value).toBe("3000000");
+  });
+
   describe("opening the reminder picker", () => {
     afterEach(() => {
       mockBottomInset = 0;

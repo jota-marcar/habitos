@@ -142,7 +142,10 @@ export function AmountsSection({
         selectTextOnFocus
         value={values.target}
         onChangeText={(target) => {
-          if (fitsMaxAmount(target)) onChange({ target });
+          // Shorter always goes through: an older amount above the maximum can be corrected.
+          if (fitsMaxAmount(target) || target.length < values.target.length) {
+            onChange({ target });
+          }
         }}
       />
       <Field
@@ -160,7 +163,12 @@ export function AmountsSection({
         selectTextOnFocus
         value={values.increment}
         onChangeText={(increment) => {
-          if (fitsMaxAmount(increment)) onChange({ increment });
+          if (
+            fitsMaxAmount(increment) ||
+            increment.length < values.increment.length
+          ) {
+            onChange({ increment });
+          }
         }}
       />
     </>
