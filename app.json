@@ -49,7 +49,7 @@
         "@sentry/react-native/expo",
         {
           "url": "https://de.sentry.io/",
-          "organization": "SLUG-DE-LA-ORGANIZACION",
+          "organization": "jota-marcar",
           "project": "habitos"
         }
       ]
