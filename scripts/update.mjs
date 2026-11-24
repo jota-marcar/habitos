@@ -102,6 +102,7 @@ function uploadSourceMaps() {
 
 if (process.argv.includes("--upload-sourcemaps")) {
   requireSentryToken();
+  requireInstalledDependencies();
   process.exit(uploadSourceMaps() ?? 1);
 }
 

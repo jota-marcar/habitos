@@ -119,6 +119,12 @@ function setVersion(version) {
           "node_modules/other": { version },
           // For another platform: npm never installs it here.
           "node_modules/other-darwin": { version, optional: true },
+          // Needed by a development tool, but only on another platform.
+          "node_modules/other-elsewhere": {
+            version,
+            devOptional: true,
+            os: [process.platform === "linux" ? "darwin" : "linux"],
+          },
         },
       },
       null,
@@ -316,6 +322,15 @@ test.each([
     expect(result.output).toContain("Run `npm ci`");
   },
 );
+
+test("update.mjs does not upload the source maps without the dependencies installed", () => {
+  installDependencies({});
+
+  const result = runScript("update.mjs", "development", "--upload-sourcemaps");
+
+  expect(result.status).toBe(1);
+  expect(result.output).toContain("Run `npm ci`");
+});
 
 // ADR-0026: an update without its source maps would leave its errors unreadable in Sentry.
 test("update.mjs refuses to publish without the token of Sentry", () => {

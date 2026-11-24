@@ -20,10 +20,24 @@ function packagesIn(file) {
   }
 }
 
+/** Whether an `os` or `cpu` list of package-lock.json, like ["darwin"] or ["!win32"], allows `value`. */
+function allows(list, value) {
+  if (!Array.isArray(list)) return true;
+  if (list.includes(`!${value}`)) return false;
+  const wanted = list.filter((item) => !item.startsWith("!"));
+  return wanted.length === 0 || wanted.includes(value);
+}
+
+/** npm leaves out the optional packages it cannot install and those for other platforms. */
+const mayBeAbsent = (entry) =>
+  entry.optional === true ||
+  !allows(entry.os, process.platform) ||
+  !allows(entry.cpu, process.arch);
+
 /**
  * The packages of package-lock.json in `directory` that node_modules lacks or holds in another
- * version. Optional packages for other platforms are never installed, so their absence is fine.
- * Empty when there is no package-lock.json.
+ * version, according to what npm recorded at the last install: a folder changed by hand after
+ * it goes unnoticed. Empty when there is no package-lock.json.
  */
 export function outdatedDependencies(directory = ".") {
   const wanted = packagesIn(path.join(directory, "package-lock.json"));
@@ -34,7 +48,7 @@ export function outdatedDependencies(directory = ".") {
     .filter(
       ([location, entry]) =>
         location !== "" &&
-        !(entry.optional && !(location in installed)) &&
+        !(mayBeAbsent(entry) && !(location in installed)) &&
         installed[location]?.version !== entry.version,
     )
     .map(([location]) =>
