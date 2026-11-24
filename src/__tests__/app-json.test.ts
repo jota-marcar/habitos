@@ -16,6 +16,13 @@ describe("app.json", () => {
     },
   );
 
+  // The app only targets iOS (ADR-0002): no Android or web settings to keep up to date.
+  test("only targets iOS", () => {
+    expect(expo.platforms).toEqual(["ios"]);
+    expect(expo.android).toBeUndefined();
+    expect(expo.web).toBeUndefined();
+  });
+
   test("does not set the iOS bundle identifier, which belongs to the variant", () => {
     expect(ios.bundleIdentifier).toBeUndefined();
   });

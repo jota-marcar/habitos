@@ -18,7 +18,7 @@ La `0.2.0` se comprobó en producción el 2026-11-24. TestFlight sigue mostrando
 ## Qué viene después
 
 1. **`0.2.1`, por OTA:** los puntos menores de la auditoría. Son la pantalla de error propia en español, la lectura que puede pisar una ordenación, los límites de los campos al escribir, el botón Posponer a última hora y el criterio de los objetivos archivados.
-2. **Próximo build, antes de finales de enero de 2027:** informes de errores (Sentry), con su ADR, y la limpieza de los restos de web y Android. El build de producción caduca hacia el 2027-02-19.
+2. **Próximo build, antes de finales de enero de 2027:** la limpieza de los restos de web y Android, e informes de errores (Sentry) con su ADR, en dos PR que van en el mismo build. Cambian la huella nativa: publica la `0.2.1` antes de fusionarlos, porque desde ese momento las OTA de `main` solo llegan a builds nuevos. El build de producción caduca hacia el 2027-02-19.
 3. **Decidir el rumbo del producto** con lo que digan los probadores: objetivos a largo plazo, estadísticas o preparar la App Store.
 4. **Antes del tercer horizonte, si es el rumbo elegido:** el núcleo común de hábitos y objetivos.
 5. **Al tocar los ficheros afectados:** TypeScript más estricto, dividir los ficheros más grandes, quitar lo que sobra y revisar la regla de separar los textos.
