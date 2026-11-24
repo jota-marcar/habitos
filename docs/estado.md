@@ -17,10 +17,12 @@ La `0.2.0` se comprobó en producción el 2026-11-24. TestFlight sigue mostrando
 
 ## Qué viene después
 
-1. **Build nuevo, con Sentry ([ADR-0026](adr/0026-informes-de-errores-anonimos-con-sentry.md)) y sin los restos de web y Android:** ya está en `main` (PR 104 y 105), y Sentry está configurado ([despliegue.md](despliegue.md#informes-de-errores-sentry)).
-   - **Huella nativa:** `main` ya tiene otra, así que sus OTA no llegan a los builds instalados.
-   - **La `0.2.1`:** solo llegó a Hábitos Dev; producción sigue en la `0.2.0`. Lleva los puntos menores de la auditoría: la pantalla de error propia en español, la lectura que puede pisar una ordenación, los límites de los campos al escribir, el botón Posponer a última hora y el criterio de los objetivos archivados. **Pendiente de decidir:** que llegue a producción con el build nuevo, que llevaría la versión `0.3.0`, o publicarla antes por OTA revirtiendo el PR 104 en `main`.
-   - **Pasos:** probar `build:dev` con un error forzado ([despliegue.md](despliegue.md#comprobarlo)), preparar la versión y lanzar `build:prod`. El build de producción actual caduca hacia el 2027-02-19.
+1. **Versión `0.3.0`, con un build nuevo, la misma en los dos entornos:** Sentry ([ADR-0026](adr/0026-informes-de-errores-anonimos-con-sentry.md)), la limpieza de web y Android (PR 104 y 105) y los puntos menores de la auditoría. Estos últimos son la pantalla de error propia en español, la lectura que puede pisar una ordenación, los límites de los campos al escribir, el botón Posponer a última hora y el criterio de los objetivos archivados. Sentry ya está configurado ([despliegue.md](despliegue.md#informes-de-errores-sentry)).
+   - **La `0.2.1`** fue una candidata que solo se probó en Hábitos Dev y no tiene tag: su contenido entra en la `0.3.0`. Se descartó revertir los PR 104 y 105 para publicarla por OTA, porque los probadores no tienen prisa y prima la coherencia.
+   - **Pasos:**
+     1. `build:dev`, ya lanzado. Con él se prueba Sentry con un error forzado ([despliegue.md](despliegue.md#comprobarlo)) y se repasa la app entera.
+     2. `update:dev` desde `main`, para que Hábitos Dev muestre la `0.3.0` con el código exacto de producción. Se prueba sin prisa.
+     3. `build:prod`. El build de producción actual caduca hacia el 2027-02-19.
 2. **Decidir el rumbo del producto** con lo que digan los probadores: objetivos a largo plazo, estadísticas o preparar la App Store.
 3. **Antes del tercer horizonte, si es el rumbo elegido:** el núcleo común de hábitos y objetivos.
 4. **Al tocar los ficheros afectados:** TypeScript más estricto, dividir los ficheros más grandes, quitar lo que sobra y revisar la regla de separar los textos.
