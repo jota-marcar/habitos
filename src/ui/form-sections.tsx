@@ -3,8 +3,12 @@
 
 import { StyleSheet, View } from "react-native";
 
+import { fitsMaxAmount } from "@/domain/amounts";
 import {
   HABIT_COLORS,
+  MAX_NAME_LENGTH,
+  MAX_UNIT_LENGTH,
+  limitedText,
   type HabitColor,
   type HabitError,
   type HabitType,
@@ -59,7 +63,8 @@ export function NameSection({
         labelHidden
         placeholder="Nombre"
         value={value}
-        onChangeText={onChange}
+        // Not `maxLength`: it counts an emoji as two characters, and the rule as one.
+        onChangeText={(name) => onChange(limitedText(name, MAX_NAME_LENGTH))}
         autoFocus={autoFocus}
         returnKeyType="done"
       />
@@ -136,21 +141,35 @@ export function AmountsSection({
         keyboardType="decimal-pad"
         selectTextOnFocus
         value={values.target}
-        onChangeText={(target) => onChange({ target })}
+        onChangeText={(target) => {
+          // Shorter always goes through: an older amount above the maximum can be corrected.
+          if (fitsMaxAmount(target) || target.length < values.target.length) {
+            onChange({ target });
+          }
+        }}
       />
       <Field
         label="Unidad"
         placeholder={unitPlaceholder}
         selectTextOnFocus
         value={values.unit}
-        onChangeText={(unit) => onChange({ unit })}
+        onChangeText={(unit) =>
+          onChange({ unit: limitedText(unit, MAX_UNIT_LENGTH) })
+        }
       />
       <Field
         label="Incremento"
         keyboardType="decimal-pad"
         selectTextOnFocus
         value={values.increment}
-        onChangeText={(increment) => onChange({ increment })}
+        onChangeText={(increment) => {
+          if (
+            fitsMaxAmount(increment) ||
+            increment.length < values.increment.length
+          ) {
+            onChange({ increment });
+          }
+        }}
       />
     </>
   ) : null;

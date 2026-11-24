@@ -30,6 +30,7 @@ import {
 } from "@/domain/order";
 import {
   archiveWeeklyGoal,
+  canEditWeeklyGoal,
   goalsForWeek,
   type WeekGoal,
 } from "@/domain/weekly-goals";
@@ -46,7 +47,7 @@ import { reportWriteFailure } from "./write-failure";
 export interface WeekPage {
   /** Its goals in the groups and order of the screen, or null while they are being read. */
   readonly goals: DayGroups<WeekGoal> | null;
-  /** Whether there is any goal at all, in this week or not. */
+  /** Whether any goal is still in force, in this week or not: like the habits, not archived. */
   readonly hasAnyGoal: boolean;
   /** Marks or unmarks a yes-or-no goal, or adds the increment to one with an amount (RF-47). */
   readonly record: (goalId: string) => Promise<void>;
@@ -75,6 +76,8 @@ export function useWeek(monday: LocalDate): WeekPage {
   const writes = useRef<Promise<void>>(Promise.resolve());
   // Discards the reads that finish after a newer one has started.
   const lastRead = useRef(0);
+  // A read that had to group, until one finishes: a newer read takes over if it is discarded.
+  const sortDue = useRef(false);
   const settleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const settleDue = useRef(false);
 
@@ -86,6 +89,7 @@ export function useWeek(monday: LocalDate): WeekPage {
   const load = useCallback(
     async (week: LocalDate, sort: boolean) => {
       const read = ++lastRead.current;
+      if (sort) sortDue.current = true;
       const [allGoals, versions, entries] = await Promise.all([
         listWeeklyGoals(db),
         listWeeklyGoalVersions(db),
@@ -97,7 +101,8 @@ export function useWeek(monday: LocalDate): WeekPage {
         { goals: allGoals, versions, entries },
         weekOf(week),
       );
-      if (sort || order.current === null) {
+      if (sortDue.current || order.current === null) {
+        sortDue.current = false;
         const grouped = groupWeekGoals(weekGoals);
         order.current = {
           pending: grouped.pending.map(goalIdOf),
@@ -111,7 +116,8 @@ export function useWeek(monday: LocalDate): WeekPage {
         }
         setGoals(keepGroups(weekGoals, goalIdOf, order.current));
       }
-      setHasAnyGoal(allGoals.length > 0);
+      const currentDay = today();
+      setHasAnyGoal(allGoals.some((g) => canEditWeeklyGoal(g, currentDay)));
     },
     [db],
   );

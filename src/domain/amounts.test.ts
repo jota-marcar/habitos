@@ -1,4 +1,10 @@
-import { isAmount, parseAmount, roundAmount } from "./amounts";
+import {
+  MAX_AMOUNT,
+  fitsMaxAmount,
+  isAmount,
+  parseAmount,
+  roundAmount,
+} from "./amounts";
 
 describe("roundAmount", () => {
   test("removes the floating-point error of adding decimals", () => {
@@ -34,6 +40,19 @@ describe("isAmount", () => {
   test("rejects values that are not finite numbers", () => {
     expect(isAmount(Number.NaN)).toBe(false);
     expect(isAmount(Number.POSITIVE_INFINITY)).toBe(false);
+  });
+});
+
+describe("fitsMaxAmount", () => {
+  test.each(["", "1,", "1.5", String(MAX_AMOUNT), "abc"])(
+    "lets %p be typed",
+    (text) => {
+      expect(fitsMaxAmount(text)).toBe(true);
+    },
+  );
+
+  test.each(["1000000", "999999,01", "1e30"])("stops %p", (text) => {
+    expect(fitsMaxAmount(text)).toBe(false);
   });
 });
 

@@ -3,7 +3,7 @@
 // configuration, which is versioned with an effective date so that changes only apply from
 // today onwards and past days keep what was due then (RF-09, ADR-0006).
 
-import { isAmount } from "./amounts";
+import { MAX_AMOUNT, isAmount } from "./amounts";
 import type { LocalDate } from "./dates";
 import { fail, ok, type Result } from "./result";
 import {
@@ -83,10 +83,12 @@ export type AmountsError =
   | "amounts_not_allowed"
   | "target_not_positive"
   | "target_too_precise"
+  | "target_too_large"
   | "unit_empty"
   | "unit_too_long"
   | "increment_not_positive"
-  | "increment_too_precise";
+  | "increment_too_precise"
+  | "increment_too_large";
 
 export type HabitError =
   NameError | AmountsError | "scheduled_days_invalid" | "scheduled_days_empty";
@@ -103,6 +105,14 @@ function lengthOf(text: string): number {
   return [...text.trim()].length;
 }
 
+/** `text` cut to `maxLength`, counted as the rules count it, so that it can be typed. */
+export function limitedText(text: string, maxLength: number): string {
+  if (lengthOf(text) <= maxLength) return text;
+  const start = text.length - text.trimStart().length;
+  const kept = [...text.slice(start)].slice(0, maxLength).join("");
+  return text.slice(0, start) + kept;
+}
+
 export function validateName(name: string): NameError[] {
   if (name.trim() === "") return ["name_empty"];
   return lengthOf(name) > MAX_NAME_LENGTH ? ["name_too_long"] : [];
@@ -112,10 +122,12 @@ function validateAmount(
   value: number | null,
   notPositive: AmountsError,
   tooPrecise: AmountsError,
+  tooLarge: AmountsError,
 ): AmountsError[] {
   if (value === null || !Number.isFinite(value) || value <= 0) {
     return [notPositive];
   }
+  if (value > MAX_AMOUNT) return [tooLarge];
   return isAmount(value) ? [] : [tooPrecise];
 }
 
@@ -136,6 +148,7 @@ export function validateAmounts(
     amounts.target,
     "target_not_positive",
     "target_too_precise",
+    "target_too_large",
   );
   if (amounts.unit === null || amounts.unit.trim() === "") {
     errors.push("unit_empty");
@@ -147,6 +160,7 @@ export function validateAmounts(
       amounts.increment,
       "increment_not_positive",
       "increment_too_precise",
+      "increment_too_large",
     ),
   );
   return errors;
