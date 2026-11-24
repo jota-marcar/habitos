@@ -35,11 +35,12 @@ describe("errorReportingOptions", () => {
     },
   );
 
+  // Throwing would keep the app from opening: worse than the bug it would point out.
   test.each([undefined, "staging"])(
-    "an unknown variant (%p) is an error, not a guess",
+    "an unknown variant (%p) is reported as unknown, without stopping the app",
     (variant) => {
-      expect(() => errorReportingOptions({ dsn: DSN, variant })).toThrow(
-        "Unknown app variant",
+      expect(errorReportingOptions({ dsn: DSN, variant })?.environment).toBe(
+        "unknown",
       );
     },
   );

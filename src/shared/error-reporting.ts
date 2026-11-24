@@ -36,14 +36,14 @@ export function errorReportingOptions(
   env: ErrorReportingEnv,
 ): ReactNativeOptions | null {
   if (env.dsn === undefined || env.dsn === "") return null;
-  if (env.variant !== "development" && env.variant !== "production") {
-    throw new Error(
-      `Unknown app variant "${String(env.variant)}": expected "development" or "production".`,
-    );
-  }
   return {
     dsn: env.dsn,
-    environment: env.variant,
+    // An unknown variant would be a bug of app.config.ts (its tests prevent it). It must not stop
+    // the app from opening, and it stays visible in Sentry.
+    environment:
+      env.variant === "development" || env.variant === "production"
+        ? env.variant
+        : "unknown",
     initialScope: { tags: { "app.version": APP_VERSION } },
     // Anonymous: no IP address, no user and no cookies or headers.
     sendDefaultPii: false,
