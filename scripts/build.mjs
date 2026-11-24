@@ -2,7 +2,9 @@
 // Starts an iOS build on EAS for one variant (ADR-0008), with guards:
 // - before: refuses to build with uncommitted changes, so that what is built is what is in git;
 //   a production build must also come from main, up to date with GitHub, because it goes to
-//   TestFlight, with a version that has not been released yet (ADR-0024);
+//   TestFlight, with a version that has not been released yet (ADR-0024); and refuses to build
+//   with node_modules out of step with package-lock.json, because EAS CLI reads the Expo config
+//   and its plugins here;
 // - after: warns if EAS CLI has rewritten app.json, which it does with values that must not
 //   be committed, and tags the version of a production build that went well.
 // The production build is sent to TestFlight when it finishes (`--auto-submit`), with the
@@ -17,6 +19,7 @@ import {
   fail,
   printSource,
   requireCommitted,
+  requireInstalledDependencies,
   requireMainUpToDate,
   requireUnreleasedVersion,
   tagRelease,
@@ -42,6 +45,7 @@ if (profile.fromMain) {
   requireMainUpToDate(`A ${profileName} build`);
   requireUnreleasedVersion(`A ${profileName} build`);
 }
+requireInstalledDependencies();
 printSource(profileName);
 
 if (checkOnly) {

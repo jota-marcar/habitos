@@ -32,6 +32,7 @@ import {
   printSource,
   requireCommitted,
   requireCompatibleBuild,
+  requireInstalledDependencies,
   requireMainUpToDate,
   requireUnreleasedVersion,
   tagRelease,
@@ -109,6 +110,7 @@ if (variant.fromMain) {
   requireMainUpToDate(`A ${variantName} update`);
   requireUnreleasedVersion(`A ${variantName} update`);
 }
+requireInstalledDependencies();
 printSource(variantName);
 requireCompatibleBuild(variantName);
 warnIfAppJsonChanged();

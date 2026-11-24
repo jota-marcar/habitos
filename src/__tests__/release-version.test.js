@@ -117,11 +117,23 @@ function setVersion(version) {
         packages: {
           "": { name: "app", version },
           "node_modules/other": { version },
+          // For another platform: npm never installs it here.
+          "node_modules/other-darwin": { version, optional: true },
         },
       },
       null,
       2,
     )}\n`,
+  );
+  installDependencies({ "node_modules/other": { version } });
+}
+
+/** What npm records in node_modules after an install. */
+function installDependencies(packages) {
+  mkdirSync(path.join(clone, "node_modules"), { recursive: true });
+  writeFileSync(
+    path.join(clone, "node_modules", ".package-lock.json"),
+    JSON.stringify({ name: "app", packages }),
   );
 }
 
@@ -146,6 +158,7 @@ beforeEach(() => {
   git("config", "user.name", "Test");
   git("config", "core.autocrlf", "false");
   git("switch", "--quiet", "-C", "main");
+  writeFileSync(path.join(clone, ".gitignore"), "node_modules/\n");
   setVersion("0.1.0");
   commit("chore: first version");
   git("tag", "-a", "v0.1.0", "-m", "v0.1.0");
@@ -281,6 +294,28 @@ test.each([
   expect(result.status).toBe(1);
   expect(result.output).toContain(message);
 });
+
+// EAS CLI reads the Expo config with the plugins of node_modules, and fails without saying why.
+test.each([
+  ["build.mjs", "missing", {}],
+  ["update.mjs", "missing", {}],
+  ["build.mjs", "older", { "node_modules/other": { version: "0.0.9" } }],
+  ["update.mjs", "older", { "node_modules/other": { version: "0.0.9" } }],
+])(
+  "%s refuses to release with a dependency %s in node_modules",
+  (script, _state, installed) => {
+    installDependencies(installed);
+    stubEasCheck("same", "same");
+
+    const result = runScript(script, "development", "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain(
+      "node_modules does not match package-lock.json (other)",
+    );
+    expect(result.output).toContain("Run `npm ci`");
+  },
+);
 
 // ADR-0026: an update without its source maps would leave its errors unreadable in Sentry.
 test("update.mjs refuses to publish without the token of Sentry", () => {

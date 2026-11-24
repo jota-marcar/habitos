@@ -71,6 +71,7 @@ Calcula la versión con los commits desde el último tag y la escribe en `app.js
 
 - **`main` al día.** `build:prod` y `update:prod` lo comprueban y se niegan a seguir. `build:dev` y `update:dev` no: usan la rama en la que estés, tal como esté en tu PC. Un `build:dev` desde una rama atrasada gasta un build en un binario sin los últimos cambios nativos.
 - **Sin cambios pendientes.** Los cuatro comandos se detienen si hay cambios sin commit.
+- **Dependencias instaladas.** Los cuatro comandos se detienen si `node_modules` no coincide con `package-lock.json`, y piden `npm ci`. EAS CLI lee la configuración de Expo en el PC, con los plugins que haya instalados allí. Si falta uno, se para con un error que no dice la causa ("expo config exited with non-zero code"), como le pasó al primer `build:prod` de la versión 0.3.0, que añadía Sentry. `/sync` ya ejecuta `npm ci` en el checkout de `main` cuando hace falta, así que solo debería saltar si se trabaja sin `/sync`.
 - **Comprobar sin lanzar.** Con `-- --check` solo se hacen las comprobaciones, por ejemplo `npm run build:dev -- --check`.
 
 ## Actualizaciones con una migración local

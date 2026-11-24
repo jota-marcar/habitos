@@ -1,16 +1,21 @@
 #!/usr/bin/env node
 // Brings the local repository up to date after a Pull Request has been merged:
-// updates main, moves the branches stacked on a merged Pull Request onto main
-// and deletes the local branches whose Pull Request is merged.
+// updates main, installs its dependencies if they are out of date, moves the
+// branches stacked on a merged Pull Request onto main and deletes the local
+// branches whose Pull Request is merged.
 // It also works from a git worktree: main is updated where it is checked out,
 // and a branch open in another worktree is never rebased or deleted.
 // Usage: node .claude/skills/sync/sync.mjs
 // Exits with code 1, changing nothing, if there are uncommitted changes here or
 // in the checkout of main.
 
-import { execFileSync, execSync } from "node:child_process";
+import { execFileSync, execSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 
+import {
+  describeDependencies,
+  outdatedDependencies,
+} from "../../../scripts/installed-dependencies.mjs";
 import { ghPath } from "../../lib/gh-path.mjs";
 
 const BASE = "main";
@@ -148,6 +153,37 @@ if (before === after) {
   console.log(git("log", "--format=  - %s", `${before}..${after}`));
   if (home !== BASE && mainPath) {
     console.log(`${BASE} is open at ${mainPath} and was updated there.`);
+  }
+}
+
+// Releases are built from main (scripts/build.mjs), with the node_modules of its checkout: a
+// dependency that a merge added or changed is installed now, not found missing by EAS later.
+// Nothing is installed if it already matches, so up-to-date checkouts stay fast.
+if (mainPath) {
+  const outdated = outdatedDependencies(mainPath);
+  if (outdated.length > 0) {
+    // Through the shell, because on Windows npm is a .cmd file.
+    const install = spawnSync("npm ci", {
+      cwd: mainPath,
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+      shell: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    if (install.status === 0) {
+      console.log(
+        `Dependencies: npm ci installed them in ${mainPath} (out of date: ${describeDependencies(outdated)}).`,
+      );
+    } else {
+      const errors = `${install.stdout ?? ""}\n${install.stderr ?? ""}`
+        .split("\n")
+        .filter((line) => /ERR!|error/i.test(line))
+        .slice(0, 3)
+        .join(" | ");
+      console.log(
+        `DEPENDENCIES PROBLEM: npm ci failed in ${mainPath} (${errors || "no error output"}); its node_modules does not match package-lock.json (${describeDependencies(outdated)}).`,
+      );
+    }
   }
 }
 

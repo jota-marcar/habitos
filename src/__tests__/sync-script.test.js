@@ -9,6 +9,7 @@
 import { afterEach, beforeEach, expect, jest, test } from "@jest/globals";
 import { execFileSync, spawnSync } from "node:child_process";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -70,8 +71,60 @@ const spawnSyncScript = (cwd) =>
   spawnSync(process.execPath, [SCRIPT], {
     cwd,
     encoding: "utf8",
-    env: { ...process.env, SYNC_GH_STUB: path.join(root, "gh-stub.cjs") },
+    env: {
+      ...process.env,
+      SYNC_GH_STUB: path.join(root, "gh-stub.cjs"),
+      PATH: `${path.join(root, "stubs")}${path.delimiter}${process.env.PATH}`,
+    },
   });
+
+/**
+ * npm, which on `npm ci` records as installed what package-lock.json asks for, as the real one
+ * does, or fails with `code`.
+ */
+function stubNpm(code) {
+  const stubs = path.join(root, "stubs");
+  mkdirSync(stubs, { recursive: true });
+  const stub = path.join(stubs, "npm-stub.cjs");
+  writeFileSync(
+    stub,
+    code === 0
+      ? `const fs = require("node:fs");
+const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+delete lock.packages[""];
+fs.mkdirSync("node_modules", { recursive: true });
+fs.writeFileSync("node_modules/.package-lock.json", JSON.stringify(lock));
+fs.appendFileSync(${JSON.stringify(path.join(root, "npm-calls.txt"))}, process.argv.slice(2).join(" ") + "\\n");
+`
+      : `console.error("npm ERR! code E404");\nprocess.exit(${code});\n`,
+  );
+  writeFileSync(
+    path.join(stubs, "npm.cmd"),
+    `@"${process.execPath}" "${stub}" %*\r\n`,
+  );
+  writeFileSync(
+    path.join(stubs, "npm"),
+    `#!/bin/sh\nexec "${process.execPath}" "${stub}" "$@"\n`,
+  );
+  chmodSync(path.join(stubs, "npm"), 0o755);
+}
+
+/** Puts in main a package-lock.json with one dependency, which nothing has installed. */
+function addDependencyToMain() {
+  writeFileSync(path.join(clone, ".gitignore"), "node_modules/\n");
+  commit(
+    "package-lock.json",
+    JSON.stringify({
+      name: "app",
+      packages: {
+        "": { name: "app" },
+        "node_modules/dep": { version: "1.0.0" },
+      },
+    }),
+    "chore: adds a dependency (#3)",
+  );
+  git("push", "--quiet", "origin", "main");
+}
 
 function runSync(cwd = clone) {
   const result = spawnSyncScript(cwd);
@@ -163,6 +216,34 @@ test("keeps a merged branch with commits that never reached its Pull Request", (
   expect(output).toContain("Deleted branches: none");
   expect(output).toContain("commits that are not in its Pull Request");
   expect(git("rev-parse", BRANCH)).toBe(unpushed);
+});
+
+// Releases are built from main: a dependency missing from its node_modules breaks EAS CLI.
+test("installs the dependencies of main when its node_modules does not match package-lock.json", () => {
+  addDependencyToMain();
+  stubNpm(0);
+
+  const output = runSync();
+
+  expect(output).toContain("Dependencies: npm ci installed them in");
+  expect(output).toContain("(out of date: dep)");
+  expect(readFileSync(path.join(root, "npm-calls.txt"), "utf8")).toBe("ci\n");
+
+  // Once installed, nothing is installed again.
+  expect(runSync()).not.toContain("Dependencies:");
+  expect(readFileSync(path.join(root, "npm-calls.txt"), "utf8")).toBe("ci\n");
+});
+
+test("reports an install that fails and carries on", () => {
+  addDependencyToMain();
+  stubNpm(1);
+  setPullRequest("MERGED", mergeBranchWithSquash());
+
+  const output = runSync();
+
+  expect(output).toContain("DEPENDENCIES PROBLEM: npm ci failed in");
+  expect(output).toContain("npm ERR! code E404");
+  expect(output).toContain(`Deleted branches: ${BRANCH}`);
 });
 
 test("keeps a branch whose Pull Request is still open", () => {
