@@ -66,6 +66,7 @@ Se usa Sentry, con su organización en la región de la UE y un proyecto para la
 - El error y la zona donde se capturó.
 - El dispositivo y la versión de la app.
 - El rastro de pantallas: lo deja la propia app con el patrón de la ruta (`/habits/[id]/edit`), nunca con sus valores.
+- Una sesión anónima por cada apertura, que es el comportamiento por defecto del SDK. No lleva usuario y sirve para saber qué parte de las aperturas termina sin cierres inesperados.
 
 **Capturas explícitas.** El módulo `src/shared/error-reporting.ts` ([ADR-0025](0025-capa-compartida-y-regla-de-dependencias-entre-capas-impuesta-con-eslint.md)) envía lo que hoy se pierde:
 
