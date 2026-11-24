@@ -41,6 +41,11 @@ function commit(message) {
 }
 
 function runScript(script, ...args) {
+  return runScriptWithEnv({}, script, ...args);
+}
+
+/** Runs a script with some variables changed: undefined removes one. */
+function runScriptWithEnv(env, script, ...args) {
   const result = spawnSync(
     process.execPath,
     [path.join(SCRIPTS, script), ...args],
@@ -49,6 +54,8 @@ function runScript(script, ...args) {
       encoding: "utf8",
       env: {
         ...process.env,
+        SENTRY_AUTH_TOKEN: "sntrys_test",
+        ...env,
         PATH: `${stubs}${path.delimiter}${process.env.PATH}`,
       },
     },
@@ -273,6 +280,24 @@ test.each([
 
   expect(result.status).toBe(1);
   expect(result.output).toContain(message);
+});
+
+// ADR-0026: an update without its source maps would leave its errors unreadable in Sentry.
+test("update.mjs refuses to publish without the token of Sentry", () => {
+  setVersion("0.2.0");
+  commit("chore: prepares the version");
+  git("push", "--quiet", "origin", "main");
+  stubEasCheck("same", "same");
+
+  const result = runScriptWithEnv(
+    { SENTRY_AUTH_TOKEN: undefined },
+    "update.mjs",
+    "production",
+    "--check",
+  );
+
+  expect(result.status).toBe(1);
+  expect(result.output).toContain("SENTRY_AUTH_TOKEN is missing");
 });
 
 test("a production build that goes well tags its version on GitHub", () => {

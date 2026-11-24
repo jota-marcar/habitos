@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react-native";
 import * as Notifications from "expo-notifications";
 
 import { listEntries } from "@/data/entries-repository";
@@ -157,6 +158,9 @@ describe("refreshReminders", () => {
       "The reminders could not be refreshed.",
       expect.any(Error),
     );
+    expect(Sentry.captureException).toHaveBeenCalledWith(new Error("broken"), {
+      tags: { area: "reminders" },
+    });
   });
 });
 
@@ -247,6 +251,10 @@ describe("listenToReminders", () => {
     expect(warn).toHaveBeenCalledWith(
       "A reminder could not be answered.",
       expect.any(Error),
+    );
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      new Error("no database"),
+      { tags: { area: "reminders" } },
     );
   });
 });

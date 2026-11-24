@@ -2,13 +2,18 @@
 // the whole app, so it depends on no provider.
 
 import type { ErrorBoundaryProps } from "expo-router";
+import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
+
+import { reportError } from "@/shared/error-reporting";
 
 import { Button } from "./components";
 import { fontSize, spacing, useColors } from "./theme";
 
-export function ErrorScreen({ retry }: ErrorBoundaryProps) {
+export function ErrorScreen({ error, retry }: ErrorBoundaryProps) {
   const colors = useColors();
+  // The boundary catches the error before Sentry could see it (ADR-0026).
+  useEffect(() => reportError(error, "error-screen"), [error]);
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <Text

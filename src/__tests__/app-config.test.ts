@@ -1,10 +1,12 @@
 import appConfig, {
+  requireSentryDsn,
   resolveGoogleUrlScheme,
   resolveVariant,
 } from "../../app.config";
 import easJson from "../../eas.json";
 
 const GOOGLE_IOS_CLIENT_ID = "1234-abcd.apps.googleusercontent.com";
+const SENTRY_DSN = "https://key@o1.ingest.de.sentry.io/2";
 
 const staticConfig = {
   name: "Hábitos",
@@ -22,17 +24,19 @@ function setEnv(name: string, value: string | undefined) {
 }
 
 /**
- * The config of a variant, with the Google client ID of its environment (null: missing), on the
- * PC or on an EAS Build server.
+ * The config of a variant, with the Google client ID and the Sentry DSN of its environment
+ * (null: missing), on the PC or on an EAS Build server.
  */
 function configFor(
   variant: string | undefined,
   {
     googleIosClientId = GOOGLE_IOS_CLIENT_ID,
+    sentryDsn = SENTRY_DSN,
     easBuild = false,
     config = staticConfig,
   }: {
     googleIosClientId?: string | null;
+    sentryDsn?: string | null;
     easBuild?: boolean;
     config?: typeof staticConfig & { plugins?: string[] };
   } = {},
@@ -41,10 +45,12 @@ function configFor(
     APP_VARIANT: process.env.APP_VARIANT,
     EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID:
       process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    EXPO_PUBLIC_SENTRY_DSN: process.env.EXPO_PUBLIC_SENTRY_DSN,
     EAS_BUILD: process.env.EAS_BUILD,
   };
   setEnv("APP_VARIANT", variant);
   setEnv("EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID", googleIosClientId ?? undefined);
+  setEnv("EXPO_PUBLIC_SENTRY_DSN", sentryDsn ?? undefined);
   setEnv("EAS_BUILD", easBuild ? "true" : undefined);
   try {
     return appConfig({
@@ -127,6 +133,14 @@ describe("appConfig", () => {
     "the internal name of the %s variant is plain ASCII",
     (variant) => {
       expect(configFor(variant).name).toMatch(/^[A-Za-z ]+$/);
+    },
+  );
+
+  // The app tells Sentry which environment an error comes from (ADR-0026).
+  test.each(["development", "production"])(
+    "the %s variant tells the app which one it is",
+    (variant) => {
+      expect(configFor(variant).extra?.appVariant).toBe(variant);
     },
   );
 
@@ -226,5 +240,24 @@ describe("eas.json", () => {
   test("only the production profile is sent to App Store Connect", () => {
     expect(Object.keys(easJson.submit)).toEqual(["production"]);
     expect(easJson.submit.production.ios.ascAppId).toMatch(/^\d+$/);
+  });
+});
+
+describe("Sentry", () => {
+  test("without the DSN, a build on EAS stops", () => {
+    expect(() =>
+      configFor("production", { sentryDsn: null, easBuild: true }),
+    ).toThrow("EXPO_PUBLIC_SENTRY_DSN is missing");
+  });
+
+  test.each([undefined, ""])(
+    "without the DSN %p, the app runs on the PC without error reports",
+    (dsn) => {
+      expect(() => requireSentryDsn(dsn, false)).not.toThrow();
+    },
+  );
+
+  test("with the DSN, a build on EAS goes on", () => {
+    expect(() => requireSentryDsn(SENTRY_DSN, true)).not.toThrow();
   });
 });

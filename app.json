@@ -44,6 +44,14 @@
         {
           "faceIDPermission": false
         }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://de.sentry.io/",
+          "organization": "SLUG-DE-LA-ORGANIZACION",
+          "project": "habitos"
+        }
       ]
     ],
     "experiments": {

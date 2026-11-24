@@ -7,6 +7,7 @@
   "dependencies": {
     "@react-native-community/datetimepicker": "9.2.1",
     "@react-native-google-signin/google-signin": "^17.0.0",
+    "@sentry/react-native": "~8.28.0",
     "@supabase/supabase-js": "^2.119.0",
     "expo": "~58.0.26",
     "expo-apple-authentication": "~58.0.3",
@@ -68,6 +69,7 @@
   "private": true,
   "allowScripts": {
     "@parcel/watcher": false,
-    "unrs-resolver": false
+    "unrs-resolver": false,
+    "@sentry/cli": false
   }
 }

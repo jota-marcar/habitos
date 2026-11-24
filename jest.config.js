@@ -26,6 +26,8 @@ module.exports = {
     "src/data/**/*.ts",
     "src/sync/**/*.ts",
     "src/notifications/**/*.ts",
+    // What leaves the device in an error report: a gap could send the name of a habit (ADR-0026).
+    "src/shared/error-reporting.ts",
     "supabase/functions/**/*.ts",
     "!src/**/*.test.ts",
     "!supabase/functions/**/*.test.ts",
@@ -38,6 +40,12 @@ module.exports = {
     "!src/notifications/startup.ts",
   ],
   coverageThreshold: {
+    "./src/shared/error-reporting.ts": {
+      statements: 100,
+      branches: 100,
+      functions: 100,
+      lines: 100,
+    },
     "./src/notifications/": {
       statements: 100,
       branches: 100,

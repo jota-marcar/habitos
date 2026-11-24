@@ -2,6 +2,7 @@
 // opening the app and coming back to it, a moment after each local change, from the task in
 // the background, and again later if it fails. Without a session it does nothing.
 
+import { reportError } from "@/shared/error-reporting";
 import { supabase } from "@/shared/supabase";
 import type { Database } from "@/data/database";
 
@@ -36,6 +37,7 @@ const scheduler = createSyncScheduler(
   },
   (error) => {
     console.warn("The data could not be synchronized.", error);
+    reportError(error, "sync");
     void recordSyncFailure(Date.now()).then(notifyFinished);
   },
 );

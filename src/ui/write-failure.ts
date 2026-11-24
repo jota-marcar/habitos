@@ -3,12 +3,15 @@
 
 import { Alert } from "react-native";
 
+import { reportError } from "@/shared/error-reporting";
+
 // Several quick taps that fail are one problem, not a dialog each.
 const QUIET_MS = 3_000;
 let lastShownAt = Number.NEGATIVE_INFINITY;
 
 export function reportWriteFailure(error: unknown): void {
   console.warn("A change could not be saved.", error);
+  reportError(error, "write");
   const shownAt = Date.now();
   if (shownAt - lastShownAt < QUIET_MS) return;
   lastShownAt = shownAt;

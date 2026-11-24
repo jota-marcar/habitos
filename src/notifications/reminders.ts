@@ -6,6 +6,7 @@ import * as Notifications from "expo-notifications";
 import type { Database } from "@/data/database";
 import { syncNow } from "@/sync/app-sync";
 import { newId, now } from "@/shared/clock";
+import { reportError } from "@/shared/error-reporting";
 import { requestHorizon } from "@/shared/horizon-request";
 
 import { answerReminder, notifyReminderRecorded } from "./actions";
@@ -58,6 +59,7 @@ export async function refreshReminders(db: Database): Promise<void> {
     await refresh();
   } catch (error) {
     console.warn("The reminders could not be refreshed.", error);
+    reportError(error, "reminders");
   }
 }
 
@@ -103,9 +105,10 @@ export function listenToReminders(openDatabase: () => Promise<Database>) {
   };
 
   const safely = (response: Notifications.NotificationResponse) =>
-    answer(response).catch((error: unknown) =>
-      console.warn("A reminder could not be answered.", error),
-    );
+    answer(response).catch((error: unknown) => {
+      console.warn("A reminder could not be answered.", error);
+      reportError(error, "reminders");
+    });
 
   Notifications.addNotificationResponseReceivedListener(
     (response) => void safely(response),
