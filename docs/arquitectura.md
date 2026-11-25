@@ -122,6 +122,26 @@ erDiagram
     USER ||--o{ WEEKLY_GOAL : tiene
     WEEKLY_GOAL ||--|{ WEEKLY_GOAL_VERSION : "se configura con"
     WEEKLY_GOAL ||--o{ WEEKLY_GOAL_ENTRY : "se registra en"
+    USER ||--o{ LONG_TERM_GOAL : tiene
+    LONG_TERM_GOAL ||--o| LONG_TERM_GOAL_ENTRY : "se registra en"
+
+    LONG_TERM_GOAL {
+        uuid id
+        uuid user_id
+        text name
+        text type "boolean | quantitative"
+        text color "nullable, clave de paleta"
+        numeric target "nullable"
+        text unit "nullable"
+        numeric increment "nullable"
+        date first_day "no cambia"
+        date deadline "posterior a first_day"
+    }
+    LONG_TERM_GOAL_ENTRY {
+        uuid id
+        uuid long_term_goal_id "única entre las vivas"
+        numeric value "1/0 en sí o no"
+    }
 
     WEEKLY_GOAL {
         uuid id
@@ -196,6 +216,7 @@ Decisiones del modelo:
 - **Avisos de pendientes:** dos al día a horas fijas (17:00 y 22:00), los días en que queda algún hábito sin cumplir (RF-37). No se guardan en la base: se calculan, como los recordatorios. Comparten la ventana de 60 con ellos (ver "Programar los recordatorios").
 - **Avisos de progreso:** dos a la semana a horas fijas (jueves a las 20:00 y domingo a las 11:00), si quedan objetivos de esa semana sin conseguir (RF-49). Tampoco se guardan en la base y van en la misma ventana.
 - **Objetivos semanales:** tablas propias con la misma forma que los hábitos, y un único total por objetivo y semana (clave única `weekly_goal_id + week`). Las semanas se guardan por su lunes. Qué objetivos tocan una semana se calcula con `first_week`, `recurring` y `archived_week` (RF-44, RF-48) ([ADR-0022](adr/0022-objetivos-semanales-en-tablas-propias-con-un-total-por-semana.md)).
+- **Metas:** dos tablas propias, sin versiones ni archivado: la configuración en `long_term_goals` y un único total por meta en `long_term_goal_entries` (clave única `long_term_goal_id`). El total va en su propia fila para que editar la meta en un dispositivo y apuntar en otro no choquen, porque la sincronización resuelve los conflictos fila a fila. Una meta está en curso de `first_day` a `deadline`, ambos incluidos, y `deadline > first_day` en las dos bases (RF-55, RF-58) ([ADR-0027](adr/0027-metas-en-dos-tablas-propias-sin-versiones-con-un-total-por-meta.md)).
 - **Campos de sincronización** en todas las tablas: identificador generado en el dispositivo (UUID), `updated_at` asignado por el servidor y `deleted` (borrado lógico) para propagar eliminaciones.
 - **En la base local** no existe `user_id` (es de un solo usuario) y cada tabla añade `pending_sync`, que marca las filas con cambios sin subir. Las claves únicas ignoran las filas borradas. Dos tablas solo existen en el dispositivo y guardan el estado de la sincronización: `sync_cursors`, hasta dónde ha bajado cada tabla, y `sync_account`, de qué cuenta son los datos ([ADR-0018](adr/0018-sincronizacion-con-pull-antes-que-push-y-union-por-clave-natural.md)).
 - **Migraciones locales:** lista ordenada en `src/data/migrations.ts`; la base guarda su versión y al abrir se aplican las que faltan. Una migración publicada no se edita.

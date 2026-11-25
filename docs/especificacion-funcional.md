@@ -66,7 +66,9 @@ La aplicación empezó por los hábitos diarios, que fueron su MVP. Se ha amplia
 | **Registro semanal** | `WeeklyGoalEntry` | Total apuntado de un objetivo semanal en una semana. |
 | **Aviso de progreso** | `ProgressDigest` | Aviso a una hora fija de la semana que nombra los objetivos aún sin conseguir y cuánto llevan. |
 | **Meta** | `LongTermGoal` | Algo que el usuario quiere conseguir antes de una fecha límite, a largo plazo (por ejemplo, "Correr una media maratón"). |
+| **Primer día** | `firstDay` | Día en que empieza una meta. |
 | **Fecha límite** | `deadline` | Último día en que una meta está en curso. |
+| **Registro de una meta** | `LongTermGoalEntry` | Total apuntado de una meta. |
 | **Aviso final** | `finalNotice` | Aviso que pide abrir la aplicación cuando los recordatorios ya preparados están a punto de acabarse. |
 
 La columna "En el código" es el nombre en inglés con el que cada término aparece en el código y en el modelo de datos ([ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)). Cada término se traduce siempre igual; uno nuevo se añade aquí antes de usarlo en el código. `goal` abrevia `WeeklyGoal` en el código de los objetivos semanales; las metas usan siempre su nombre completo, `LongTermGoal`, para no confundirse con ellos. `Record` se evita porque ya tiene otro significado en el lenguaje de programación.

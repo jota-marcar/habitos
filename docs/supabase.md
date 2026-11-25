@@ -121,7 +121,7 @@ Cada migración de la columna *Local* debe aparecer también en *Remote*. Si *Re
 
 En el panel de cada proyecto:
 
-1. **Table Editor:** aparecen las 7 tablas: `habits`, `habit_versions`, `entries`, `reminders`, `weekly_goals`, `weekly_goal_versions` y `weekly_goal_entries`. En un proyecto nuevo están vacías.
+1. **Table Editor:** aparecen las 9 tablas: `habits`, `habit_versions`, `entries`, `reminders`, `weekly_goals`, `weekly_goal_versions`, `weekly_goal_entries`, `long_term_goals` y `long_term_goal_entries`. En un proyecto nuevo están vacías.
 2. Cada tabla muestra que tiene **RLS enabled** y tres políticas (leer, crear y actualizar).
 3. **Advisors → Security Advisor:** no debe haber avisos sobre estas tablas. Si aparece alguno, cópialo en la conversación para analizarlo antes de seguir.
 
