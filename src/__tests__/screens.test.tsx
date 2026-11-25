@@ -27,6 +27,8 @@ import EditHabit from "@/app/habits/[id]/edit";
 import NewHabit from "@/app/habits/new";
 import Settings from "@/app/settings";
 import SignIn from "@/app/sign-in";
+import EditLongTermGoal from "@/app/long-term-goals/[id]/edit";
+import NewLongTermGoal from "@/app/long-term-goals/new";
 import EditWeeklyGoal from "@/app/weekly-goals/[id]/edit";
 import NewWeeklyGoal from "@/app/weekly-goals/new";
 import { listEntries, saveEntry } from "@/data/entries-repository";
@@ -37,7 +39,14 @@ import {
 } from "@/data/habits-repository";
 import { listReminders } from "@/data/reminders-repository";
 import {
+  listLongTermGoalEntries,
+  listLongTermGoals,
+  saveLongTermGoal,
+  saveLongTermGoalEntry,
+} from "@/data/long-term-goals-repository";
+import {
   habit,
+  longTermGoal,
   markSynced,
   openMigratedDatabase,
   version,
@@ -55,6 +64,7 @@ import type { TestDatabase } from "@/data/testing/node-database";
 import { localDate, type Weekday } from "@/domain/dates";
 import { scheduledDaysFrom } from "@/domain/schedule";
 import { localTime } from "@/domain/times";
+import type { LongTermGoal } from "@/domain/long-term-goals";
 import type { WeeklyGoal, WeeklyGoalVersion } from "@/domain/weekly-goals";
 import { AppStack, STACK_SETTINGS } from "@/ui/app-stack";
 import { DatabaseContext } from "@/ui/database";
@@ -188,19 +198,27 @@ function session(
 
 let mockSession: Session | null = null;
 
-// The native picker is replaced by a button that picks 08:30.
+// The native picker is replaced by a button that picks what `mockPicked` says: 08:30 for the
+// reminders, or a day for the deadlines. It shows the day it starts on and the first one it
+// allows, to check them.
+const PICKED_TIME = new Date(2026, 10, 12, 8, 30);
+let mockPicked = PICKED_TIME;
 jest.mock("@react-native-community/datetimepicker", () => {
   const { createElement } = jest.requireActual("react");
   const { Pressable } = jest.requireActual("react-native");
   return function MockDateTimePicker(props: {
     testID: string;
+    value: Date;
+    minimumDate?: Date;
     onLayout?: (event: unknown) => void;
     onValueChange: (event: unknown, date: Date) => void;
   }) {
     return createElement(Pressable, {
       testID: props.testID,
+      accessibilityValue: { text: props.value.toDateString() },
+      accessibilityHint: props.minimumDate?.toDateString(),
       onLayout: props.onLayout,
-      onPress: () => props.onValueChange({}, new Date(2026, 10, 12, 8, 30)),
+      onPress: () => props.onValueChange({}, mockPicked),
     });
   };
 });
@@ -273,6 +291,7 @@ let db: TestDatabase;
 
 beforeEach(async () => {
   mockToday = TODAY;
+  mockPicked = PICKED_TIME;
   mockNotificationsAllowed = true;
   mockScheduled.clear();
   mockSession = session("apple", "persona@example.com");
@@ -323,6 +342,8 @@ async function renderApp(initialUrl = "/") {
       "habits/[id]/edit": EditHabit,
       "weekly-goals/new": NewWeeklyGoal,
       "weekly-goals/[id]/edit": EditWeeklyGoal,
+      "long-term-goals/new": NewLongTermGoal,
+      "long-term-goals/[id]/edit": EditLongTermGoal,
       settings: Settings,
       "sign-in": SignIn,
     },
@@ -2110,9 +2131,10 @@ describe("weekly goals (RF-42 to RF-50)", () => {
     expect(screen.queryByLabelText("Restar 1 h")).toBeNull();
     expect(screen.queryByLabelText("Escribir la cantidad")).toBeNull();
     expect(screen.getByLabelText("Editar")).toBeTruthy();
-    await waitFor(async () =>
-      expect(await listWeeklyGoalEntries(db, NEXT_WEEK)).toEqual([]),
-    );
+    // Not `waitFor` with an async check: it returns before its act() closes, and the act left
+    // open stops the next test from rendering. The pause lets the tap be written, if it were.
+    await waitForTheMove();
+    expect(await listWeeklyGoalEntries(db, NEXT_WEEK)).toEqual([]);
   });
 
   test("a one-off goal of a past week can only be deleted", async () => {
@@ -2207,6 +2229,447 @@ describe("weekly goals (RF-42 to RF-50)", () => {
     });
 
     expect(await screen.findByText("Correr")).toBeTruthy();
+  });
+});
+
+describe("long-term goals (RF-55 to RF-61)", () => {
+  // Today is Thursday, 12 November 2026.
+  const TOMORROW = localDate("2026-11-13");
+  const NEW_YEAR = localDate("2026-12-31");
+
+  async function showGoals() {
+    const width = Dimensions.get("window").width;
+    await fireEvent.scroll(await screen.findByTestId("horizon-pager"), {
+      nativeEvent: {
+        contentOffset: { x: width * 2, y: 0 },
+        contentSize: { width: width * 3, height: 600 },
+        layoutMeasurement: { width, height: 600 },
+      },
+    });
+    await screen.findByText("Metas");
+  }
+
+  async function renderGoals() {
+    await renderApp();
+    await showGoals();
+  }
+
+  async function chooseDay(label: string) {
+    await layOut("calendar");
+    await drag("day-date", 300, 800);
+    await fireEvent.press(screen.getByLabelText(label));
+  }
+
+  const addGoal = (id: string, overrides: Partial<LongTermGoal> = {}) =>
+    saveLongTermGoal(
+      db,
+      longTermGoal(id, {
+        firstDay: localDate("2026-11-01"),
+        deadline: NEW_YEAR,
+        ...overrides,
+      }),
+    );
+
+  const addBooks = (overrides: Partial<LongTermGoal> = {}) =>
+    addGoal("books", {
+      name: "Leer",
+      type: "quantitative",
+      target: 24,
+      unit: "libros",
+      increment: 1,
+      ...overrides,
+    });
+
+  async function openNewGoal(name: string) {
+    await openMenu();
+    await fireEvent.press(screen.getByLabelText("Crear"));
+    expect(screen).toHavePathname("/long-term-goals/new");
+    await fireEvent.changeText(screen.getByLabelText("Nombre"), name);
+  }
+
+  async function save() {
+    await fireEvent.press(screen.getByLabelText("Guardar"));
+    await waitFor(() => expect(screen).toHavePathname("/"));
+  }
+
+  async function hold(id: string) {
+    await fireEvent(
+      await screen.findByTestId(`long-term-goal-${id}`),
+      "longPress",
+    );
+  }
+
+  function lastAlertButton(alert: jest.SpyInstance, label: string) {
+    const buttons = alert.mock.lastCall?.[2] as AlertButton[];
+    return buttons.find((b) => b.text === label);
+  }
+
+  /** The names of the goals on the page, from top to bottom, with what is left of them. */
+  function goalLabels() {
+    return screen
+      .getAllByTestId(/^long-term-goal-/)
+      .map((row) => row.props.accessibilityLabel as string);
+  }
+
+  /** The names of the goals in the achieved group, after the gap between the groups. */
+  function achievedNames() {
+    const items = screen.getAllByTestId(
+      /^long-term-goal-|^long-term-goals-gap$/,
+    );
+    const gap = items.findIndex(
+      (item) => item.props.testID === "long-term-goals-gap",
+    );
+    return items
+      .slice(gap + 1)
+      .map((row) => row.props.accessibilityLabel as string);
+  }
+
+  test("the third page has its title and explains how to create the first goal (RF-58)", async () => {
+    await renderGoals();
+
+    expect(screen.getByText("Todavía no tienes metas.")).toBeTruthy();
+    expect(
+      screen.getByText("Desliza desde abajo para crear una."),
+    ).toBeTruthy();
+    expect(screen.queryByText("Hoy")).toBeNull();
+  });
+
+  test("creates a goal from the menu of the page, with a deadline chosen on purpose (RF-55)", async () => {
+    await renderGoals();
+    await openNewGoal("Leer");
+    await fireEvent.press(screen.getByText("Cantidad"));
+    await fireEvent.changeText(screen.getByLabelText("Cantidad"), "24");
+    await fireEvent.changeText(screen.getByLabelText("Unidad"), "libros");
+
+    // The deadline has no default: saving without one says so.
+    await fireEvent.press(screen.getByLabelText("Guardar"));
+    expect(await screen.findByText("Elige una fecha límite.")).toBeTruthy();
+    expect(screen).toHavePathname("/long-term-goals/new");
+
+    // The calendar opens on the first day allowed, the day after it starts.
+    await fireEvent.press(screen.getByText("Elegir fecha límite"));
+    const picker = screen.getByTestId("deadline-picker");
+    expect(picker.props.accessibilityValue.text).toBe(
+      new Date(2026, 10, 13).toDateString(),
+    );
+    expect(picker.props.accessibilityHint).toBe(
+      new Date(2026, 10, 13).toDateString(),
+    );
+    expect(screen.getByText("Queda 1 día")).toBeTruthy();
+
+    mockPicked = new Date(2027, 5, 17, 12);
+    await fireEvent.press(picker);
+    expect(screen.getByText("Quedan 217 días")).toBeTruthy();
+    await save();
+
+    expect(await screen.findByText("Leer")).toBeTruthy();
+    expect(screen.getByText("0 / 24 libros")).toBeTruthy();
+    expect(screen.getByText("quedan 217 días")).toBeTruthy();
+    expect(await listLongTermGoals(db)).toEqual([
+      expect.objectContaining({
+        name: "Leer",
+        type: "quantitative",
+        target: 24,
+        firstDay: TODAY,
+        deadline: localDate("2027-06-17"),
+      }),
+    ]);
+  });
+
+  test("a goal created from a future day starts that day, and counts from it", async () => {
+    await renderGoals();
+    await chooseDay("20 de noviembre de 2026");
+    await screen.findByText("Viernes, 20 nov");
+
+    await openNewGoal("Correr");
+    await fireEvent.press(screen.getByText("Elegir fecha límite"));
+    // From the day it starts, not from today.
+    expect(
+      screen.getByTestId("deadline-picker").props.accessibilityValue.text,
+    ).toBe(new Date(2026, 10, 21).toDateString());
+    expect(screen.getByText("Queda 1 día")).toBeTruthy();
+    await save();
+
+    expect(await screen.findByText("Correr")).toBeTruthy();
+    expect(screen.getByText("queda 1 día")).toBeTruthy();
+    expect(await listLongTermGoals(db)).toEqual([
+      expect.objectContaining({
+        firstDay: localDate("2026-11-20"),
+        deadline: localDate("2026-11-21"),
+      }),
+    ]);
+  });
+
+  test("a goal created from a past day starts today, and the screen goes there", async () => {
+    await renderGoals();
+    await chooseDay("4 de noviembre de 2026");
+    await screen.findByText("Miércoles, 4 nov");
+
+    await openNewGoal("Correr");
+    await fireEvent.press(screen.getByText("Elegir fecha límite"));
+    await save();
+
+    expect(await screen.findByText("Correr")).toBeTruthy();
+    expect(screen.queryByText("Miércoles, 4 nov")).toBeNull();
+    expect((await listLongTermGoals(db))[0].firstDay).toBe(TODAY);
+  });
+
+  test("a deadline that does not come after the first day is rejected", async () => {
+    await renderGoals();
+    await openNewGoal("Correr");
+    await fireEvent.press(screen.getByText("Elegir fecha límite"));
+
+    // The calendar does not offer it, but a form left open past midnight could keep it.
+    mockPicked = new Date(2026, 10, 12, 12);
+    await fireEvent.press(screen.getByTestId("deadline-picker"));
+    await fireEvent.press(screen.getByLabelText("Guardar"));
+
+    expect(
+      await screen.findByText(
+        "La fecha límite tiene que ser posterior al día en que empieza la meta.",
+      ),
+    ).toBeTruthy();
+    expect(await listLongTermGoals(db)).toEqual([]);
+  });
+
+  test("cancelling a goal with a deadline chosen asks first (RF-52)", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    await renderGoals();
+    await openMenu();
+    await fireEvent.press(screen.getByLabelText("Crear"));
+    await fireEvent.press(await screen.findByText("Elegir fecha límite"));
+
+    await fireEvent.press(screen.getByLabelText("Cancelar"));
+
+    expect(alert).toHaveBeenCalledWith(
+      "¿Descartar los cambios?",
+      expect.any(String),
+      expect.any(Array),
+    );
+    expect(screen).toHavePathname("/long-term-goals/new");
+  });
+
+  test("the goals in progress go by their deadline, and the achieved ones at the bottom (RF-58)", async () => {
+    await addGoal("marathon", {
+      name: "Maratón",
+      deadline: localDate("2027-04-01"),
+    });
+    await addBooks();
+    await addGoal("move", { name: "Mudanza", deadline: TOMORROW });
+    await addGoal("app", { name: "App", deadline: TODAY });
+    await addGoal("done", { name: "Hecha", deadline: TOMORROW });
+    await saveLongTermGoalEntry(db, {
+      id: "e1",
+      longTermGoalId: "done",
+      value: 1,
+    });
+    // Not in progress today: it ended, or it has not started.
+    await addGoal("ended", {
+      name: "Terminada",
+      deadline: localDate("2026-11-11"),
+    });
+    await addGoal("later", {
+      name: "Futura",
+      firstDay: localDate("2026-11-20"),
+    });
+    await renderGoals();
+    await screen.findByText("Leer");
+
+    expect(goalLabels()).toEqual([
+      "App, último día",
+      "Mudanza, queda 1 día",
+      "Leer, quedan 49 días",
+      "Maratón, quedan 140 días",
+      "Hecha",
+    ]);
+    expect(achievedNames()).toEqual(["Hecha"]);
+  });
+
+  test("a tap adds the increment, and the goal moves to the achieved group after a pause (RF-59)", async () => {
+    await addBooks({ target: 2 });
+    await renderGoals();
+
+    await fireEvent.press(await screen.findByTestId("long-term-goal-books"));
+    await screen.findByText("1 / 2 libros");
+    await fireEvent.press(screen.getByTestId("long-term-goal-books"));
+    await screen.findByText("2 / 2 libros");
+    expect(achievedNames()).toEqual([]);
+    expect(mockHaptics).toContain("notification:success");
+
+    await waitForTheMove();
+
+    await waitFor(() => expect(achievedNames()).toEqual(["Leer"]));
+    // An achieved goal does not say what is left.
+    expect(screen.queryByTestId("detail-books")).toBeNull();
+    expect(await listLongTermGoalEntries(db)).toEqual([
+      expect.objectContaining({ longTermGoalId: "books", value: 2 }),
+    ]);
+  });
+
+  test("another day shows its date next to the title, which goes back to today (RF-41)", async () => {
+    await addBooks();
+    await renderGoals();
+    await screen.findByText("Leer");
+
+    await chooseDay("10 de noviembre de 2026");
+
+    expect(await screen.findByText("Martes, 10 nov")).toBeTruthy();
+    expect(screen.getByText("Metas")).toBeTruthy();
+    expect(screen.getByText("quedan 51 días")).toBeTruthy();
+
+    await fireEvent.press(screen.getByText("Metas"));
+    expect(await screen.findByText("quedan 49 días")).toBeTruthy();
+    expect(screen.queryByText("Martes, 10 nov")).toBeNull();
+  });
+
+  test("a day with goals, but none in progress, says so", async () => {
+    await addBooks({ firstDay: localDate("2026-11-10") });
+    await renderGoals();
+    await screen.findByText("Leer");
+
+    await chooseDay("4 de noviembre de 2026");
+
+    expect(
+      await screen.findByText("Ese día no hay ninguna meta en curso."),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText("Desliza desde abajo para crear una."),
+    ).toBeNull();
+  });
+
+  test("a goal forgotten before its deadline is recorded from one of its days (RF-59)", async () => {
+    await addGoal("move", {
+      name: "Mudanza",
+      deadline: localDate("2026-11-10"),
+    });
+    await renderGoals();
+    // Like an archived habit, a goal that has ended no longer counts as one the user has.
+    expect(await screen.findByText("Todavía no tienes metas.")).toBeTruthy();
+
+    await chooseDay("10 de noviembre de 2026");
+    await fireEvent.press(await screen.findByTestId("long-term-goal-move"));
+    await waitForTheMove();
+
+    expect(await listLongTermGoalEntries(db)).toEqual([
+      expect.objectContaining({ longTermGoalId: "move", value: 1 }),
+    ]);
+  });
+
+  test("a future day records nothing, and the options cannot correct", async () => {
+    await addBooks();
+    await renderGoals();
+    await chooseDay("20 de noviembre de 2026");
+
+    await fireEvent.press(await screen.findByTestId("long-term-goal-books"));
+    await hold("books");
+
+    expect(screen.queryByLabelText("Restar 1 libros")).toBeNull();
+    expect(screen.queryByLabelText("Escribir la cantidad")).toBeNull();
+    expect(screen.getByLabelText("Editar")).toBeTruthy();
+    expect(screen.queryByLabelText("Archivar")).toBeNull();
+    await waitForTheMove();
+    expect(await listLongTermGoalEntries(db)).toEqual([]);
+  });
+
+  test("the options subtract the increment and write the exact total (RF-60)", async () => {
+    const prompt = jest.spyOn(Alert, "prompt").mockImplementation(() => {});
+    await addBooks();
+    await renderGoals();
+    await fireEvent.press(await screen.findByTestId("long-term-goal-books"));
+    await fireEvent.press(screen.getByTestId("long-term-goal-books"));
+    await screen.findByText("2 / 24 libros");
+
+    await hold("books");
+    expect(screen.queryByLabelText("Archivar")).toBeNull();
+    await fireEvent.press(screen.getByLabelText("Restar 1 libros"));
+    expect(await screen.findAllByText("1 / 24 libros")).toHaveLength(2);
+
+    await fireEvent.press(screen.getByLabelText("Escribir la cantidad"));
+    await act(async () => {
+      await lastAlertButton(prompt, "Guardar")?.onPress?.("7");
+    });
+
+    expect(await screen.findByText("7 / 24 libros")).toBeTruthy();
+  });
+
+  test("a goal whose deadline has passed is no longer edited (RF-56)", async () => {
+    await addBooks({ deadline: localDate("2026-11-10") });
+    await renderGoals();
+    await chooseDay("10 de noviembre de 2026");
+
+    await hold("books");
+
+    expect(screen.queryByLabelText("Editar")).toBeNull();
+    expect(screen.getByLabelText("Restar 1 libros")).toBeTruthy();
+    expect(screen.getByLabelText("Eliminar")).toBeTruthy();
+  });
+
+  test("editing changes the whole goal, the deadline included (RF-56)", async () => {
+    await addBooks();
+    await saveLongTermGoalEntry(db, {
+      id: "e1",
+      longTermGoalId: "books",
+      value: 3,
+    });
+    await renderGoals();
+
+    await hold("books");
+    await fireEvent.press(screen.getByLabelText("Editar"));
+    expect(screen).toHavePathname("/long-term-goals/books/edit");
+    await screen.findByDisplayValue("Leer");
+    // The type cannot change, and the deadline is shown until it is changed.
+    expect(screen.queryByText("Sí o no")).toBeNull();
+    expect(screen.getByText("31 de diciembre de 2026")).toBeTruthy();
+    expect(screen.getByText("Quedan 49 días")).toBeTruthy();
+
+    await fireEvent.changeText(screen.getByLabelText("Nombre"), "Leer más");
+    await fireEvent.changeText(screen.getByLabelText("Cantidad"), "3");
+    await fireEvent.press(screen.getByLabelText("Cambiar la fecha límite"));
+    // A goal that has started can bring its deadline as close as today.
+    expect(screen.getByTestId("deadline-picker").props.accessibilityHint).toBe(
+      new Date(2026, 10, 12).toDateString(),
+    );
+    mockPicked = new Date(2026, 11, 1, 12);
+    await fireEvent.press(screen.getByTestId("deadline-picker"));
+    expect(screen.getByText("Quedan 19 días")).toBeTruthy();
+    await save();
+
+    // With the new target, what was recorded achieves it.
+    await waitFor(() => expect(achievedNames()).toEqual(["Leer más"]));
+    expect(await listLongTermGoals(db)).toEqual([
+      expect.objectContaining({
+        name: "Leer más",
+        target: 3,
+        firstDay: localDate("2026-11-01"),
+        deadline: localDate("2026-12-01"),
+      }),
+    ]);
+  });
+
+  test("deleting asks first, and the goal disappears with what was recorded (RF-57)", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    await addBooks();
+    await saveLongTermGoalEntry(db, {
+      id: "e1",
+      longTermGoalId: "books",
+      value: 3,
+    });
+    await renderGoals();
+
+    await hold("books");
+    await fireEvent.press(screen.getByLabelText("Eliminar"));
+    expect(alert).toHaveBeenCalledWith(
+      "¿Eliminar «Leer»?",
+      "Se borrará junto con todo lo apuntado. No se puede deshacer.",
+      expect.any(Array),
+    );
+    await act(async () => {
+      await lastAlertButton(alert, "Eliminar")?.onPress?.();
+    });
+
+    expect(await screen.findByText("Todavía no tienes metas.")).toBeTruthy();
+    expect(await listLongTermGoals(db)).toEqual([]);
+    expect(await listLongTermGoalEntries(db)).toEqual([]);
   });
 });
 

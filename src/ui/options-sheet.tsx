@@ -1,5 +1,5 @@
-// The options of a habit or a weekly goal (RF-34, RF-50), in a sheet that comes up when it is
-// held down in its list. Which options it shows is decided by the domain.
+// The options of a habit, a weekly goal or a long-term goal (RF-34, RF-50, RF-60), in a sheet that
+// comes up when it is held down in its list. Which options it shows is decided by the domain.
 
 import type { SFSymbol } from "expo-symbols";
 import { Alert } from "react-native";
@@ -31,15 +31,16 @@ export interface OptionsItem {
   readonly amounts: Amounts;
   readonly value: number;
   readonly options: readonly HabitOption[];
-  /** What the confirmations explain. */
-  readonly archiveMessage: string;
+  /** What the confirmations explain. Long-term goals are not archived (RF-57). */
+  readonly archiveMessage?: string;
   readonly deleteMessage: string;
 }
 
 export interface OptionsActions {
   readonly decrement: (id: string) => Promise<void>;
   readonly setAmount: (id: string, amount: number) => Promise<void>;
-  readonly archive: (id: string) => Promise<void>;
+  /** Only for what can be archived: habits and weekly goals. */
+  readonly archive?: (id: string) => Promise<void>;
   readonly remove: (id: string) => Promise<void>;
   readonly edit: (id: string) => void;
 }
@@ -126,8 +127,13 @@ function Options({
     },
     archive: () => {
       sheet.close();
-      confirm(`¿Archivar «${name}»?`, item.archiveMessage, "Archivar", () =>
-        actions.archive(id),
+      const { archive } = actions;
+      if (archive === undefined) return;
+      confirm(
+        `¿Archivar «${name}»?`,
+        item.archiveMessage ?? "",
+        "Archivar",
+        () => archive(id),
       );
     },
     delete: () => {

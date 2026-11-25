@@ -1,5 +1,5 @@
-// The list of a page of the main screen: the habits of a day (RF-12) or the goals of a week
-// (RF-46). What is pending sits at the top and what is done at the bottom, with the free space
+// The list of a page of the main screen: the habits of a day (RF-12), the goals of a week (RF-46)
+// or the long-term goals in progress (RF-58). What is pending sits at the top and what is done at the bottom, with the free space
 // between them. An item that was done or undone slides to its group, after a pause in the taps.
 
 import { useEffect, type ComponentProps } from "react";
@@ -30,6 +30,9 @@ const DONE_OPACITY = 0.4;
 // with Reduce Motion on, iOS skips it.
 const MOVE = LinearTransition.duration(350).easing(Easing.inOut(Easing.quad));
 
+// Between the dot and the name.
+const LABEL_GAP = spacing.sm + 2;
+
 // The least space between the two groups, when they fill the box and it scrolls (RF-12).
 const GROUP_GAP = spacing.xl;
 
@@ -42,6 +45,8 @@ export interface TrackedItem {
   readonly amounts: Amounts;
   readonly value: number;
   readonly done: boolean;
+  /** A second line under the name, smaller: what is left of a long-term goal (RF-58). */
+  readonly detail?: string;
 }
 
 function TrackedRow({
@@ -60,7 +65,7 @@ function TrackedRow({
   onLongPress: () => void;
 }) {
   const colors = useColors();
-  const { id, name, type, color, amounts, value, done } = item;
+  const { id, name, type, color, amounts, value, done, detail } = item;
   const boolean = type === "boolean";
   const progress = boolean ? null : formatProgress(value, amounts);
 
@@ -77,26 +82,44 @@ function TrackedRow({
         testID={`${rowPrefix}-${id}`}
         accessibilityRole={boolean ? "checkbox" : "button"}
         accessibilityState={boolean ? { checked: done } : undefined}
-        accessibilityLabel={name}
+        accessibilityLabel={detail === undefined ? name : `${name}, ${detail}`}
         accessibilityValue={progress === null ? undefined : { text: progress }}
         onPress={onPress}
         onLongPress={onLongPress}
         style={({ pressed }) => [styles.row, pressed && styles.pressed]}
       >
-        <View style={styles.label}>
-          {/* An item without a color leaves the room of the dot empty, so that the names line up. */}
-          {!showColor ? null : color === null ? (
-            <View testID={`no-color-${id}`} style={styles.noDot} />
-          ) : (
-            <ProgressDot
-              testID={`color-dot-${id}`}
-              color={colors.tracked[color]}
-              progress={progressOf(type, amounts, value)}
-            />
+        <View style={styles.labelLines}>
+          <View style={styles.label}>
+            {/* An item without a color leaves the room of the dot empty, so that the names line up. */}
+            {!showColor ? null : color === null ? (
+              <View testID={`no-color-${id}`} style={styles.noDot} />
+            ) : (
+              <ProgressDot
+                testID={`color-dot-${id}`}
+                color={colors.tracked[color]}
+                progress={progressOf(type, amounts, value)}
+              />
+            )}
+            <Text
+              style={[styles.name, { color: colors.text }]}
+              numberOfLines={2}
+            >
+              {name}
+            </Text>
+          </View>
+          {/* Under the name, lined up with it and not with the dot. */}
+          {detail === undefined ? null : (
+            <Text
+              testID={`detail-${id}`}
+              style={[
+                styles.detail,
+                showColor && styles.detailAfterDot,
+                { color: colors.textSecondary },
+              ]}
+            >
+              {detail}
+            </Text>
           )}
-          <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
-            {name}
-          </Text>
         </View>
         {progress === null ? null : (
           <Text style={[styles.progress, { color: colors.textSecondary }]}>
@@ -115,7 +138,7 @@ function Separator() {
   );
 }
 
-type ListScrollProps = Pick<
+export type ListScrollProps = Pick<
   ComponentProps<typeof ScrollView>,
   "simultaneousWith" | "onScroll"
 >;
@@ -195,12 +218,15 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md - spacing.xs,
   },
   pressed: { opacity: 0.6 },
+  labelLines: { flexShrink: 1, gap: 2 },
   label: {
     alignItems: "center",
     flexDirection: "row",
     flexShrink: 1,
-    gap: spacing.sm + 2,
+    gap: LABEL_GAP,
   },
+  detail: { fontSize: fontSize.caption },
+  detailAfterDot: { marginLeft: PROGRESS_DOT_SIZE + LABEL_GAP },
   noDot: { height: PROGRESS_DOT_SIZE, width: PROGRESS_DOT_SIZE },
   name: { flexShrink: 1, fontSize: fontSize.list },
   progress: { fontSize: fontSize.list, fontVariant: ["tabular-nums"] },

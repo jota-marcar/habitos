@@ -120,6 +120,20 @@ export function formatFullDate(date: LocalDate): string {
   return `${day} de ${MONTH_NAMES[month - 1]} de ${year}`;
 }
 
+/**
+ * What is left of a long-term goal until its deadline (RF-58): "quedan 40 días", "queda 1 día",
+ * and "último día" on the deadline itself.
+ */
+export function formatDaysLeft(days: number): string {
+  if (days === 0) return "último día";
+  return days === 1 ? "queda 1 día" : `quedan ${days} días`;
+}
+
+/** The same, at the start of a line (RF-55): "Quedan 217 días". */
+export function formatDaysLeftLine(days: number): string {
+  return capitalized(formatDaysLeft(days));
+}
+
 /** An amount with a decimal comma and no trailing zeros: 1.5 → "1,5". */
 export function formatAmount(value: number): string {
   return String(value).replace(".", ",");

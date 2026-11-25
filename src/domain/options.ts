@@ -1,9 +1,14 @@
-// The options of a habit or a weekly goal, opened by holding it down in its list (RF-34, RF-50).
-// Which ones appear depends on the day or the week on screen and on the habit or goal.
+// The options of a habit, a weekly goal or a long-term goal, opened by holding it down in its list
+// (RF-34, RF-50, RF-60). Which ones appear depends on the day or the week on screen and on the item.
 
 import type { LocalDate } from "./dates";
 import { canRecordOn } from "./entries";
 import type { Habit } from "./habits";
+import {
+  canEditLongTermGoal,
+  canRecordLongTermGoal,
+  type LongTermGoal,
+} from "./long-term-goals";
 import { canEditWeeklyGoal, type WeeklyGoal } from "./weekly-goals";
 import type { Week } from "./weeks";
 
@@ -51,6 +56,29 @@ export function weeklyGoalOptions(
   }
   if (canEditWeeklyGoal(goal, today)) options.push("edit");
   if (goal.recurring && goal.archivedWeek === null) options.push("archive");
+  options.push("delete");
+  return options;
+}
+
+/**
+ * The options of a long-term `goal` while `day` is on screen, in the order they are shown
+ * (RF-60).
+ * - What was recorded can be corrected whenever something can be recorded (RF-59). Only goals
+ *   with an amount need options for it.
+ * - A goal whose deadline has passed can no longer be edited (RF-56).
+ * - Goals are not archived: they end on their deadline (RF-57).
+ * - Any goal can be deleted (RF-57).
+ */
+export function longTermGoalOptions(
+  goal: LongTermGoal,
+  day: LocalDate,
+  today: LocalDate,
+): HabitOption[] {
+  const options: HabitOption[] = [];
+  if (goal.type === "quantitative" && canRecordLongTermGoal(goal, day, today)) {
+    options.push("decrement", "exact_amount");
+  }
+  if (canEditLongTermGoal(goal, today)) options.push("edit");
   options.push("delete");
   return options;
 }

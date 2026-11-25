@@ -4,7 +4,7 @@
 // included.
 
 import type { LocalDate } from "./dates";
-import { later } from "./dates";
+import { addDays, daysBetween, later } from "./dates";
 import { isDone } from "./day";
 import { fail, ok, type Result } from "./result";
 import {
@@ -37,7 +37,8 @@ export interface LongTermGoalEntry {
   readonly value: number;
 }
 
-export type DeadlineError = "deadline_not_after_first_day" | "deadline_in_past";
+export type DeadlineError =
+  "deadline_empty" | "deadline_not_after_first_day" | "deadline_in_past";
 
 export type LongTermGoalError = NameError | AmountsError | DeadlineError;
 
@@ -46,7 +47,8 @@ export interface NewLongTermGoal {
   readonly type: TrackedType;
   readonly color: TrackedColor | null;
   readonly amounts: Amounts;
-  readonly deadline: LocalDate;
+  /** Required, with no default, so that it is chosen on purpose (RF-55): null until then. */
+  readonly deadline: LocalDate | null;
 }
 
 /**
@@ -74,6 +76,36 @@ export function validateDeadline(
 }
 
 /**
+ * The earliest deadline that can be chosen for a goal that starts on `firstDay` (RF-55, RF-56):
+ * the day after it starts, and not before the current day.
+ */
+export function earliestDeadline(
+  firstDay: LocalDate,
+  today: LocalDate,
+): LocalDate {
+  return later(addDays(firstDay, 1), today);
+}
+
+/**
+ * The days left until `deadline` from `day` (RF-55, RF-58): 0 on the deadline itself, which is
+ * the last day of the goal.
+ */
+export function daysLeft(deadline: LocalDate, day: LocalDate): number {
+  return daysBetween(day, deadline);
+}
+
+/**
+ * The day the form counts the days left from (RF-55): the day the goal starts, or the current
+ * one if it has already started. It is the first day the page shows the goal from now on.
+ */
+export function countdownStart(
+  firstDay: LocalDate,
+  today: LocalDate,
+): LocalDate {
+  return later(firstDay, today);
+}
+
+/**
  * Creates a goal that starts on `firstDay`, which `firstDayOfNewLongTermGoal` gives. The
  * identifier is generated outside the domain.
  */
@@ -83,12 +115,15 @@ export function createLongTermGoal(
   firstDay: LocalDate,
   today: LocalDate,
 ): Result<LongTermGoal, LongTermGoalError> {
+  const { deadline } = input;
   const errors: LongTermGoalError[] = [
     ...validateName(input.name),
     ...validateAmounts(input.type, input.amounts),
-    ...validateDeadline(input.deadline, firstDay, today),
+    ...(deadline === null
+      ? (["deadline_empty"] as const)
+      : validateDeadline(deadline, firstDay, today)),
   ];
-  if (errors.length > 0) return fail(errors);
+  if (errors.length > 0 || deadline === null) return fail(errors);
 
   return ok({
     ...normalizeAmounts(input.amounts),
@@ -97,7 +132,7 @@ export function createLongTermGoal(
     type: input.type,
     color: input.color,
     firstDay,
-    deadline: input.deadline,
+    deadline,
   });
 }
 

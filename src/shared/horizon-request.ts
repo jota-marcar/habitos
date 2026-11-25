@@ -3,7 +3,7 @@
 // waits here until the screen is there to take it.
 
 /** The pages of the main screen, in the order they are swiped through. */
-export const HORIZONS = ["habits", "weekly"] as const;
+export const HORIZONS = ["habits", "weekly", "longTerm"] as const;
 export type Horizon = (typeof HORIZONS)[number];
 
 let requested: Horizon | null = null;

@@ -3,7 +3,7 @@
 // scheduled ahead (ADR-0005), so a digest has to be cancelled as soon as nothing is left.
 
 import { addDays, type LocalDate } from "./dates";
-import { groupWeekGoals } from "./order";
+import { groupGoals } from "./order";
 import { localTime, type LocalDateTime, type LocalTime } from "./times";
 import {
   goalsForWeek,
@@ -71,7 +71,7 @@ export function upcomingProgressDigests(
     )
     .slice(0, UPCOMING_PROGRESS_MOMENTS)
     .flatMap(({ date, time }) => {
-      const { pending } = groupWeekGoals(goalsForWeek(source, weekOf(date)));
+      const { pending } = groupGoals(goalsForWeek(source, weekOf(date)));
       return pending.length === 0 ? [] : [{ date, time, goals: pending }];
     });
 }

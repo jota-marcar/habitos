@@ -3,6 +3,7 @@
 import { MAX_AMOUNT } from "@/domain/amounts";
 import type { AmountError } from "@/domain/entries";
 import { type HabitError } from "@/domain/habits";
+import type { DeadlineError } from "@/domain/long-term-goals";
 import { MAX_NAME_LENGTH, MAX_UNIT_LENGTH } from "@/domain/tracked";
 import type { ReminderError } from "@/domain/reminders";
 import { formatAmount } from "@/shared/format";
@@ -22,6 +23,14 @@ export const HABIT_ERROR_MESSAGES: Readonly<Record<HabitError, string>> = {
   increment_too_precise: "El incremento admite 2 decimales como máximo.",
   increment_too_large: `El incremento admite ${formatAmount(MAX_AMOUNT)} como máximo.`,
 };
+
+export const DEADLINE_ERROR_MESSAGES: Readonly<Record<DeadlineError, string>> =
+  {
+    deadline_empty: "Elige una fecha límite.",
+    deadline_not_after_first_day:
+      "La fecha límite tiene que ser posterior al día en que empieza la meta.",
+    deadline_in_past: "La fecha límite no puede ser anterior a hoy.",
+  };
 
 export const REMINDER_ERROR_MESSAGES: Readonly<Record<ReminderError, string>> =
   {

@@ -104,6 +104,9 @@ Convenciones del dominio:
   - `ui/use-tracked-page.ts`: la lectura de una página, la cola de escritura, la pausa antes de recolocar la lista y el registro de los toques. Cada página solo dice qué lee, cómo agrupa y cómo guarda.
   - `ui/amounts-form.ts`: las cantidades tal como las escribe el usuario en un formulario.
   - `ui/use-held-options.ts`: la hoja de opciones de una página y el elemento que se mantuvo pulsado.
+  - `domain/order.ts`: los grupos de pendientes y conseguidos de las páginas de objetivos y de metas (`groupGoals`, `settleGoals`), que mantienen el orden en que llegan.
+  - `ui/horizon-pages.tsx`: lo que muestra cada página en su recuadro, la lista o el texto de cuando no hay nada.
+  - `ui/use-reveal-end.ts`: el desplazamiento del formulario que deja a la vista un selector nativo abierto al final, como el de la hora de un recordatorio o el calendario de la fecha límite.
 
 Las pantallas están en `src/app/` porque es la ubicación de la plantilla de Expo; dentro solo van rutas, y los tests van fuera (en `src/__tests__/` o junto al código que prueban, fuera de `src/app/`). Los imports usan el alias `@/` → `src/`.
 

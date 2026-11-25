@@ -14,11 +14,7 @@ import {
   saveWeeklyGoalEntry,
 } from "@/data/weekly-goals-repository";
 import type { LocalDate } from "@/domain/dates";
-import {
-  groupWeekGoals,
-  settleWeekGoals,
-  type DayGroups,
-} from "@/domain/order";
+import { groupGoals, settleGoals, type DayGroups } from "@/domain/order";
 import {
   archiveWeeklyGoal,
   canEditWeeklyGoal,
@@ -76,8 +72,8 @@ export function useWeek(monday: LocalDate): WeekPage {
           items: weekGoals,
           // Like the habits, a goal still counts while it can be edited: not archived.
           hasAny: allGoals.some((g) => canEditWeeklyGoal(g, currentDay)),
-          group: () => groupWeekGoals(weekGoals),
-          settle: (order) => settleWeekGoals(weekGoals, order),
+          group: () => groupGoals(weekGoals),
+          settle: (order) => settleGoals(weekGoals, order),
           save: async ({ goal }, value) => {
             const existing = entries.find((e) => e.weeklyGoalId === goal.id);
             await saveWeeklyGoalEntry(db, {
