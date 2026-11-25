@@ -21,7 +21,7 @@ La `0.3.0` llegó a los probadores el 2026-11-24. Es un binario nuevo, así que 
    1. **Hecho (PR 111):** especificación y glosario.
    2. **Hecho (PR 112):** el núcleo común de hábitos y objetivos (C4 de la auditoría).
    3. **Hecho (PR 113):** el modelo de datos y la sincronización, con su ADR ([ADR-0027](adr/0027-metas-en-dos-tablas-propias-sin-versiones-con-un-total-por-meta.md), aceptado). La migración de la nube `20261125120000_long_term_goals` ya está aplicada en los dos entornos.
-   4. **Hecho:** la interfaz, la tercera página de la pantalla principal con su formulario y sus opciones.
+   4. **Hecho (PR 115):** la interfaz, la tercera página de la pantalla principal con su formulario y sus opciones.
    5. Los avisos de las metas, que están por definir.
 2. **Versión `0.4.0`, por OTA, con las metas:** el selector de fecha usa el módulo nativo que ya lleva el binario, así que no hace falta un build. Lleva la migración local de las metas, así que la actualización **no se podrá deshacer**: cualquier fallo se corrige publicando otra hacia delante ([despliegue.md](despliegue.md#actualizaciones-con-una-migración-local)). Se prepara con `node scripts/bump-version.mjs`, se prueba sin prisa en Hábitos Dev con `update:dev` y después sale con `update:prod`. Falta decidir si sale antes o después de los avisos de las metas.
 3. **Al tocar los ficheros afectados:** TypeScript más estricto, dividir los ficheros más grandes, quitar lo que sobra y revisar la regla de separar los textos.
