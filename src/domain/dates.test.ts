@@ -1,5 +1,6 @@
 import {
   addDays,
+  daysBetween,
   localDate,
   localDateOf,
   msUntilNextDay,
@@ -63,6 +64,29 @@ describe("weekdayOf", () => {
     ["2026-11-01", 6],
   ])("%s is weekday %i (Monday = 0)", (date, weekday) => {
     expect(weekdayOf(localDate(date))).toBe(weekday);
+  });
+});
+
+describe("daysBetween", () => {
+  test("counts the days from one date to another", () => {
+    expect(daysBetween(localDate("2026-11-25"), localDate("2026-12-31"))).toBe(
+      36,
+    );
+    expect(daysBetween(localDate("2026-11-25"), localDate("2026-11-25"))).toBe(
+      0,
+    );
+    expect(daysBetween(localDate("2026-11-25"), localDate("2026-11-24"))).toBe(
+      -1,
+    );
+  });
+
+  test("crosses a change of daylight saving time and a leap year", () => {
+    expect(daysBetween(localDate("2026-03-28"), localDate("2026-03-30"))).toBe(
+      2,
+    );
+    expect(daysBetween(localDate("2028-02-28"), localDate("2028-03-01"))).toBe(
+      2,
+    );
   });
 });
 

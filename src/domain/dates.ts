@@ -68,6 +68,11 @@ export function addDays(date: LocalDate, days: number): LocalDate {
   );
 }
 
+/** The days from `from` to `to`: negative if `to` comes first. */
+export function daysBetween(from: LocalDate, to: LocalDate): number {
+  return Math.round((toUtcMs(to) - toUtcMs(from)) / MS_PER_DAY);
+}
+
 /** The milliseconds from `instant` until the next day starts in the device's local time. */
 export function msUntilNextDay(instant: Date): number {
   // Built from local parts, so a day of 23 or 25 hours (daylight saving time) is right too.

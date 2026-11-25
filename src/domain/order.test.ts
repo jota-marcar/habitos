@@ -1,11 +1,11 @@
 import { localDate } from "./dates";
 import type { DayHabit } from "./day";
 import {
-  groupWeekGoals,
+  groupGoals,
   keepGroups,
   keepOrder,
   settleGroups,
-  settleWeekGoals,
+  settleGoals,
   sortByReminders,
   sortDayHabits,
 } from "./order";
@@ -309,7 +309,7 @@ describe("the goals of a week (RF-46)", () => {
   }
 
   test("groups them into pending and achieved, keeping their order", () => {
-    const groups = groupWeekGoals([
+    const groups = groupGoals([
       weekGoal("a", true),
       weekGoal("b", false),
       weekGoal("c", true),
@@ -321,7 +321,7 @@ describe("the goals of a week (RF-46)", () => {
   });
 
   test("settling moves each goal to its group, in the place of its order", () => {
-    const settled = settleWeekGoals(
+    const settled = settleGoals(
       [
         weekGoal("a", true),
         weekGoal("b", false),
@@ -336,7 +336,7 @@ describe("the goals of a week (RF-46)", () => {
 
   test("settling leaves alone a goal that is no longer in the week", () => {
     expect(
-      settleWeekGoals([weekGoal("a", false)], {
+      settleGoals([weekGoal("a", false)], {
         pending: ["a"],
         done: ["gone"],
       }),

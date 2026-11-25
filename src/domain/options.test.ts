@@ -1,6 +1,11 @@
 import { localDate } from "./dates";
 import type { Habit } from "./habits";
-import { habitOptions, weeklyGoalOptions } from "./options";
+import type { LongTermGoal } from "./long-term-goals";
+import {
+  habitOptions,
+  longTermGoalOptions,
+  weeklyGoalOptions,
+} from "./options";
 import type { WeeklyGoal } from "./weekly-goals";
 import { weekOf } from "./weeks";
 
@@ -136,5 +141,63 @@ describe("weeklyGoalOptions (RF-50)", () => {
       "exact_amount",
       "delete",
     ]);
+  });
+});
+
+describe("longTermGoalOptions (RF-60)", () => {
+  function goal(overrides: Partial<LongTermGoal> = {}): LongTermGoal {
+    return {
+      id: "g1",
+      name: "Leer",
+      type: "quantitative",
+      color: null,
+      target: 24,
+      unit: "libros",
+      increment: 1,
+      firstDay: localDate("2026-11-01"),
+      deadline: localDate("2026-12-31"),
+      ...overrides,
+    };
+  }
+
+  test("a goal with an amount is corrected, edited and deleted on a day it is in progress", () => {
+    expect(longTermGoalOptions(goal(), today, today)).toEqual([
+      "decrement",
+      "exact_amount",
+      "edit",
+      "delete",
+    ]);
+    expect(longTermGoalOptions(goal(), yesterday, today)).toEqual([
+      "decrement",
+      "exact_amount",
+      "edit",
+      "delete",
+    ]);
+  });
+
+  test("a yes-or-no goal corrects nothing from its options", () => {
+    expect(
+      longTermGoalOptions(goal({ type: "boolean" }), today, today),
+    ).toEqual(["edit", "delete"]);
+  });
+
+  test("nothing is recorded on a future day", () => {
+    expect(longTermGoalOptions(goal(), tomorrow, today)).toEqual([
+      "edit",
+      "delete",
+    ]);
+  });
+
+  test("a goal whose deadline has passed is still corrected, but no longer edited (RF-56)", () => {
+    const ended = goal({ deadline: yesterday });
+    expect(longTermGoalOptions(ended, yesterday, today)).toEqual([
+      "decrement",
+      "exact_amount",
+      "delete",
+    ]);
+  });
+
+  test("is never archived (RF-57)", () => {
+    expect(longTermGoalOptions(goal(), today, today)).not.toContain("archive");
   });
 });

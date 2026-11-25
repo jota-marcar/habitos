@@ -9,7 +9,6 @@
 import type { DayHabit } from "./day";
 import type { Reminder } from "./reminders";
 import type { LocalTime } from "./times";
-import type { WeekGoal } from "./weekly-goals";
 
 // Where a habit goes: the habits that are overdue, then those still to warn, then those
 // without reminders. The time orders the habits of each place.
@@ -104,32 +103,36 @@ export function settleGroups(
   return moveToTheirGroup(sorted, doneIds, groups);
 }
 
+/** What the pages of goals need to group them: weekly goals (RF-46) and long-term goals (RF-58). */
+export interface GroupedGoal {
+  readonly goal: { readonly id: string };
+  readonly done: boolean;
+}
+
 /**
- * The groups of the weekly page when it is shown (RF-46): pending goals and achieved ones, each
- * in the order of `weekGoals`.
+ * The groups of a page of goals when it is shown (RF-46, RF-58): pending goals and achieved
+ * ones, each in the order of `goals`.
  */
-export function groupWeekGoals(
-  weekGoals: readonly WeekGoal[],
-): DayGroups<WeekGoal> {
+export function groupGoals<T extends GroupedGoal>(
+  goals: readonly T[],
+): DayGroups<T> {
   return {
-    pending: weekGoals.filter((g) => !g.done),
-    done: weekGoals.filter((g) => g.done),
+    pending: goals.filter((g) => !g.done),
+    done: goals.filter((g) => g.done),
   };
 }
 
 /**
  * Moves to the other group the goals of `groups` that are in the wrong one, like `settleGroups`
- * with the habits of a day (RF-46). Goals that are not in `weekGoals` are left as they are.
+ * with the habits of a day (RF-46, RF-58). Goals that are not in `goals` are left as they are.
  */
-export function settleWeekGoals(
-  weekGoals: readonly WeekGoal[],
+export function settleGoals(
+  goals: readonly GroupedGoal[],
   groups: DayGroups<string>,
 ): DayGroups<string> {
-  const doneIds = new Set(
-    weekGoals.filter((g) => g.done).map((g) => g.goal.id),
-  );
+  const doneIds = new Set(goals.filter((g) => g.done).map((g) => g.goal.id));
   return moveToTheirGroup(
-    weekGoals.map((g) => g.goal.id),
+    goals.map((g) => g.goal.id),
     doneIds,
     groups,
   );

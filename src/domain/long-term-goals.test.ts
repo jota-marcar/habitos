@@ -4,7 +4,10 @@ import {
   canRecordLongTermGoal,
   changeLongTermGoalAmounts,
   changeLongTermGoalDeadline,
+  countdownStart,
   createLongTermGoal,
+  daysLeft,
+  earliestDeadline,
   firstDayOfNewLongTermGoal,
   isInProgress,
   longTermGoalsForDay,
@@ -57,6 +60,38 @@ describe("firstDayOfNewLongTermGoal", () => {
   });
 });
 
+describe("earliestDeadline", () => {
+  test("is the day after the goal starts", () => {
+    expect(earliestDeadline(TODAY, TODAY)).toBe(TOMORROW);
+    expect(earliestDeadline(NEXT_WEEK, TODAY)).toBe(localDate("2026-12-03"));
+  });
+
+  test("is the current day if the goal started before yesterday", () => {
+    expect(earliestDeadline(localDate("2026-11-01"), TODAY)).toBe(TODAY);
+  });
+});
+
+describe("daysLeft (RF-58)", () => {
+  test("counts the days until the deadline", () => {
+    expect(daysLeft(NEW_YEAR, TODAY)).toBe(36);
+    expect(daysLeft(TOMORROW, TODAY)).toBe(1);
+  });
+
+  test("is 0 on the deadline, the last day", () => {
+    expect(daysLeft(TODAY, TODAY)).toBe(0);
+  });
+});
+
+describe("countdownStart (RF-55)", () => {
+  test("is the day the goal starts if it has not started", () => {
+    expect(countdownStart(NEXT_WEEK, TODAY)).toBe(NEXT_WEEK);
+  });
+
+  test("is the current day once the goal has started", () => {
+    expect(countdownStart(YESTERDAY, TODAY)).toBe(TODAY);
+  });
+});
+
 describe("validateDeadline", () => {
   test("accepts a day after the first one, from the current day on", () => {
     expect(validateDeadline(TOMORROW, TODAY, TODAY)).toEqual([]);
@@ -103,6 +138,12 @@ describe("createLongTermGoal", () => {
       TODAY,
     );
     expect(result).toMatchObject({ ok: true, value: NO_AMOUNTS });
+  });
+
+  test("requires a deadline, which has no default (RF-55)", () => {
+    expect(
+      createLongTermGoal({ ...NEW_GOAL, deadline: null }, "goal", TODAY, TODAY),
+    ).toEqual(fail(["deadline_empty"]));
   });
 
   test("gathers every error of the name, the amounts and the deadline", () => {

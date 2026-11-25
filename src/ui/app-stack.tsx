@@ -49,6 +49,14 @@ export function AppStack() {
           options={{ title: "Editar objetivo", presentation: "modal" }}
         />
         <Stack.Screen
+          name="long-term-goals/new"
+          options={{ title: "Nueva meta", presentation: "modal" }}
+        />
+        <Stack.Screen
+          name="long-term-goals/[id]/edit"
+          options={{ title: "Editar meta", presentation: "modal" }}
+        />
+        <Stack.Screen
           name="settings"
           options={{ title: "Ajustes", presentation: "modal" }}
         />

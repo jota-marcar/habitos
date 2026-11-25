@@ -8,28 +8,22 @@ Qué hay publicado, qué viene ahora y qué falta por decidir. Una sesión nueva
 
 | Entorno | Binario | Actualización OTA | Nube |
 |---------|---------|-------------------|------|
-| **Producción** (Hábitos, TestFlight) | `0.1.0 (2)`, tag `v0.1.0+2`. Caduca hacia el **2027-02-19** | `0.2.0`, tag `v0.2.0`, del 2026-11-24 | `habitos`: al día hasta `20261125120000_long_term_goals`, aplicada el 2026-11-25 |
-| **Desarrollo** (Hábitos Dev) | `0.1.0 (1)`, del 2026-11-21. Hay un build nuevo en marcha, con Sentry, del 2026-11-24 | `0.2.1`, del 2026-11-24, solo para probar | `habitos-dev`: al día hasta `20261125120000_long_term_goals`, aplicada el 2026-11-25 |
+| **Producción** (Hábitos, TestFlight) | `0.3.0 (3)`, tag `v0.3.0`, del 2026-11-24, con Sentry. Caduca hacia el **2027-02-22** | Ninguna: funciona con la que lleva el binario | `habitos`: al día hasta `20261125120000_long_term_goals`, aplicada el 2026-11-25 |
+| **Desarrollo** (Hábitos Dev) | `0.3.0 (1)`, del 2026-11-24 | `0.3.0`, del 2026-11-24, desde `main` | `habitos-dev`: al día hasta `20261125120000_long_term_goals`, aplicada el 2026-11-25 |
 
 Las migraciones de la nube las aplica el usuario. Lo que dice esta tabla sobre ellas es lo último registrado: antes de publicar, compruébalo con `supabase migration list`.
 
-La `0.2.0` se comprobó en producción el 2026-11-24. TestFlight sigue mostrando `0.1.0 (2)` porque llegó por OTA: la versión real es la que aparece en **Ajustes**. Esta actualización **no se puede deshacer**, porque lleva una migración local: cualquier fallo se corrige publicando otra hacia delante ([despliegue.md](despliegue.md#actualizaciones-con-una-migración-local)).
+La `0.3.0` llegó a los probadores el 2026-11-24. Es un binario nuevo, así que las actualizaciones OTA anteriores ya no le llegan. Se generó antes del PR 113, así que todavía no lleva las tablas de las metas.
 
 ## Qué viene después
 
-1. **Versión `0.3.0`, con un build nuevo, la misma en los dos entornos:** Sentry ([ADR-0026](adr/0026-informes-de-errores-anonimos-con-sentry.md)), la limpieza de web y Android (PR 104 y 105) y los puntos menores de la auditoría. Estos últimos son la pantalla de error propia en español, la lectura que puede pisar una ordenación, los límites de los campos al escribir, el botón Posponer a última hora y el criterio de los objetivos archivados. Sentry ya está configurado ([despliegue.md](despliegue.md#informes-de-errores-sentry)).
-   - **La `0.2.1`** fue una candidata que solo se probó en Hábitos Dev y no tiene tag: su contenido entra en la `0.3.0`. Se descartó revertir los PR 104 y 105 para publicarla por OTA, porque los probadores no tienen prisa y prima la coherencia.
-   - **Pasos:**
-     1. `build:dev`, otra vez. El primero se hizo con la URL de Sentry de la región (`de.sentry.io`), que el token ignora y que solo producía un aviso. Corregirla cambió la huella nativa. Con el build nuevo se prueba Sentry con un error forzado ([despliegue.md](despliegue.md#comprobarlo)) y se repasa la app entera.
-     2. `update:dev` desde `main`, para que Hábitos Dev muestre la `0.3.0` con el código exacto de producción. Se prueba sin prisa.
-     3. `build:prod`. El build de producción actual caduca hacia el 2027-02-19.
-2. **Metas, el tercer horizonte** (rumbo elegido el 2026-11-25): los requisitos están en la [sección 3.9](especificacion-funcional.md#39-metas). Se harán como los objetivos semanales, en Pull Requests sucesivos:
-   1. Especificación y glosario. "Meta" pasa a nombrar el horizonte, y la cantidad que hay que alcanzar se llama ahora "Cantidad", también en los formularios.
-   2. El núcleo común de hábitos y objetivos (C4 de la auditoría), limitado a lo que vayan a reutilizar las metas.
+1. **Metas, el tercer horizonte** (rumbo elegido el 2026-11-25): los requisitos están en la [sección 3.9](especificacion-funcional.md#39-metas). Se hacen como los objetivos semanales, en Pull Requests sucesivos:
+   1. **Hecho (PR 111):** especificación y glosario.
+   2. **Hecho (PR 112):** el núcleo común de hábitos y objetivos (C4 de la auditoría).
    3. **Hecho (PR 113):** el modelo de datos y la sincronización, con su ADR ([ADR-0027](adr/0027-metas-en-dos-tablas-propias-sin-versiones-con-un-total-por-meta.md), aceptado). La migración de la nube `20261125120000_long_term_goals` ya está aplicada en los dos entornos.
-      - La migración local hace irreversible la actualización que la lleve. La próxima publicación desde `main`, también la `0.3.0`, llevará ya las tablas de las metas, aunque sin interfaz.
-   4. La interfaz.
+   4. **Hecho:** la interfaz, la tercera página de la pantalla principal con su formulario y sus opciones.
    5. Los avisos de las metas, que están por definir.
+2. **Versión `0.4.0`, por OTA, con las metas:** el selector de fecha usa el módulo nativo que ya lleva el binario, así que no hace falta un build. Lleva la migración local de las metas, así que la actualización **no se podrá deshacer**: cualquier fallo se corrige publicando otra hacia delante ([despliegue.md](despliegue.md#actualizaciones-con-una-migración-local)). Se prepara con `node scripts/bump-version.mjs`, se prueba sin prisa en Hábitos Dev con `update:dev` y después sale con `update:prod`. Falta decidir si sale antes o después de los avisos de las metas.
 3. **Al tocar los ficheros afectados:** TypeScript más estricto, dividir los ficheros más grandes, quitar lo que sobra y revisar la regla de separar los textos.
 
 ## Decisiones pendientes

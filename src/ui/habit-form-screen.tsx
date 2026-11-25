@@ -3,13 +3,11 @@
 
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Stack, useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   Keyboard,
-  type LayoutChangeEvent,
   Pressable,
   ScrollView,
-  type ScrollViewInstance,
   StyleSheet,
   Text,
   View,
@@ -41,6 +39,7 @@ import { REMINDER_ERROR_MESSAGES } from "./messages";
 import { warnIfRemindersNotAllowed } from "./reminders";
 import { fontSize, spacing, useColors } from "./theme";
 import { hasFormChanges, useDiscardGuard } from "./use-discard-guard";
+import { useRevealEnd } from "./use-reveal-end";
 
 const WEEKDAYS: readonly Weekday[] = [0, 1, 2, 3, 4, 5, 6];
 
@@ -77,13 +76,7 @@ export function HabitFormScreen({
   const [pickedTime, setPickedTime] = useState<LocalTime | null>(null);
   const [reminderError, setReminderError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const scroll = useRef<ScrollViewInstance>(null);
-  // Set when the reminder picker opens, until it has its real height.
-  const revealPicker = useRef(false);
-  // The size and position of the form, to scroll it just enough to show the picker.
-  const viewportHeight = useRef(0);
-  const contentHeight = useRef(0);
-  const scrollY = useRef(0);
+  const { scrollProps, revealEnd, onPickerLayout } = useRevealEnd();
 
   const messages = messagesByField(errors);
   // An open picker counts: saving would add its time (RF-22).
@@ -113,24 +106,8 @@ export function HabitFormScreen({
   // it whole, with its buttons. The keyboard, if open, would hide it.
   const openPicker = () => {
     Keyboard.dismiss();
-    revealPicker.current = true;
+    revealEnd();
     setPickedTime(DEFAULT_REMINDER_TIME);
-  };
-
-  // The native picker first lays out with no height and measures itself in a later pass, so the
-  // form waits for that height. It waits one more frame for the new size of the form to arrive
-  // and reach the native view, which limits the scroll to the size it knows. The target leaves
-  // the keyboard out, as it is closing. The picker and its buttons end the form, so its end is
-  // what has to be shown.
-  const revealOpenedPicker = (event: LayoutChangeEvent) => {
-    if (!revealPicker.current || event.nativeEvent.layout.height === 0) return;
-    revealPicker.current = false;
-    requestAnimationFrame(() => {
-      const end = contentHeight.current - viewportHeight.current;
-      if (end > scrollY.current) {
-        scroll.current?.scrollTo({ y: end, animated: true });
-      }
-    });
   };
 
   const removeReminder = (time: LocalTime) =>
@@ -155,18 +132,8 @@ export function HabitFormScreen({
 
   return (
     <ScrollView
-      ref={scroll}
+      {...scrollProps}
       testID="habit-form"
-      onLayout={(event) => {
-        viewportHeight.current = event.nativeEvent.layout.height;
-      }}
-      onContentSizeChange={(_width, height) => {
-        contentHeight.current = height;
-      }}
-      onScroll={(event) => {
-        scrollY.current = event.nativeEvent.contentOffset.y;
-      }}
-      scrollEventThrottle={16}
       automaticallyAdjustKeyboardInsets
       keyboardShouldPersistTaps="handled"
       // The end of the form clears the home indicator, so that the last buttons, which the
@@ -261,7 +228,7 @@ export function HabitFormScreen({
               display="spinner"
               locale="es-ES"
               value={dateAt(pickedTime)}
-              onLayout={revealOpenedPicker}
+              onLayout={onPickerLayout}
               onValueChange={(_event, date) => setPickedTime(localTimeOf(date))}
             />
             <View style={styles.pickerActions}>

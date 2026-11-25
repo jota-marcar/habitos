@@ -1,16 +1,16 @@
 // The main screen (RF-30), with a page per horizon that the box slides through (RF-33): the
-// habits of the day and the goals of the week (RF-40). No header and no fixed buttons: the
-// period at the top, the box and, under it, the strip the menu is pulled up from (RF-32).
+// habits of the day, the goals of the week (RF-40) and the long-term goals (RF-58). No header
+// and no fixed buttons: the period at the top, the box and, under it, the strip the menu is
+// pulled up from (RF-32).
 // In each box, what is pending sits at the top and what is done at the bottom (RF-12, RF-46). A
-// tap records a habit or a goal (RF-14, RF-15, RF-47) and holding it down opens its options
-// (RF-34, RF-50).
+// tap records a habit or a goal (RF-14, RF-15, RF-47, RF-59) and holding it down opens its
+// options (RF-34, RF-50, RF-60).
 // The calendar that changes the day is pulled down from the date or from the list (RF-31).
 
 import { useRouter, type Href } from "expo-router";
 import { useEffect, useRef } from "react";
 import {
   StyleSheet,
-  Text,
   View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { LocalDate } from "@/domain/dates";
 import type { DayHabit } from "@/domain/day";
+import type { DayLongTermGoal } from "@/domain/long-term-goals";
 import type { WeekGoal } from "@/domain/weekly-goals";
 import { isInWeek, weekOf } from "@/domain/weeks";
 import { CalendarSheet } from "@/ui/calendar-sheet";
@@ -32,62 +33,31 @@ import {
   listenToHorizonRequests,
   type Horizon,
 } from "@/shared/horizon-request";
+import { HabitsPage, LongTermPage, WeeklyPage } from "@/ui/horizon-pages";
 import { HorizonPager, HorizonTitles, useHorizons } from "@/ui/horizons";
+import { LongTermGoalOptionsSheet } from "@/ui/long-term-goal-options-sheet";
 import { Sheet, SheetOption, useOpenSheetGesture, useSheet } from "@/ui/sheet";
 import { SyncWarning } from "@/ui/sync-status";
-import { fontSize, radius, spacing, topGap, useColors } from "@/ui/theme";
-import { TrackedList, type TrackedItem } from "@/ui/tracked-list";
+import { radius, spacing, topGap, useColors } from "@/ui/theme";
 import { useDay } from "@/ui/use-day";
 import { useHeldOptions } from "@/ui/use-held-options";
+import { useLongTermGoals } from "@/ui/use-long-term-goals";
 import { useWeek } from "@/ui/use-week";
 import { WeeklyGoalOptionsSheet } from "@/ui/weekly-goal-options-sheet";
 
 // The strip is thin, but the area that catches the drag is as tall as a button.
 const STRIP_TOUCH_HEIGHT = 44;
 
-const habitItem = ({ habit, version, value, done }: DayHabit): TrackedItem => ({
-  id: habit.id,
-  name: habit.name,
-  type: habit.type,
-  color: habit.color,
-  amounts: version,
-  value,
-  done,
-});
-
-const goalItem = ({ goal, version, value, done }: WeekGoal): TrackedItem => ({
-  id: goal.id,
-  name: goal.name,
-  type: goal.type,
-  color: goal.color,
-  amounts: version,
-  value,
-  done,
-});
-
 // The form each page creates its items with (RF-32).
 const CREATE_PATHS = {
   habits: "/habits/new",
   weekly: "/weekly-goals/new",
+  longTerm: "/long-term-goals/new",
 } as const satisfies Record<Horizon, Href>;
 
 const habitIdOf = (dayHabit: DayHabit) => dayHabit.habit.id;
 const goalIdOf = (weekGoal: WeekGoal) => weekGoal.goal.id;
-
-/** What a page says while it has nothing to show, and how to create something if it never had. */
-function EmptyPage({ title, hint }: { title: string; hint?: string }) {
-  const colors = useColors();
-  return (
-    <View style={styles.empty}>
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>{title}</Text>
-      {hint === undefined ? null : (
-        <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
-          {hint}
-        </Text>
-      )}
-    </View>
-  );
-}
+const longTermGoalIdOf = (dayGoal: DayLongTermGoal) => dayGoal.goal.id;
 
 export default function Today() {
   const colors = useColors();
@@ -102,6 +72,8 @@ export default function Today() {
   const isThisWeek = isInWeek(today, week);
   const weekRange = formatWeekRange(week, today);
   const weekPage = useWeek(week.start);
+  // The long-term goals are those in progress on the day on screen (RF-41).
+  const longTermPage = useLongTermGoals(date);
 
   // Tapping a notification opens its page on the current day and week (RF-26, RF-37, RF-49). A
   // form that is open stays on top, with what was typed in it. Until the carousel is there, a
@@ -139,6 +111,7 @@ export default function Today() {
   const listPeriods: Record<Horizon, LocalDate> = {
     habits: date,
     weekly: week.start,
+    longTerm: date,
   };
   const shownPeriods = useRef(listPeriods);
   useEffect(() => {
@@ -156,8 +129,10 @@ export default function Today() {
   const habitOptions = useHeldOptions(habits, habitIdOf);
   const goals = weekPage.goals;
   const goalOptions = useHeldOptions(goals, goalIdOf);
-  const isEmpty = <T,>(groups: { pending: readonly T[]; done: readonly T[] }) =>
-    groups.pending.length === 0 && groups.done.length === 0;
+  const longTermGoalOptions = useHeldOptions(
+    longTermPage.goals,
+    longTermGoalIdOf,
+  );
 
   // The form is told the day it was opened from, to say when the changes apply (RF-09).
   const edit = (habitId: string) =>
@@ -172,13 +147,19 @@ export default function Today() {
       params: { id: goalId, day: date },
     });
 
+  const editLongTermGoal = (goalId: string) =>
+    router.push({
+      pathname: "/long-term-goals/[id]/edit",
+      params: { id: goalId },
+    });
+
   const showDay = (chosen: LocalDate) => {
     calendar.close();
     day.select(chosen);
   };
 
   // Creates an item of the page on screen (RF-32). Created from a future day or week, it starts
-  // then (RF-06, RF-42).
+  // then (RF-06, RF-42, RF-55).
   const create = () => {
     menu.close();
     router.push({
@@ -215,6 +196,12 @@ export default function Today() {
                 returnHint: isThisWeek ? undefined : "Vuelve a esta semana",
                 onReturn: () => showDay(today),
               },
+              longTerm: {
+                title: "Metas",
+                detail: isToday ? undefined : formatDayTitle(date, today),
+                returnHint: isToday ? undefined : "Vuelve a hoy",
+                onReturn: () => showDay(today),
+              },
             }}
           />
         </View>
@@ -227,64 +214,42 @@ export default function Today() {
           <HorizonPager
             horizons={horizons}
             pages={{
-              habits:
-                habits === null ? null : isEmpty(habits) ? (
-                  <EmptyPage
-                    title={
-                      !hasAnyHabit
-                        ? "Todavía no tienes hábitos."
-                        : isToday
-                          ? "Hoy no toca ningún hábito."
-                          : "Este día no toca ningún hábito."
-                    }
-                    hint={
-                      hasAnyHabit
-                        ? undefined
-                        : "Desliza desde abajo para crear uno y desde arriba para abrir el calendario."
-                    }
-                  />
-                ) : (
-                  <TrackedList
-                    key={date}
-                    testID="day-habits"
-                    rowPrefix="habit"
-                    groups={habits}
-                    itemOf={habitItem}
-                    onPress={(item) => void record(item.habit.id)}
-                    onLongPress={habitOptions.open}
-                    simultaneousWith={openCalendarFromList}
-                    onScroll={onListScroll("habits")}
-                  />
-                ),
-              weekly:
-                goals === null ? null : isEmpty(goals) ? (
-                  <EmptyPage
-                    title={
-                      !weekPage.hasAnyGoal
-                        ? "Todavía no tienes objetivos semanales."
-                        : isThisWeek
-                          ? "Esta semana no hay objetivos."
-                          : "Esa semana no hay objetivos."
-                    }
-                    hint={
-                      weekPage.hasAnyGoal
-                        ? undefined
-                        : "Desliza desde abajo para crear uno."
-                    }
-                  />
-                ) : (
-                  <TrackedList
-                    key={week.start}
-                    testID="week-goals"
-                    rowPrefix="goal"
-                    groups={goals}
-                    itemOf={goalItem}
-                    onPress={(item) => void weekPage.record(item.goal.id)}
-                    onLongPress={goalOptions.open}
-                    simultaneousWith={openCalendarFromList}
-                    onScroll={onListScroll("weekly")}
-                  />
-                ),
+              habits: (
+                <HabitsPage
+                  day={date}
+                  isToday={isToday}
+                  groups={habits}
+                  hasAny={hasAnyHabit}
+                  onPress={(item) => void record(item.habit.id)}
+                  onLongPress={habitOptions.open}
+                  simultaneousWith={openCalendarFromList}
+                  onScroll={onListScroll("habits")}
+                />
+              ),
+              weekly: (
+                <WeeklyPage
+                  monday={week.start}
+                  isThisWeek={isThisWeek}
+                  groups={goals}
+                  hasAny={weekPage.hasAnyGoal}
+                  onPress={(item) => void weekPage.record(item.goal.id)}
+                  onLongPress={goalOptions.open}
+                  simultaneousWith={openCalendarFromList}
+                  onScroll={onListScroll("weekly")}
+                />
+              ),
+              longTerm: (
+                <LongTermPage
+                  day={date}
+                  isToday={isToday}
+                  groups={longTermPage.goals}
+                  hasAny={longTermPage.hasAnyGoal}
+                  onPress={(item) => void longTermPage.record(item.goal.id)}
+                  onLongPress={longTermGoalOptions.open}
+                  simultaneousWith={openCalendarFromList}
+                  onScroll={onListScroll("longTerm")}
+                />
+              ),
             }}
           />
         </View>
@@ -338,6 +303,15 @@ export default function Today() {
         page={weekPage}
         onEdit={editGoal}
       />
+
+      <LongTermGoalOptionsSheet
+        sheet={longTermGoalOptions.sheet}
+        dayGoal={longTermGoalOptions.held}
+        day={date}
+        today={today}
+        page={longTermPage}
+        onEdit={editLongTermGoal}
+      />
     </View>
   );
 }
@@ -350,15 +324,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md + spacing.md,
   },
   pager: { flex: 1 },
-  empty: {
-    alignItems: "center",
-    flex: 1,
-    gap: spacing.sm,
-    justifyContent: "center",
-    padding: spacing.xl,
-  },
-  emptyTitle: { fontSize: fontSize.body, textAlign: "center" },
-  emptyHint: { fontSize: fontSize.caption, textAlign: "center" },
   strip: {
     alignItems: "center",
     height: STRIP_TOUCH_HEIGHT,

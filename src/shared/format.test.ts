@@ -4,6 +4,8 @@ import { weekOf } from "@/domain/weeks";
 
 import {
   formatAmount,
+  formatDaysLeft,
+  formatDaysLeftLine,
   formatDayTitle,
   formatFullDate,
   formatMonthTitle,
@@ -70,4 +72,15 @@ test("formatProgress shows the amount, the target and the unit (RF-13)", () => {
   };
   expect(formatProgress(1.25, config)).toBe("1,25 / 2 L");
   expect(formatProgress(0, config)).toBe("0 / 2 L");
+});
+
+test("formatDaysLeft says what is left of a long-term goal (RF-58)", () => {
+  expect(formatDaysLeft(40)).toBe("quedan 40 días");
+  expect(formatDaysLeft(1)).toBe("queda 1 día");
+  expect(formatDaysLeft(0)).toBe("último día");
+});
+
+test("formatDaysLeftLine starts a line with it (RF-55)", () => {
+  expect(formatDaysLeftLine(217)).toBe("Quedan 217 días");
+  expect(formatDaysLeftLine(0)).toBe("Último día");
 });
