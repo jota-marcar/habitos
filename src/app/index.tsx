@@ -6,8 +6,8 @@
 // (RF-34, RF-50).
 // The calendar that changes the day is pulled down from the date or from the list (RF-31).
 
-import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useRouter, type Href } from "expo-router";
+import { useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -27,8 +27,8 @@ import { CalendarSheet } from "@/ui/calendar-sheet";
 import { today as currentDay } from "@/shared/clock";
 import { formatDayTitle, formatWeekRange } from "@/shared/format";
 import { HabitOptionsSheet } from "@/ui/habit-options-sheet";
-import { playOptionsOpened } from "@/ui/haptics";
 import {
+  HORIZONS,
   listenToHorizonRequests,
   type Horizon,
 } from "@/shared/horizon-request";
@@ -38,6 +38,7 @@ import { SyncWarning } from "@/ui/sync-status";
 import { fontSize, radius, spacing, topGap, useColors } from "@/ui/theme";
 import { TrackedList, type TrackedItem } from "@/ui/tracked-list";
 import { useDay } from "@/ui/use-day";
+import { useHeldOptions } from "@/ui/use-held-options";
 import { useWeek } from "@/ui/use-week";
 import { WeeklyGoalOptionsSheet } from "@/ui/weekly-goal-options-sheet";
 
@@ -64,53 +65,24 @@ const goalItem = ({ goal, version, value, done }: WeekGoal): TrackedItem => ({
   done,
 });
 
-function EmptyDay({
-  hasAnyHabit,
-  isToday,
-}: {
-  hasAnyHabit: boolean;
-  isToday: boolean;
-}) {
-  const colors = useColors();
-  return (
-    <View style={styles.empty}>
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>
-        {!hasAnyHabit
-          ? "Todavía no tienes hábitos."
-          : isToday
-            ? "Hoy no toca ningún hábito."
-            : "Este día no toca ningún hábito."}
-      </Text>
-      {hasAnyHabit ? null : (
-        <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
-          Desliza desde abajo para crear uno y desde arriba para abrir el
-          calendario.
-        </Text>
-      )}
-    </View>
-  );
-}
+// The form each page creates its items with (RF-32).
+const CREATE_PATHS = {
+  habits: "/habits/new",
+  weekly: "/weekly-goals/new",
+} as const satisfies Record<Horizon, Href>;
 
-function EmptyWeek({
-  hasAnyGoal,
-  isThisWeek,
-}: {
-  hasAnyGoal: boolean;
-  isThisWeek: boolean;
-}) {
+const habitIdOf = (dayHabit: DayHabit) => dayHabit.habit.id;
+const goalIdOf = (weekGoal: WeekGoal) => weekGoal.goal.id;
+
+/** What a page says while it has nothing to show, and how to create something if it never had. */
+function EmptyPage({ title, hint }: { title: string; hint?: string }) {
   const colors = useColors();
   return (
     <View style={styles.empty}>
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>
-        {!hasAnyGoal
-          ? "Todavía no tienes objetivos semanales."
-          : isThisWeek
-            ? "Esta semana no hay objetivos."
-            : "Esa semana no hay objetivos."}
-      </Text>
-      {hasAnyGoal ? null : (
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>{title}</Text>
+      {hint === undefined ? null : (
         <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
-          Desliza desde abajo para crear uno.
+          {hint}
         </Text>
       )}
     </View>
@@ -125,7 +97,6 @@ export default function Today() {
   const { date, today, habits, hasAnyHabit, record } = day;
   const isToday = date === today;
   const horizons = useHorizons();
-  const onHabits = horizons.horizon === "habits";
   // The week on screen is the one of the day on screen (RF-41).
   const week = weekOf(date);
   const isThisWeek = isInWeek(today, week);
@@ -155,7 +126,9 @@ export default function Today() {
     listAtTop,
   );
   // Each page has its own list, and what counts is the one on screen.
-  const listOffsets = useRef<Record<Horizon, number>>({ habits: 0, weekly: 0 });
+  const listOffsets = useRef(
+    Object.fromEntries(HORIZONS.map((h) => [h, 0])) as Record<Horizon, number>,
+  );
   const onListScroll =
     (horizon: Horizon) => (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       const offset = event.nativeEvent.contentOffset.y;
@@ -176,34 +149,11 @@ export default function Today() {
 
   const menu = useSheet();
   const openMenu = useOpenSheetGesture(menu, "menu-strip");
-  const options = useSheet();
-  // The habit whose options were opened. Its row gives how it is now; what it was like when
-  // it was held down is kept for when it is no longer on the day, while the sheet closes.
-  const [held, setHeld] = useState<DayHabit | null>(null);
-  const allHabits =
-    habits === null ? null : [...habits.pending, ...habits.done];
-  const heldNow =
-    allHabits?.find((item) => item.habit.id === held?.habit.id) ?? held;
-
-  const goalOptions = useSheet();
-  // The same for the goal whose options were opened.
-  const [heldGoal, setHeldGoal] = useState<WeekGoal | null>(null);
+  const habitOptions = useHeldOptions(habits, habitIdOf);
   const goals = weekPage.goals;
-  const allGoals = goals === null ? null : [...goals.pending, ...goals.done];
-  const heldGoalNow =
-    allGoals?.find((item) => item.goal.id === heldGoal?.goal.id) ?? heldGoal;
-
-  const openOptions = (item: DayHabit) => {
-    playOptionsOpened();
-    setHeld(item);
-    options.open();
-  };
-
-  const openGoalOptions = (item: WeekGoal) => {
-    playOptionsOpened();
-    setHeldGoal(item);
-    goalOptions.open();
-  };
+  const goalOptions = useHeldOptions(goals, goalIdOf);
+  const isEmpty = <T,>(groups: { pending: readonly T[]; done: readonly T[] }) =>
+    groups.pending.length === 0 && groups.done.length === 0;
 
   // The form is told the day it was opened from, to say when the changes apply (RF-09).
   const edit = (habitId: string) =>
@@ -228,7 +178,7 @@ export default function Today() {
   const create = () => {
     menu.close();
     router.push({
-      pathname: onHabits ? "/habits/new" : "/weekly-goals/new",
+      pathname: CREATE_PATHS[horizons.horizon],
       params: { day: date },
     });
   };
@@ -274,8 +224,21 @@ export default function Today() {
             horizons={horizons}
             pages={{
               habits:
-                habits === null ? null : allHabits?.length === 0 ? (
-                  <EmptyDay hasAnyHabit={hasAnyHabit} isToday={isToday} />
+                habits === null ? null : isEmpty(habits) ? (
+                  <EmptyPage
+                    title={
+                      !hasAnyHabit
+                        ? "Todavía no tienes hábitos."
+                        : isToday
+                          ? "Hoy no toca ningún hábito."
+                          : "Este día no toca ningún hábito."
+                    }
+                    hint={
+                      hasAnyHabit
+                        ? undefined
+                        : "Desliza desde abajo para crear uno y desde arriba para abrir el calendario."
+                    }
+                  />
                 ) : (
                   <TrackedList
                     key={date}
@@ -284,16 +247,26 @@ export default function Today() {
                     groups={habits}
                     itemOf={habitItem}
                     onPress={(item) => void record(item.habit.id)}
-                    onLongPress={openOptions}
+                    onLongPress={habitOptions.open}
                     simultaneousWith={openCalendarFromList}
                     onScroll={onListScroll("habits")}
                   />
                 ),
               weekly:
-                goals === null ? null : allGoals?.length === 0 ? (
-                  <EmptyWeek
-                    hasAnyGoal={weekPage.hasAnyGoal}
-                    isThisWeek={isThisWeek}
+                goals === null ? null : isEmpty(goals) ? (
+                  <EmptyPage
+                    title={
+                      !weekPage.hasAnyGoal
+                        ? "Todavía no tienes objetivos semanales."
+                        : isThisWeek
+                          ? "Esta semana no hay objetivos."
+                          : "Esa semana no hay objetivos."
+                    }
+                    hint={
+                      weekPage.hasAnyGoal
+                        ? undefined
+                        : "Desliza desde abajo para crear uno."
+                    }
                   />
                 ) : (
                   <TrackedList
@@ -303,7 +276,7 @@ export default function Today() {
                     groups={goals}
                     itemOf={goalItem}
                     onPress={(item) => void weekPage.record(item.goal.id)}
-                    onLongPress={openGoalOptions}
+                    onLongPress={goalOptions.open}
                     simultaneousWith={openCalendarFromList}
                     onScroll={onListScroll("weekly")}
                   />
@@ -326,7 +299,8 @@ export default function Today() {
         sheet={calendar}
         date={date}
         today={today}
-        wholeWeek={!onHabits}
+        // The weekly page shows a whole week, and the calendar marks it (RF-41).
+        wholeWeek={horizons.horizon === "weekly"}
         onSelect={showDay}
       />
 
@@ -346,15 +320,15 @@ export default function Today() {
       </Sheet>
 
       <HabitOptionsSheet
-        sheet={options}
-        dayHabit={heldNow}
+        sheet={habitOptions.sheet}
+        dayHabit={habitOptions.held}
         day={day}
         onEdit={edit}
       />
 
       <WeeklyGoalOptionsSheet
-        sheet={goalOptions}
-        weekGoal={heldGoalNow}
+        sheet={goalOptions.sheet}
+        weekGoal={goalOptions.held}
         week={week}
         today={today}
         page={weekPage}
