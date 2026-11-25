@@ -1,25 +1,25 @@
 -- Who can do what on each table: only signed-in users, with no physical deletion, and with
 -- Row Level Security enabled (supabase/migrations, ADR-0015).
 begin;
-select plan(28);
+select plan(36);
 
 select ok(
   (select relrowsecurity from pg_class where oid = format('public.%I', t)::regclass),
   format('%s has Row Level Security enabled', t)
 )
-from unnest(array['habits', 'habit_versions', 'entries', 'reminders', 'weekly_goals', 'weekly_goal_versions', 'weekly_goal_entries']) as t;
+from unnest(array['habits', 'habit_versions', 'entries', 'reminders', 'weekly_goals', 'weekly_goal_versions', 'weekly_goal_entries', 'long_term_goals', 'long_term_goal_entries']) as t;
 
 select table_privs_are(
   'public', t, 'anon', array[]::text[],
   format('anon has no access to %s', t)
 )
-from unnest(array['habits', 'habit_versions', 'entries', 'reminders', 'weekly_goals', 'weekly_goal_versions', 'weekly_goal_entries']) as t;
+from unnest(array['habits', 'habit_versions', 'entries', 'reminders', 'weekly_goals', 'weekly_goal_versions', 'weekly_goal_entries', 'long_term_goals', 'long_term_goal_entries']) as t;
 
 select table_privs_are(
   'public', t, 'authenticated', array['SELECT', 'INSERT', 'UPDATE'],
   format('authenticated can read, insert and update %s, but not delete or truncate', t)
 )
-from unnest(array['habits', 'habit_versions', 'entries', 'reminders', 'weekly_goals', 'weekly_goal_versions', 'weekly_goal_entries']) as t;
+from unnest(array['habits', 'habit_versions', 'entries', 'reminders', 'weekly_goals', 'weekly_goal_versions', 'weekly_goal_entries', 'long_term_goals', 'long_term_goal_entries']) as t;
 
 select policies_are('public', 'habits', array[
   'Users read their own habits',
@@ -55,6 +55,16 @@ select policies_are('public', 'weekly_goal_entries', array[
   'Users read their own weekly goal entries',
   'Users create their own weekly goal entries',
   'Users update their own weekly goal entries'
+]);
+select policies_are('public', 'long_term_goals', array[
+  'Users read their own long-term goals',
+  'Users create their own long-term goals',
+  'Users update their own long-term goals'
+]);
+select policies_are('public', 'long_term_goal_entries', array[
+  'Users read their own long-term goal entries',
+  'Users create their own long-term goal entries',
+  'Users update their own long-term goal entries'
 ]);
 
 select * from finish();

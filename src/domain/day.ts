@@ -18,8 +18,8 @@ export interface DayHabit {
 }
 
 /**
- * A boolean habit or weekly goal is done when it is marked; a quantitative one, when the
- * accumulated amount reaches the target of the version in force then (RF-16, RF-47).
+ * A boolean habit, weekly goal or long-term goal is done when it is marked; a quantitative one,
+ * when the accumulated amount reaches the target in force then (RF-16, RF-47, RF-59).
  */
 export function isDone(
   type: TrackedType,

@@ -137,6 +137,34 @@ const QUERY_INDEXES = `
     ON entries (deleted, id) WHERE pending_sync = 1;
 `;
 
+// Long-term goals (ADR-0027): the configuration, without versions, and a single total per goal.
+// The deadline is always after the first day, also in an emptied row (ADR-0023).
+const LONG_TERM_GOALS = `
+  CREATE TABLE long_term_goals (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('boolean', 'quantitative')),
+    color TEXT,
+    target REAL,
+    unit TEXT,
+    increment REAL,
+    first_day TEXT NOT NULL,
+    deadline TEXT NOT NULL,
+    ${SYNC_COLUMNS},
+    CHECK (deadline > first_day)
+  ) STRICT;
+
+  CREATE TABLE long_term_goal_entries (
+    id TEXT PRIMARY KEY NOT NULL,
+    long_term_goal_id TEXT NOT NULL REFERENCES long_term_goals (id) ON DELETE CASCADE,
+    value REAL NOT NULL CHECK (value >= 0),
+    ${SYNC_COLUMNS}
+  ) STRICT;
+
+  CREATE UNIQUE INDEX long_term_goal_entries_goal
+    ON long_term_goal_entries (long_term_goal_id) WHERE deleted = 0;
+`;
+
 /** Every migration, in order. The version of the schema is the position, starting at 1. */
 export const MIGRATIONS: readonly string[] = [
   INITIAL_SCHEMA,
@@ -144,6 +172,7 @@ export const MIGRATIONS: readonly string[] = [
   SYNC_STATE,
   WEEKLY_GOALS,
   QUERY_INDEXES,
+  LONG_TERM_GOALS,
 ];
 
 /** The version of the schema of `db`: 0 for a new database. */

@@ -14,9 +14,14 @@ import {
 } from "@supabase/supabase-js";
 
 import { addHabit } from "@/data/habits-repository";
+import {
+  saveLongTermGoal,
+  saveLongTermGoalEntry,
+} from "@/data/long-term-goals-repository";
 import { saveEntry } from "@/data/entries-repository";
 import {
   habit,
+  longTermGoal,
   openMigratedDatabase,
   version,
   weeklyGoal,
@@ -45,6 +50,8 @@ const ACCOUNT_TABLES = [
   "weekly_goals",
   "weekly_goal_versions",
   "weekly_goal_entries",
+  "long_term_goals",
+  "long_term_goal_entries",
 ];
 
 // The first request starts the function, which downloads its dependencies.
@@ -100,6 +107,9 @@ async function accountWithData(): Promise<Account> {
       week: localDate("2026-11-16"),
       value: 1,
     });
+    const longTermGoalId = id();
+    await saveLongTermGoal(db, longTermGoal(longTermGoalId));
+    await saveLongTermGoalEntry(db, { id: id(), longTermGoalId, value: 1 });
     await synchronize(db, supabaseRemote(account), data.user.id);
   } finally {
     db.close();
@@ -130,6 +140,8 @@ const ONE_ROW_EACH = {
   weekly_goals: 1,
   weekly_goal_versions: 1,
   weekly_goal_entries: 1,
+  long_term_goals: 1,
+  long_term_goal_entries: 1,
 };
 const NO_ROWS = {
   habits: 0,
@@ -139,6 +151,8 @@ const NO_ROWS = {
   weekly_goals: 0,
   weekly_goal_versions: 0,
   weekly_goal_entries: 0,
+  long_term_goals: 0,
+  long_term_goal_entries: 0,
 };
 
 async function deleteAccount(account: SupabaseClient) {

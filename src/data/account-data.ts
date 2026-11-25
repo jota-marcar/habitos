@@ -16,6 +16,8 @@ const ACCOUNT_TABLES = [
   "weekly_goal_entries",
   "weekly_goal_versions",
   "weekly_goals",
+  "long_term_goal_entries",
+  "long_term_goals",
 ] as const;
 
 /**

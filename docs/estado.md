@@ -26,7 +26,9 @@ La `0.2.0` se comprobó en producción el 2026-11-24. TestFlight sigue mostrando
 2. **Metas, el tercer horizonte** (rumbo elegido el 2026-11-25): los requisitos están en la [sección 3.9](especificacion-funcional.md#39-metas). Se harán como los objetivos semanales, en Pull Requests sucesivos:
    1. Especificación y glosario. "Meta" pasa a nombrar el horizonte, y la cantidad que hay que alcanzar se llama ahora "Cantidad", también en los formularios.
    2. El núcleo común de hábitos y objetivos (C4 de la auditoría), limitado a lo que vayan a reutilizar las metas.
-   3. El modelo de datos y la sincronización, con su ADR.
+   3. El modelo de datos y la sincronización, con su ADR ([ADR-0027](adr/0027-metas-en-dos-tablas-propias-sin-versiones-con-un-total-por-meta.md)). Añade una migración local y la migración de la nube `20261125120000_long_term_goals`.
+      - **Antes de publicar nada desde `main` con este cambio**, también la `0.3.0`, hay que aplicar esa migración en el proyecto de la nube del entorno. Sin ella, la sincronización falla al llegar a las tablas nuevas y deja de subir también los hábitos y los objetivos.
+      - La migración local hace irreversible la actualización que la lleve. Si la `0.3.0` sale después de fusionar este cambio, llevará ya las tablas de las metas, aunque sin interfaz.
    4. La interfaz.
    5. Los avisos de las metas, que están por definir.
 3. **Al tocar los ficheros afectados:** TypeScript más estricto, dividir los ficheros más grandes, quitar lo que sobra y revisar la regla de separar los textos.

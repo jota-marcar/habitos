@@ -4,8 +4,10 @@
 import type { Database, SqlValue } from "./database";
 import type { SyncTable } from "./sync-repository";
 
-// The columns that cannot be null get a fixed value. It is a Monday, valid for a week too.
+// The columns that cannot be null get a fixed value. It is a Monday, valid for a week too. A
+// deadline has to be after the first day, so it is the day after.
 const NO_DATE = "1970-01-05";
+const NO_DEADLINE = "1970-01-06";
 const NO_TIME = "00:00";
 const NO_AMOUNTS = { target: null, unit: null, increment: null };
 const ALL_DAYS = 127;
@@ -40,6 +42,15 @@ export const EMPTIED_VALUES: Readonly<
   },
   weekly_goal_versions: { effective_from: NO_DATE, ...NO_AMOUNTS },
   weekly_goal_entries: { week: NO_DATE, value: 0 },
+  long_term_goals: {
+    name: "",
+    type: "boolean",
+    color: null,
+    ...NO_AMOUNTS,
+    first_day: NO_DATE,
+    deadline: NO_DEADLINE,
+  },
+  long_term_goal_entries: { value: 0 },
 };
 
 /** Marks the rows of `table` that match `where` as deleted, and empties them. */

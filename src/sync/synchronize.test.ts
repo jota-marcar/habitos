@@ -9,6 +9,13 @@ import {
   saveHabit,
 } from "@/data/habits-repository";
 import {
+  deleteLongTermGoal,
+  listLongTermGoalEntries,
+  listLongTermGoals,
+  saveLongTermGoal,
+  saveLongTermGoalEntry,
+} from "@/data/long-term-goals-repository";
+import {
   addReminder,
   deleteReminder,
   listReminders,
@@ -20,6 +27,7 @@ import {
 } from "@/data/sync-repository";
 import {
   habit,
+  longTermGoal,
   openMigratedDatabase,
   version,
   weeklyGoal,
@@ -161,6 +169,98 @@ describe("synchronize weekly goals", () => {
     await synchronize(tablet, remote, USER);
 
     expect(await listWeeklyGoals(tablet)).toEqual([]);
+  });
+});
+
+describe("synchronize long-term goals", () => {
+  test("another device finds the goal and its total", async () => {
+    const goal = longTermGoal("books", {
+      type: "quantitative",
+      color: "blue",
+      target: 24,
+      unit: "libros",
+      increment: 1,
+    });
+    await saveLongTermGoal(phone, goal);
+    await saveLongTermGoalEntry(phone, {
+      id: "books-entry",
+      longTermGoalId: "books",
+      value: 5,
+    });
+
+    await synchronize(phone, remote, USER);
+    await synchronize(tablet, remote, USER);
+
+    expect(await listLongTermGoals(tablet)).toEqual([goal]);
+    expect(await listLongTermGoalEntries(tablet)).toEqual([
+      { id: "books-entry", longTermGoalId: "books", value: 5 },
+    ]);
+    expect(await pendingCount(phone)).toBe(0);
+    expect(await pendingCount(tablet)).toBe(0);
+  });
+
+  test("a change to the goal and a change to its total on two devices are both kept", async () => {
+    await saveLongTermGoal(phone, longTermGoal("books"));
+    await synchronize(phone, remote, USER);
+    await synchronize(tablet, remote, USER);
+    await saveLongTermGoal(phone, longTermGoal("books", { name: "Leer" }));
+    await saveLongTermGoalEntry(tablet, {
+      id: "tablet-entry",
+      longTermGoalId: "books",
+      value: 1,
+    });
+
+    await synchronize(phone, remote, USER);
+    await synchronize(tablet, remote, USER);
+    await synchronize(phone, remote, USER);
+
+    for (const device of [phone, tablet]) {
+      expect((await listLongTermGoals(device))[0].name).toBe("Leer");
+      expect(await listLongTermGoalEntries(device)).toMatchObject([
+        { value: 1 },
+      ]);
+    }
+  });
+
+  test("the total of a goal recorded on two devices is joined by its key", async () => {
+    await saveLongTermGoal(phone, longTermGoal("books"));
+    await synchronize(phone, remote, USER);
+    await synchronize(tablet, remote, USER);
+    await saveLongTermGoalEntry(phone, {
+      id: "phone-entry",
+      longTermGoalId: "books",
+      value: 1,
+    });
+    await saveLongTermGoalEntry(tablet, {
+      id: "tablet-entry",
+      longTermGoalId: "books",
+      value: 3,
+    });
+
+    await synchronize(phone, remote, USER);
+    await synchronize(tablet, remote, USER);
+    await synchronize(phone, remote, USER);
+
+    expect(remote.rows.long_term_goal_entries.size).toBe(1);
+    expect(await listLongTermGoalEntries(phone)).toEqual(
+      await listLongTermGoalEntries(tablet),
+    );
+  });
+
+  test("a deleted goal disappears from the other devices", async () => {
+    await saveLongTermGoal(phone, longTermGoal("books"));
+    await synchronize(phone, remote, USER);
+    await synchronize(tablet, remote, USER);
+
+    await deleteLongTermGoal(phone, "books");
+    await synchronize(phone, remote, USER);
+    await synchronize(tablet, remote, USER);
+
+    expect(await listLongTermGoals(tablet)).toEqual([]);
+    expect(remote.row("long_term_goals", "books")).toMatchObject({
+      deleted: true,
+      ...EMPTIED_VALUES.long_term_goals,
+    });
   });
 });
 

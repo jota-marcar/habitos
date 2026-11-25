@@ -14,7 +14,9 @@ export type SyncTable =
   | "reminders"
   | "weekly_goals"
   | "weekly_goal_versions"
-  | "weekly_goal_entries";
+  | "weekly_goal_entries"
+  | "long_term_goals"
+  | "long_term_goal_entries";
 
 /** The synchronized tables, parents before their children, as their foreign keys require. */
 export const SYNC_TABLES: readonly SyncTable[] = [
@@ -25,6 +27,8 @@ export const SYNC_TABLES: readonly SyncTable[] = [
   "weekly_goals",
   "weekly_goal_versions",
   "weekly_goal_entries",
+  "long_term_goals",
+  "long_term_goal_entries",
 ];
 
 /** The value of a column in the cloud. */
@@ -90,6 +94,19 @@ const COLUMNS: Record<SyncTable, readonly string[]> = {
     "deleted",
   ],
   weekly_goal_entries: ["id", "weekly_goal_id", "week", "value", "deleted"],
+  long_term_goals: [
+    "id",
+    "name",
+    "type",
+    "color",
+    "target",
+    "unit",
+    "increment",
+    "first_day",
+    "deadline",
+    "deleted",
+  ],
+  long_term_goal_entries: ["id", "long_term_goal_id", "value", "deleted"],
 };
 
 /** The columns that are 0 or 1 on the device and a boolean in the cloud. */
@@ -108,6 +125,8 @@ const NATURAL_KEYS: Record<SyncTable, readonly string[]> = {
   weekly_goals: [],
   weekly_goal_versions: ["weekly_goal_id", "effective_from"],
   weekly_goal_entries: ["weekly_goal_id", "week"],
+  long_term_goals: [],
+  long_term_goal_entries: ["long_term_goal_id"],
 };
 
 /** The columns of `table` that travel to and from the cloud. */
