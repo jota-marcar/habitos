@@ -2,7 +2,7 @@
 
 Qué hay publicado, qué viene ahora y qué falta por decidir. Una sesión nueva puede empezar por aquí. Se actualiza en el mismo Pull Request que cambia algo de lo que cuenta, y al publicar.
 
-**Última actualización:** 2026-11-24.
+**Última actualización:** 2026-11-25.
 
 ## Qué hay publicado
 
@@ -23,9 +23,13 @@ La `0.2.0` se comprobó en producción el 2026-11-24. TestFlight sigue mostrando
      1. `build:dev`, otra vez. El primero se hizo con la URL de Sentry de la región (`de.sentry.io`), que el token ignora y que solo producía un aviso. Corregirla cambió la huella nativa. Con el build nuevo se prueba Sentry con un error forzado ([despliegue.md](despliegue.md#comprobarlo)) y se repasa la app entera.
      2. `update:dev` desde `main`, para que Hábitos Dev muestre la `0.3.0` con el código exacto de producción. Se prueba sin prisa.
      3. `build:prod`. El build de producción actual caduca hacia el 2027-02-19.
-2. **Decidir el rumbo del producto** con lo que digan los probadores: objetivos a largo plazo, estadísticas o preparar la App Store.
-3. **Antes del tercer horizonte, si es el rumbo elegido:** el núcleo común de hábitos y objetivos.
-4. **Al tocar los ficheros afectados:** TypeScript más estricto, dividir los ficheros más grandes, quitar lo que sobra y revisar la regla de separar los textos.
+2. **Metas, el tercer horizonte** (rumbo elegido el 2026-11-25): los requisitos están en la [sección 3.9](especificacion-funcional.md#39-metas). Se harán como los objetivos semanales, en Pull Requests sucesivos:
+   1. Especificación y glosario. "Meta" pasa a nombrar el horizonte, y la cantidad que hay que alcanzar se llama ahora "Cantidad", también en los formularios.
+   2. El núcleo común de hábitos y objetivos (C4 de la auditoría), limitado a lo que vayan a reutilizar las metas.
+   3. El modelo de datos y la sincronización, con su ADR.
+   4. La interfaz.
+   5. Los avisos de las metas, que están por definir.
+3. **Al tocar los ficheros afectados:** TypeScript más estricto, dividir los ficheros más grandes, quitar lo que sobra y revisar la regla de separar los textos.
 
 ## Decisiones pendientes
 

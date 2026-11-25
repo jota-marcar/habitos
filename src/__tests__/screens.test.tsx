@@ -925,7 +925,7 @@ describe("new habit", () => {
 
     await fireEvent.changeText(screen.getByLabelText("Nombre"), "Beber agua");
     await fireEvent.press(screen.getByText("Cantidad"));
-    await fireEvent.changeText(screen.getByLabelText("Meta"), "2");
+    await fireEvent.changeText(screen.getByLabelText("Cantidad"), "2");
     await fireEvent.changeText(screen.getByLabelText("Unidad"), "L");
     await fireEvent.changeText(screen.getByLabelText("Incremento"), "0,25");
     await save();
@@ -949,9 +949,9 @@ describe("new habit", () => {
     await type("Unidad", "a".repeat(11));
     expect(valueOf("Unidad")).toHaveLength(10);
 
-    await type("Meta", "999999");
-    await type("Meta", "1000000");
-    expect(valueOf("Meta")).toBe("999999");
+    await type("Cantidad", "999999");
+    await type("Cantidad", "1000000");
+    expect(valueOf("Cantidad")).toBe("999999");
 
     await type("Incremento", "5");
     await type("Incremento", "1000000");
@@ -965,13 +965,13 @@ describe("new habit", () => {
       version("big", { target: 20_000_000, unit: "p", increment: 30_000_000 }),
     );
     await renderApp("/habits/big/edit");
-    const meta = await screen.findByLabelText("Meta");
+    const targetField = await screen.findByLabelText("Cantidad");
     const increment = screen.getByLabelText("Incremento");
 
-    await fireEvent.changeText(meta, "2000000");
+    await fireEvent.changeText(targetField, "2000000");
     await fireEvent.changeText(increment, "3000000");
 
-    expect(screen.getByLabelText("Meta").props.value).toBe("2000000");
+    expect(screen.getByLabelText("Cantidad").props.value).toBe("2000000");
     expect(screen.getByLabelText("Incremento").props.value).toBe("3000000");
   });
 
@@ -1057,7 +1057,7 @@ describe("new habit", () => {
     await renderApp("/habits/new");
     await fireEvent.press(screen.getByText("Cantidad"));
 
-    for (const label of ["Meta", "Unidad", "Incremento"]) {
+    for (const label of ["Cantidad", "Unidad", "Incremento"]) {
       expect(screen.getByLabelText(label)).toHaveProp(
         "selectTextOnFocus",
         true,
@@ -1071,7 +1071,7 @@ describe("new habit", () => {
     await renderApp("/habits/new");
     await fireEvent.press(screen.getByText("Cantidad"));
 
-    for (const label of ["Meta", "Unidad", "Incremento"]) {
+    for (const label of ["Cantidad", "Unidad", "Incremento"]) {
       expect(screen.getByLabelText(label)).toHaveStyle({
         backgroundColor: "#27272A",
         textAlign: "right",
@@ -1106,7 +1106,7 @@ describe("new habit", () => {
 
     expect(screen.getByText("Escribe un nombre.")).toBeTruthy();
     expect(
-      screen.getByText("La meta debe ser un número mayor que 0."),
+      screen.getByText("La cantidad debe ser un número mayor que 0."),
     ).toBeTruthy();
     expect(screen.getByText("Elige al menos un día.")).toBeTruthy();
     expect(await listHabits(db)).toEqual([]);
@@ -1438,7 +1438,7 @@ describe("edit habit (RF-08)", () => {
 
     expect(screen).toHavePathname("/habits/water/edit");
     expect(await screen.findByDisplayValue("Beber agua")).toBeTruthy();
-    expect(screen.getByLabelText("Meta")).toHaveDisplayValue("2");
+    expect(screen.getByLabelText("Cantidad")).toHaveDisplayValue("2");
     expect(screen.getByLabelText("Unidad")).toHaveDisplayValue("L");
     expect(screen.getByLabelText("Incremento")).toHaveDisplayValue("0,25");
     expect(screen.getByLabelText("domingo")).toBeChecked();
@@ -1453,7 +1453,7 @@ describe("edit habit (RF-08)", () => {
     await screen.findByDisplayValue("Beber agua");
 
     await fireEvent.changeText(screen.getByLabelText("Nombre"), "Agua");
-    await fireEvent.changeText(screen.getByLabelText("Meta"), "1,5");
+    await fireEvent.changeText(screen.getByLabelText("Cantidad"), "1,5");
     await fireEvent.press(screen.getByLabelText("domingo"));
     await fireEvent.press(
       screen.getByLabelText("Quitar el recordatorio de las 10:00"),
@@ -1512,7 +1512,7 @@ describe("edit habit (RF-08)", () => {
     await renderApp("/habits/walk/edit");
 
     expect(await screen.findByDisplayValue("Pasear")).toBeTruthy();
-    expect(screen.queryByLabelText("Meta")).toBeNull();
+    expect(screen.queryByLabelText("Cantidad")).toBeNull();
     expect(screen.queryByText("Sí o no")).toBeNull();
   });
 
@@ -1522,12 +1522,12 @@ describe("edit habit (RF-08)", () => {
     await screen.findByDisplayValue("Beber agua");
 
     await fireEvent.changeText(screen.getByLabelText("Nombre"), " ");
-    await fireEvent.changeText(screen.getByLabelText("Meta"), "0");
+    await fireEvent.changeText(screen.getByLabelText("Cantidad"), "0");
     await fireEvent.press(screen.getByLabelText("Guardar"));
 
     expect(await screen.findByText("Escribe un nombre.")).toBeTruthy();
     expect(
-      screen.getByText("La meta debe ser un número mayor que 0."),
+      screen.getByText("La cantidad debe ser un número mayor que 0."),
     ).toBeTruthy();
     expect(screen).toHavePathname("/habits/water/edit");
     expect(await listHabits(db)).toEqual([
@@ -2040,7 +2040,7 @@ describe("weekly goals (RF-42 to RF-50)", () => {
     await fireEvent.press(screen.getByLabelText("Guardar"));
 
     expect(
-      await screen.findByText("La meta debe ser un número mayor que 0."),
+      await screen.findByText("La cantidad debe ser un número mayor que 0."),
     ).toBeTruthy();
     expect(screen).toHavePathname("/weekly-goals/new");
     expect(await listWeeklyGoals(db)).toEqual([]);
@@ -2144,7 +2144,7 @@ describe("weekly goals (RF-42 to RF-50)", () => {
       screen.getByLabelText("Nombre"),
       "Mis proyectos",
     );
-    await fireEvent.changeText(screen.getByLabelText("Meta"), "10");
+    await fireEvent.changeText(screen.getByLabelText("Cantidad"), "10");
     await save();
 
     // The name changes in the whole history, and the target only from this week.
@@ -2547,7 +2547,7 @@ describe("calendar (RF-18, RF-31)", () => {
         "Los cambios se aplican desde el 14 de noviembre de 2026",
       ),
     ).toBeTruthy();
-    await fireEvent.changeText(screen.getByLabelText("Meta"), "3");
+    await fireEvent.changeText(screen.getByLabelText("Cantidad"), "3");
     await fireEvent.press(screen.getByLabelText("Guardar"));
 
     await waitFor(() => expect(screen).toHavePathname("/"));
