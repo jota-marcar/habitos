@@ -3,13 +3,9 @@
 
 import { weekdayOf, type LocalDate } from "./dates";
 import type { Entry } from "./entries";
-import {
-  versionOn,
-  type Amounts,
-  type Habit,
-  type HabitType,
-  type HabitVersion,
-} from "./habits";
+import { type Habit, type HabitVersion } from "./habits";
+import { versionOn } from "./versions";
+import { type Amounts, type TrackedType } from "./tracked";
 import { isScheduledOn } from "./schedule";
 
 export interface DayHabit {
@@ -26,7 +22,7 @@ export interface DayHabit {
  * accumulated amount reaches the target of the version in force then (RF-16, RF-47).
  */
 export function isDone(
-  type: HabitType,
+  type: TrackedType,
   version: Pick<Amounts, "target">,
   value: number,
 ): boolean {
@@ -39,7 +35,7 @@ export function isDone(
  * or done; a quantitative one goes up with the amount and stays at 1 past the target.
  */
 export function progressOf(
-  type: HabitType,
+  type: TrackedType,
   version: Pick<Amounts, "target">,
   value: number,
 ): number {

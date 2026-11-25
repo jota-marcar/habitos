@@ -3,7 +3,7 @@
 // appearance so native pieces (alerts, pickers, keyboard) match. The colors of the habits are
 // not part of the interface: the user gives them to tell habits apart (ADR-0014).
 
-import type { HabitColor } from "@/domain/habits";
+import type { TrackedColor } from "@/domain/tracked";
 
 export interface Colors {
   readonly background: string;
@@ -16,8 +16,8 @@ export interface Colors {
   readonly danger: string;
   /** Dims the screen behind a sheet. */
   readonly backdrop: string;
-  /** The tone of each color a habit can have: light, to be read on the dark surfaces. */
-  readonly habit: Readonly<Record<HabitColor, string>>;
+  /** The tone of each color a habit or goal can have: light, to be read on the dark surfaces. */
+  readonly tracked: Readonly<Record<TrackedColor, string>>;
 }
 
 const COLORS: Colors = {
@@ -30,7 +30,7 @@ const COLORS: Colors = {
   onPrimary: "#0F0F11",
   danger: "#F2555A",
   backdrop: "#000000",
-  habit: {
+  tracked: {
     red: "#F87171",
     orange: "#FB923C",
     amber: "#FBBF24",

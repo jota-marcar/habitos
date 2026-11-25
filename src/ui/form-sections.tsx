@@ -4,32 +4,32 @@
 import { StyleSheet, View } from "react-native";
 
 import { fitsMaxAmount } from "@/domain/amounts";
+import { type HabitError } from "@/domain/habits";
 import {
-  HABIT_COLORS,
+  TRACKED_COLORS,
   MAX_NAME_LENGTH,
   MAX_UNIT_LENGTH,
   limitedText,
-  type HabitColor,
-  type HabitError,
-  type HabitType,
-} from "@/domain/habits";
+  type TrackedColor,
+  type TrackedType,
+} from "@/domain/tracked";
 
 import { ColorSwatch, Field, Section, SegmentedControl } from "./components";
-import { HABIT_COLOR_NAMES } from "@/shared/format";
+import { TRACKED_COLOR_NAMES } from "@/shared/format";
 import { fieldOf, type HabitFormField } from "./habit-form";
 import { HABIT_ERROR_MESSAGES } from "./messages";
 import { spacing, useColors } from "./theme";
 
-const TYPE_OPTIONS: readonly { value: HabitType; label: string }[] = [
+const TYPE_OPTIONS: readonly { value: TrackedType; label: string }[] = [
   { value: "boolean", label: "Sí o no" },
   { value: "quantitative", label: "Cantidad" },
 ];
 
 // The colors are shown in rows, like the days of the week.
 const COLORS_PER_ROW = 6;
-const COLOR_ROWS: readonly (readonly HabitColor[])[] = [
-  HABIT_COLORS.slice(0, COLORS_PER_ROW),
-  HABIT_COLORS.slice(COLORS_PER_ROW),
+const COLOR_ROWS: readonly (readonly TrackedColor[])[] = [
+  TRACKED_COLORS.slice(0, COLORS_PER_ROW),
+  TRACKED_COLORS.slice(COLORS_PER_ROW),
 ];
 
 /** The first message for each field, if it has errors. */
@@ -76,8 +76,8 @@ export function ColorSection({
   value,
   onChange,
 }: {
-  value: HabitColor | null;
-  onChange: (color: HabitColor | null) => void;
+  value: TrackedColor | null;
+  onChange: (color: TrackedColor | null) => void;
 }) {
   const colors = useColors();
   return (
@@ -88,8 +88,8 @@ export function ColorSection({
             {row.map((color) => (
               <ColorSwatch
                 key={color}
-                color={colors.habit[color]}
-                accessibilityLabel={HABIT_COLOR_NAMES[color]}
+                color={colors.tracked[color]}
+                accessibilityLabel={TRACKED_COLOR_NAMES[color]}
                 selected={value === color}
                 // Touching the chosen color takes it away (RF-06).
                 onPress={() => onChange(value === color ? null : color)}
@@ -103,7 +103,7 @@ export function ColorSection({
 }
 
 export interface AmountValues {
-  readonly type: HabitType;
+  readonly type: TrackedType;
   /** The amounts as typed, so that "1," can be shown while typing "1,5". */
   readonly target: string;
   readonly unit: string;

@@ -7,9 +7,9 @@ import type { LocalDate } from "@/domain/dates";
 import {
   DEFAULT_INCREMENT,
   type Amounts,
-  type HabitColor,
-  type HabitType,
-} from "@/domain/habits";
+  type TrackedColor,
+  type TrackedType,
+} from "@/domain/tracked";
 import {
   changeWeeklyGoalAmounts,
   createWeeklyGoal,
@@ -25,8 +25,8 @@ import { formatAmount, formatWeekRange } from "@/shared/format";
 
 export interface WeeklyGoalFormValues {
   readonly name: string;
-  readonly color: HabitColor | null;
-  readonly type: HabitType;
+  readonly color: TrackedColor | null;
+  readonly type: TrackedType;
   /** The amounts as typed, so that "1," can be shown while typing "1,5". */
   readonly target: string;
   readonly unit: string;
@@ -46,7 +46,7 @@ export const EMPTY_WEEKLY_GOAL_FORM: WeeklyGoalFormValues = {
 };
 
 // The amounts of a yes-or-no goal are ignored, even if they were typed before changing the type.
-function amountsOf(type: HabitType, values: WeeklyGoalFormValues): Amounts {
+function amountsOf(type: TrackedType, values: WeeklyGoalFormValues): Amounts {
   const quantitative = type === "quantitative";
   return {
     // Text that is not a number is rejected like a missing amount.

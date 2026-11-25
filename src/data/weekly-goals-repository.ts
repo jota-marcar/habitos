@@ -3,7 +3,7 @@
 // returned.
 
 import { localDate, type LocalDate } from "@/domain/dates";
-import { parseHabitColor, type HabitType } from "@/domain/habits";
+import { parseTrackedColor, type TrackedType } from "@/domain/tracked";
 import type {
   WeeklyGoal,
   WeeklyGoalEntry,
@@ -44,9 +44,9 @@ function toWeeklyGoal(row: WeeklyGoalRow): WeeklyGoal {
     id: row.id,
     name: row.name,
     // The table only admits the two types.
-    type: row.type as HabitType,
+    type: row.type as TrackedType,
     // A key this version does not know is read as no color (ADR-0014).
-    color: parseHabitColor(row.color),
+    color: parseTrackedColor(row.color),
     recurring: row.recurring === 1,
     firstWeek: localDate(row.first_week),
     archivedWeek:

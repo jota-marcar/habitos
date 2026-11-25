@@ -6,7 +6,7 @@ import { Alert } from "react-native";
 
 import { parseAmount } from "@/domain/amounts";
 import { exactAmount } from "@/domain/entries";
-import type { Amounts } from "@/domain/habits";
+import type { Amounts } from "@/domain/tracked";
 import type { HabitOption } from "@/domain/options";
 
 import { formatAmount, formatProgress } from "@/shared/format";

@@ -6,18 +6,20 @@ import type { HabitChanges } from "@/data/habits-repository";
 import { parseAmount } from "@/domain/amounts";
 import type { LocalDate } from "@/domain/dates";
 import {
-  DEFAULT_INCREMENT,
   DEFAULT_SCHEDULED_DAYS,
   changeConfig,
   createHabit,
   recolorHabit,
   renameHabit,
   type Habit,
-  type HabitColor,
   type HabitError,
-  type HabitType,
   type HabitVersion,
 } from "@/domain/habits";
+import {
+  DEFAULT_INCREMENT,
+  type TrackedColor,
+  type TrackedType,
+} from "@/domain/tracked";
 import {
   addReminder,
   type Reminder,
@@ -30,8 +32,8 @@ import { formatAmount } from "@/shared/format";
 
 export interface HabitFormValues {
   readonly name: string;
-  readonly color: HabitColor | null;
-  readonly type: HabitType;
+  readonly color: TrackedColor | null;
+  readonly type: TrackedType;
   /** The amounts as typed, so that "1," can be shown while typing "1,5". */
   readonly target: string;
   readonly unit: string;

@@ -14,7 +14,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { progressOf } from "@/domain/day";
-import type { Amounts, HabitColor, HabitType } from "@/domain/habits";
+import type { Amounts, TrackedColor, TrackedType } from "@/domain/tracked";
 import type { DayGroups } from "@/domain/order";
 
 import { formatProgress } from "@/shared/format";
@@ -37,8 +37,8 @@ const GROUP_GAP = spacing.xl;
 export interface TrackedItem {
   readonly id: string;
   readonly name: string;
-  readonly type: HabitType;
-  readonly color: HabitColor | null;
+  readonly type: TrackedType;
+  readonly color: TrackedColor | null;
   readonly amounts: Amounts;
   readonly value: number;
   readonly done: boolean;
@@ -90,7 +90,7 @@ function TrackedRow({
           ) : (
             <ProgressDot
               testID={`color-dot-${id}`}
-              color={colors.habit[color]}
+              color={colors.tracked[color]}
               progress={progressOf(type, amounts, value)}
             />
           )}

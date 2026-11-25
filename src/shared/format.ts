@@ -2,7 +2,7 @@
 
 import type { Month } from "@/domain/calendar";
 import { weekdayOf, type LocalDate, type Weekday } from "@/domain/dates";
-import type { Amounts, HabitColor } from "@/domain/habits";
+import type { Amounts, TrackedColor } from "@/domain/tracked";
 import type { Week } from "@/domain/weeks";
 
 /** Initials of the weekdays, from Monday to Sunday. */
@@ -17,7 +17,7 @@ export const WEEKDAY_INITIALS: Readonly<Record<Weekday, string>> = {
 };
 
 /** The names of the colors of a habit, as a screen reader says them (RF-06). */
-export const HABIT_COLOR_NAMES: Readonly<Record<HabitColor, string>> = {
+export const TRACKED_COLOR_NAMES: Readonly<Record<TrackedColor, string>> = {
   red: "Rojo",
   orange: "Naranja",
   amber: "Ámbar",

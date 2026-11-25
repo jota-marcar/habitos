@@ -5,18 +5,18 @@
 
 import type { LocalDate } from "./dates";
 import { isDone } from "./day";
+import { later } from "./dates";
 import {
-  later,
   normalizeAmounts,
   validateAmounts,
   validateName,
-  versionOn,
   type Amounts,
   type AmountsError,
-  type HabitColor,
-  type HabitType,
+  type TrackedColor,
+  type TrackedType,
   type NameError,
-} from "./habits";
+} from "./tracked";
+import { versionOn } from "./versions";
 import { fail, ok, type Result } from "./result";
 import { weekOf, type Week } from "./weeks";
 
@@ -24,9 +24,9 @@ export interface WeeklyGoal {
   readonly id: string;
   readonly name: string;
   /** Cannot change after the goal is created (RF-42). */
-  readonly type: HabitType;
+  readonly type: TrackedType;
   /** Not versioned, like the name: it changes in the whole history (RF-43). */
-  readonly color: HabitColor | null;
+  readonly color: TrackedColor | null;
   /** Whether it repeats every week or is a one-off. Cannot change (RF-42). */
   readonly recurring: boolean;
   /** The Monday of its first week: the only one of a one-off goal. */
@@ -55,8 +55,8 @@ export type WeeklyGoalError = NameError | AmountsError;
 
 export interface NewWeeklyGoal {
   readonly name: string;
-  readonly type: HabitType;
-  readonly color: HabitColor | null;
+  readonly type: TrackedType;
+  readonly color: TrackedColor | null;
   readonly recurring: boolean;
   readonly amounts: Amounts;
 }
@@ -127,7 +127,7 @@ export function renameWeeklyGoal(
 /** Gives a goal another color, or none. Like the name, it is not versioned (RF-43). */
 export function recolorWeeklyGoal(
   goal: WeeklyGoal,
-  color: HabitColor | null,
+  color: TrackedColor | null,
 ): WeeklyGoal {
   return { ...goal, color };
 }

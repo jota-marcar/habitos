@@ -11,7 +11,7 @@ import {
   saveWeeklyGoalChanges,
 } from "@/data/weekly-goals-repository";
 import { parseLocalDate } from "@/domain/dates";
-import { versionOn } from "@/domain/habits";
+import { versionOn } from "@/domain/versions";
 import {
   canEditWeeklyGoal,
   weeklyGoalChangesApplyFrom,

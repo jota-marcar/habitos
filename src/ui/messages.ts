@@ -2,11 +2,8 @@
 
 import { MAX_AMOUNT } from "@/domain/amounts";
 import type { AmountError } from "@/domain/entries";
-import {
-  MAX_NAME_LENGTH,
-  MAX_UNIT_LENGTH,
-  type HabitError,
-} from "@/domain/habits";
+import { type HabitError } from "@/domain/habits";
+import { MAX_NAME_LENGTH, MAX_UNIT_LENGTH } from "@/domain/tracked";
 import type { ReminderError } from "@/domain/reminders";
 import { formatAmount } from "@/shared/format";
 
