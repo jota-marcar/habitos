@@ -73,8 +73,8 @@ select results_eq(
   'A deleted total keeps nothing'
 );
 select results_eq(
-  $ select name, type, color, target, unit, increment, first_day, deadline from public.long_term_goals where id = 'aaaaaaaa-0000-4000-8000-000000000042' $,
-  $ values ('', 'boolean', null::text, null::double precision, null::text, null::double precision, '1970-01-05'::date, '1970-01-06'::date) $,
+  $$ select name, type, color, target, unit, increment, first_day, deadline from public.long_term_goals where id = 'aaaaaaaa-0000-4000-8000-000000000042' $$,
+  $$ values ('', 'boolean', null::text, null::double precision, null::text, null::double precision, '1970-01-05'::date, '1970-01-06'::date) $$,
   'A deleted long-term goal keeps nothing'
 );
 
@@ -111,15 +111,15 @@ select results_eq(
 );
 update public.long_term_goal_entries set value = 6 where id = 'aaaaaaaa-0000-4000-8000-000000000043';
 select results_eq(
-  $ select deleted, value from public.long_term_goal_entries where id = 'aaaaaaaa-0000-4000-8000-000000000043' $,
-  $ values (true, 0::double precision) $,
+  $$ select deleted, value from public.long_term_goal_entries where id = 'aaaaaaaa-0000-4000-8000-000000000043' $$,
+  $$ values (true, 0::double precision) $$,
   'A total of a deleted long-term goal ends up deleted and empty when it is uploaded'
 );
 insert into public.long_term_goal_entries (id, user_id, long_term_goal_id, value) values
   ('aaaaaaaa-0000-4000-8000-000000000044', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-0000-4000-8000-000000000042', 2);
 select results_eq(
-  $ select deleted, value from public.long_term_goal_entries where id = 'aaaaaaaa-0000-4000-8000-000000000044' $,
-  $ values (true, 0::double precision) $,
+  $$ select deleted, value from public.long_term_goal_entries where id = 'aaaaaaaa-0000-4000-8000-000000000044' $$,
+  $$ values (true, 0::double precision) $$,
   'A new total of a deleted long-term goal arrives deleted and empty'
 );
 

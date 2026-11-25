@@ -3,14 +3,16 @@
 begin;
 select plan(11);
 
--- Two users: Ana (aaaa…) and Bea (bbbb…), each with a goal and its total.
+-- Two users: Ana (aaaa…) and Bea (bbbb…), each with a goal and its total. Bea has another goal
+-- without a total, so that hanging one from it can only fail by its owner.
 insert into auth.users (id, email) values
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'ana@example.com'),
   ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'bea@example.com');
 
 insert into public.long_term_goals (id, user_id, name, type, target, unit, increment, first_day, deadline) values
   ('aaaaaaaa-0000-4000-8000-000000000051', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Read', 'quantitative', 24, 'books', 1, '2026-11-25', '2026-12-31'),
-  ('bbbbbbbb-0000-4000-8000-000000000051', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'Run', 'boolean', null, null, null, '2026-11-25', '2027-03-01');
+  ('bbbbbbbb-0000-4000-8000-000000000051', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'Run', 'boolean', null, null, null, '2026-11-25', '2027-03-01'),
+  ('bbbbbbbb-0000-4000-8000-000000000054', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'Swim', 'boolean', null, null, null, '2026-11-25', '2027-03-01');
 insert into public.long_term_goal_entries (id, user_id, long_term_goal_id, value) values
   ('aaaaaaaa-0000-4000-8000-000000000052', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-0000-4000-8000-000000000051', 3),
   ('bbbbbbbb-0000-4000-8000-000000000052', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'bbbbbbbb-0000-4000-8000-000000000051', 1);
@@ -65,7 +67,7 @@ select results_eq(
 );
 select throws_ok(
   $$ insert into public.long_term_goal_entries (id, long_term_goal_id, value)
-     values (gen_random_uuid(), 'bbbbbbbb-0000-4000-8000-000000000051', 1) $$,
+     values (gen_random_uuid(), 'bbbbbbbb-0000-4000-8000-000000000054', 1) $$,
   '23503', null,
   'Ana cannot hang a total from a goal of Bea'
 );
@@ -86,8 +88,8 @@ delete from auth.users where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 select is(
   (select count(*)::int from public.long_term_goals)
     + (select count(*)::int from public.long_term_goal_entries),
-  2,
-  'Deleting the account of Ana leaves only the two rows of Bea'
+  3,
+  'Deleting the account of Ana leaves only the three rows of Bea'
 );
 
 select * from finish();
