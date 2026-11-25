@@ -30,7 +30,7 @@ Cada ADR documenta una decisión técnica importante: el contexto, las opciones 
 | [0024](0024-versiones-visibles-con-versionado-semantico-y-un-tag-por-publicacion.md) | Versiones visibles con versionado semántico y un tag por publicación | Aceptado |
 | [0025](0025-capa-compartida-y-regla-de-dependencias-entre-capas-impuesta-con-eslint.md) | Capa compartida y regla de dependencias entre capas impuesta con ESLint | Aceptado |
 | [0026](0026-informes-de-errores-anonimos-con-sentry.md) | Informes de errores anónimos con Sentry | Aceptado |
-| [0027](0027-metas-en-dos-tablas-propias-sin-versiones-con-un-total-por-meta.md) | Metas en dos tablas propias, sin versiones, con un total por meta | Propuesto |
+| [0027](0027-metas-en-dos-tablas-propias-sin-versiones-con-un-total-por-meta.md) | Metas en dos tablas propias, sin versiones, con un total por meta | Aceptado |
 
 ## Plantilla
 

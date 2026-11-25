@@ -1,6 +1,6 @@
 # ADR-0027: Metas en dos tablas propias, sin versiones, con un total por meta
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado
 - **Fecha:** 2026-11-25
 
 ## Contexto
