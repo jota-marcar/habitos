@@ -135,17 +135,21 @@ export default function Today() {
       listOffsets.current[horizon] = offset;
       if (horizon === horizons.horizon) listAtTop.set(offset <= 0);
     };
-  // Each day and each week have their own list, which starts at the top.
+  // Each page shows the list of a period, which starts at the top when the period changes.
+  const listPeriods: Record<Horizon, LocalDate> = {
+    habits: date,
+    weekly: week.start,
+  };
+  const shownPeriods = useRef(listPeriods);
   useEffect(() => {
-    listOffsets.current.habits = 0;
-  }, [date]);
-  useEffect(() => {
-    listOffsets.current.weekly = 0;
-  }, [week.start]);
-  useEffect(
-    () => listAtTop.set(listOffsets.current[horizons.horizon] <= 0),
-    [date, week.start, horizons.horizon, listAtTop],
-  );
+    for (const horizon of HORIZONS) {
+      if (shownPeriods.current[horizon] !== listPeriods[horizon]) {
+        listOffsets.current[horizon] = 0;
+      }
+    }
+    shownPeriods.current = listPeriods;
+    listAtTop.set(listOffsets.current[horizons.horizon] <= 0);
+  });
 
   const menu = useSheet();
   const openMenu = useOpenSheetGesture(menu, "menu-strip");
