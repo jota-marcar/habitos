@@ -61,7 +61,7 @@ import { DatabaseContext } from "@/ui/database";
 import { requestHorizon } from "@/shared/horizon-request";
 import type { Horizon } from "@/shared/horizon-request";
 import { SessionContext } from "@/ui/session";
-import { SETTLE_DELAY_MS } from "@/ui/use-day";
+import { SETTLE_DELAY_MS } from "@/ui/use-tracked-page";
 
 // Thursday, 12 November 2026: after the day the fixtures are created (2026-11-01).
 const TODAY = localDate("2026-11-12");

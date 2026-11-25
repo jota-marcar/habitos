@@ -1,15 +1,10 @@
 // The day on screen, which the calendar changes (RF-18), its habits and how to change them:
-// recording them (RF-12 to RF-16) and the options of each one (RF-34). It reads the database
-// when a day is shown and again after each change it makes (ADR-0010).
-//
-// The groups (pending and done) and their order are computed when the day is shown, at the
-// time it is shown if it is the current day, and then kept while it stays on screen, so the
-// list does not move under the finger when a habit is marked (RF-12). Only after a pause in the
-// taps do the habits that were done or undone move to their group, where the screen animates
-// them.
+// recording them (RF-12 to RF-16) and the options of each one (RF-34). How the list is read,
+// kept in place and recorded is common to every page (`use-tracked-page`); a day sorts its
+// habits by their reminders, and follows the clock and the app coming back.
 
 import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState } from "react-native";
 
 import { listEntries, saveEntry } from "@/data/entries-repository";
@@ -21,30 +16,16 @@ import {
 } from "@/data/habits-repository";
 import { listReminders } from "@/data/reminders-repository";
 import type { LocalDate } from "@/domain/dates";
-import { habitsForDay, isDone, type DayHabit } from "@/domain/day";
-import {
-  canRecordOn,
-  decremented,
-  incremented,
-  toggled,
-} from "@/domain/entries";
+import { habitsForDay, type DayHabit } from "@/domain/day";
 import { archiveHabit } from "@/domain/habits";
 import { localTimeOf } from "@/domain/times";
-import {
-  keepGroups,
-  settleGroups,
-  sortDayHabits,
-  type DayGroups,
-} from "@/domain/order";
+import { settleGroups, sortDayHabits, type DayGroups } from "@/domain/order";
 import { onReminderRecorded } from "@/notifications/actions";
-import { refreshReminders } from "@/notifications/reminders";
-import { onSyncedChanges, syncSoon } from "@/sync/app-sync";
 
 import { msUntilTomorrow, newId, now, today } from "@/shared/clock";
 import { useDatabase } from "./database";
 import { takeDayOnReturn } from "./day-on-return";
-import { playRecorded, recordedFeedback } from "./haptics";
-import { reportWriteFailure } from "./write-failure";
+import { useTrackedPage, type PageSource } from "./use-tracked-page";
 
 export interface Day {
   /** The day on screen. */
@@ -69,15 +50,6 @@ export interface Day {
   readonly remove: (habitId: string) => Promise<void>;
 }
 
-const habitIdOf = (dayHabit: DayHabit) => dayHabit.habit.id;
-
-/**
- * How long the list waits after the last change made on it before moving the habits that were
- * done or undone to their group (RF-12): enough to see the habit marked, and to tap it again
- * without it going away.
- */
-export const SETTLE_DELAY_MS = 600;
-
 export function useDay(): Day {
   const db = useDatabase();
   const [date, setDate] = useState(today);
@@ -85,69 +57,51 @@ export function useDay(): Day {
   // The same two days, for what happens outside a render: timers and the state of the app.
   const shown = useRef(date);
   const current = useRef(currentDay);
-  const [habits, setHabits] = useState<DayGroups<DayHabit> | null>(null);
-  const [hasAnyHabit, setHasAnyHabit] = useState(false);
-  // The groups computed when the day was shown, as habit ids.
-  const order = useRef<DayGroups<string> | null>(null);
-  // Changes are written one after another, so that quick taps do not overwrite each other.
-  const writes = useRef<Promise<void>>(Promise.resolve());
-  // Discards the reads that finish after a newer one has started.
-  const lastRead = useRef(0);
-  // A read that had to sort, until one finishes: a newer read takes over if it is discarded.
-  const sortDue = useRef(false);
-  // The pause after the last change, and whether it is over: the next read then moves the
-  // habits to their group.
-  const settleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const settleDue = useRef(false);
 
-  const holdSettling = useCallback(() => {
-    clearTimeout(settleTimer.current);
-    settleDue.current = false;
-  }, []);
-
-  const load = useCallback(
-    async (shownDate: LocalDate, sort: boolean) => {
-      const read = ++lastRead.current;
-      if (sort) sortDue.current = true;
-      const [allHabits, versions, entries, reminders] = await Promise.all([
-        listHabits(db),
-        listHabitVersions(db),
-        listEntries(db, shownDate, shownDate),
-        listReminders(db),
-      ]);
-      if (read !== lastRead.current) return;
-
-      const dayHabits = habitsForDay(
-        { habits: allHabits, versions, entries },
-        shownDate,
-      );
-      // The current day is sorted by what is overdue and what comes next; any other day, by
-      // the first reminders (RF-12).
-      const time = shownDate === today() ? localTimeOf(now()) : null;
-      if (sortDue.current || order.current === null) {
-        sortDue.current = false;
-        const sorted = sortDayHabits(dayHabits, reminders, time);
-        order.current = {
-          pending: sorted.pending.map(habitIdOf),
-          done: sorted.done.map(habitIdOf),
+  const source = useMemo<PageSource<DayHabit>>(
+    () => ({
+      idOf: (dayHabit) => dayHabit.habit.id,
+      progressOf: ({ habit, version, value, done }) => ({
+        type: habit.type,
+        amounts: version,
+        value,
+        done,
+      }),
+      read: async (day) => {
+        const [allHabits, versions, entries, reminders] = await Promise.all([
+          listHabits(db),
+          listHabitVersions(db),
+          listEntries(db, day, day),
+          listReminders(db),
+        ]);
+        const dayHabits = habitsForDay(
+          { habits: allHabits, versions, entries },
+          day,
+        );
+        // The current day is sorted by what is overdue and what comes next; any other day, by
+        // the first reminders (RF-12).
+        const time = day === today() ? localTimeOf(now()) : null;
+        return {
+          items: dayHabits,
+          hasAny: allHabits.some((h) => h.archivedOn === null),
+          group: () => sortDayHabits(dayHabits, reminders, time),
+          settle: (order) => settleGroups(dayHabits, order, reminders, time),
+          save: async ({ habit }, value) => {
+            const existing = entries.find((e) => e.habitId === habit.id);
+            await saveEntry(db, {
+              id: existing?.id ?? newId(),
+              habitId: habit.id,
+              date: day,
+              value,
+            });
+          },
         };
-        setHabits(sorted);
-      } else {
-        if (settleDue.current) {
-          order.current = settleGroups(
-            dayHabits,
-            order.current,
-            reminders,
-            time,
-          );
-          settleDue.current = false;
-        }
-        setHabits(keepGroups(dayHabits, habitIdOf, order.current));
-      }
-      setHasAnyHabit(allHabits.some((h) => h.archivedOn === null));
-    },
+      },
+    }),
     [db],
   );
+  const page = useTrackedPage(source, date);
+  const { show: showPage, reload, change } = page;
 
   const checkToday = useCallback(() => {
     current.current = today();
@@ -159,17 +113,13 @@ export function useDay(): Day {
   // focus and when the app comes back from the background.
   const show = useCallback(
     (day: LocalDate) => {
-      holdSettling();
       checkToday();
       shown.current = day;
       setDate(day);
-      void load(day, true);
+      showPage(day);
     },
-    [checkToday, holdSettling, load],
+    [checkToday, showPage],
   );
-
-  // A pending pause does not outlive the screen.
-  useEffect(() => holdSettling, [holdSettling]);
 
   // Gaining focus is opening the app, which starts on the current day, and coming back from a
   // form, which keeps the day that was on screen unless it asks for another one.
@@ -212,116 +162,7 @@ export function useDay(): Day {
 
   // A button of a reminder may record something while the day is on screen (RF-25): it is
   // read again without sorting it, like any other change.
-  useEffect(
-    () => onReminderRecorded(() => void load(shown.current, false)),
-    [load],
-  );
-
-  // So may a synchronization, with what changed on another device (RF-05).
-  useEffect(
-    () => onSyncedChanges(() => void load(shown.current, false)),
-    [load],
-  );
-
-  // Makes a change after the ones before it and reads the day again, without sorting it.
-  const change = useCallback(
-    (make: () => Promise<void>): Promise<void> => {
-      const write = writes.current.then(async () => {
-        try {
-          await make();
-        } catch (error) {
-          reportWriteFailure(error);
-          throw error;
-        }
-        // Marking a habit done cancels its pending reminders of the day (RF-24); archiving
-        // or deleting it, all of them.
-        void refreshReminders(db);
-        syncSoon(db);
-        await load(date, false);
-      });
-      // A failed write is reported to the caller but does not block the next ones.
-      writes.current = write.catch(() => undefined);
-      return write;
-    },
-    [db, date, load],
-  );
-
-  // Records the value that `next` gives for a habit of the day on screen. Each change holds the
-  // habits in their places and starts the pause again, once it is written; when the pause is
-  // over, the day is read again and they move to their group. A tap on the list (`withHaptics`)
-  // is felt as soon as its value is known, before it is written.
-  const setValue = useCallback(
-    (
-      habitId: string,
-      next: (dayHabit: DayHabit) => number,
-      withHaptics = false,
-    ): Promise<void> => {
-      holdSettling();
-      const write = change(async () => {
-        if (!canRecordOn(date, today())) return;
-        const [allHabits, versions, entries] = await Promise.all([
-          listHabits(db),
-          listHabitVersions(db),
-          listEntries(db, date, date),
-        ]);
-        const dayHabit = habitsForDay(
-          { habits: allHabits, versions, entries },
-          date,
-        ).find((d) => d.habit.id === habitId);
-        if (dayHabit === undefined) return;
-
-        const value = next(dayHabit);
-        if (withHaptics) {
-          const { habit, version } = dayHabit;
-          playRecorded(
-            recordedFeedback(dayHabit.done, isDone(habit.type, version, value)),
-          );
-        }
-        const existing = entries.find((e) => e.habitId === habitId);
-        await saveEntry(db, {
-          id: existing?.id ?? newId(),
-          habitId,
-          date,
-          value,
-        });
-      });
-      void write.then(() => {
-        clearTimeout(settleTimer.current);
-        settleTimer.current = setTimeout(() => {
-          settleDue.current = true;
-          void load(shown.current, false);
-        }, SETTLE_DELAY_MS);
-      }, holdSettling);
-      return write;
-    },
-    [db, date, change, holdSettling, load],
-  );
-
-  const record = useCallback(
-    (habitId: string) =>
-      setValue(
-        habitId,
-        ({ habit, version, value }) =>
-          habit.type === "boolean"
-            ? toggled(value)
-            : incremented(value, version.increment ?? 0),
-        true,
-      ),
-    [setValue],
-  );
-
-  const decrement = useCallback(
-    (habitId: string) =>
-      setValue(habitId, ({ version, value }) =>
-        decremented(value, version.increment ?? 0),
-      ),
-    [setValue],
-  );
-
-  const setAmount = useCallback(
-    (habitId: string, amount: number) => setValue(habitId, () => amount),
-    [setValue],
-  );
+  useEffect(() => onReminderRecorded(reload), [reload]);
 
   const archive = useCallback(
     (habitId: string) =>
@@ -343,11 +184,11 @@ export function useDay(): Day {
     date,
     today: currentDay,
     select: show,
-    habits,
-    hasAnyHabit,
-    record,
-    decrement,
-    setAmount,
+    habits: page.items,
+    hasAnyHabit: page.hasAny,
+    record: page.record,
+    decrement: page.decrement,
+    setAmount: page.setAmount,
     archive,
     remove,
   };

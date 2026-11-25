@@ -20,7 +20,7 @@ import type { DayGroups } from "@/domain/order";
 import { formatProgress } from "@/shared/format";
 import { PROGRESS_DOT_SIZE, ProgressDot } from "./progress-dot";
 import { fontSize, spacing, useColors } from "./theme";
-import { SETTLE_DELAY_MS } from "./use-day";
+import { SETTLE_DELAY_MS } from "./use-tracked-page";
 
 // A done item is dimmed (RF-13), gradually during the pause before it moves to its group
 // (RF-12). With Reduce Motion on, it changes at once.
