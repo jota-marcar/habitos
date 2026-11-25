@@ -136,7 +136,7 @@ export function AmountsSection({
   const amounts = quantitative ? (
     <>
       <Field
-        label="Meta"
+        label="Cantidad"
         placeholder={targetPlaceholder}
         keyboardType="decimal-pad"
         selectTextOnFocus

@@ -8,7 +8,7 @@ Una aplicación móvil para registrar cada día qué hábitos se han cumplido.
 
 El problema que resuelve no es la falta de motivación, sino el **olvido**: con el ajetreo diario se pasan cosas que uno quiere hacer. Apuntar lo que se hace genera conciencia, y los recordatorios evitan que se olvide.
 
-La aplicación empezó por los hábitos diarios, que fueron su MVP. Se ha ampliado con los objetivos semanales (ver [3.8](#38-objetivos-semanales)) y a futuro podría incluir objetivos a largo plazo (ver [6. Visión a futuro](#6-visión-a-futuro-tres-horizontes)).
+La aplicación empezó por los hábitos diarios, que fueron su MVP. Se ha ampliado con los objetivos semanales (ver [3.8](#38-objetivos-semanales)) y con las metas a largo plazo (ver [3.9](#39-metas)), los tres horizontes de la [visión a futuro](#6-visión-a-futuro-tres-horizontes).
 
 ### Principios
 
@@ -29,12 +29,13 @@ La aplicación empezó por los hábitos diarios, que fueron su MVP. Se ha amplia
 |---------|--------------|-------------|
 | **Hábito** | `Habit` | Algo que el usuario quiere hacer de forma periódica (por ejemplo, "Meditar" o "Beber agua"). |
 | **Hábito booleano** | `boolean` | Se cumple o no se cumple (por ejemplo, "Meditar"). |
-| **Hábito cuantitativo** | `quantitative` | Tiene una meta numérica con unidad (por ejemplo, "Beber agua: 2 L"). |
-| **Meta** | `target` | Cantidad que hay que alcanzar para cumplir un hábito cuantitativo en un día, o un objetivo semanal de cantidad en una semana. |
+| **Hábito cuantitativo** | `quantitative` | Tiene una cantidad que alcanzar, con unidad (por ejemplo, "Beber agua: 2 L"). |
+| **Cantidad** | `target` | Lo que hay que alcanzar para cumplir un hábito cuantitativo en un día, un objetivo semanal de cantidad en una semana o una meta de cantidad (por ejemplo, 2 L o 5 h). |
+| **Lo acumulado** | `value` | Lo que se lleva apuntado de un hábito cuantitativo en un día, de un objetivo semanal de cantidad en una semana o de una meta de cantidad. |
 | **Incremento** | `increment` | Cantidad que se suma con cada toque en un hábito cuantitativo (por ejemplo, 250 ml). |
 | **Unidad** | `unit` | Texto corto que acompaña a las cantidades de un hábito cuantitativo (por ejemplo, "L" o "páginas"). |
 | **Días programados** | `scheduledDays` | Días de la semana en los que toca un hábito. |
-| **Registro** | `Entry` | Lo que se ha apuntado de un hábito en un día concreto: cumplido o no, o la cantidad acumulada. |
+| **Registro** | `Entry` | Lo que se ha apuntado de un hábito en un día concreto: cumplido o no, o lo acumulado. |
 | **Día** | `day` | Periodo de 00:00 a 23:59 en la hora local del dispositivo. |
 | **Recordatorio** | `Reminder` | Aviso a una hora concreta para que el usuario no olvide un hábito. |
 | **Posponer** | `snooze` | Aplazar un recordatorio para recibirlo de nuevo más tarde. |
@@ -52,21 +53,23 @@ La aplicación empezó por los hábitos diarios, que fueron su MVP. Se ha amplia
 | **Estado de la copia** | `syncStatus` | Si lo que hay en el dispositivo ya está copiado en la cuenta, desde cuándo, o si lleva días sin poder copiarse. |
 | **Ajustes** | `settings` | Pantalla con las opciones de la cuenta, que se abre desde el menú. |
 | **Versión de la aplicación** | `appVersion` | Número que identifica cada publicación de la aplicación (por ejemplo, 0.2.0). |
-| **Opciones** | `options` | Acciones sobre un hábito que se abren al mantenerlo pulsado: corregir la cantidad, editar, archivar y eliminar. |
-| **Horizonte** | `horizon` | Cada página de la pantalla principal, según el plazo que abarca: los hábitos del día, los objetivos de la semana y, más adelante, los objetivos a largo plazo. |
+| **Opciones** | `options` | Acciones sobre un hábito, un objetivo o una meta que se abren al mantenerlo pulsado: corregir lo acumulado, editar, archivar y eliminar. |
+| **Horizonte** | `horizon` | Cada página de la pantalla principal, según el plazo que abarca: los hábitos del día, los objetivos de la semana y las metas a largo plazo. |
 | **Semana** | `week` | Periodo de lunes a domingo en la hora local del dispositivo. |
 | **Objetivo semanal** | `WeeklyGoal` | Algo que el usuario quiere conseguir en el conjunto de una semana, sin importar qué día lo haga. |
 | **Objetivo recurrente** | `recurring` | Objetivo semanal que se repite todas las semanas y empieza cada una de cero. |
 | **Objetivo puntual** | `recurring = false` | Objetivo semanal de una sola semana. |
-| **Versión de la configuración** | `HabitVersion`, `WeeklyGoalVersion` | Los días, la meta, la unidad y el incremento vigentes desde una fecha. Al editarlos se añade una versión, para que el pasado conserve los suyos. |
+| **Versión de la configuración** | `HabitVersion`, `WeeklyGoalVersion` | Los días, la cantidad, la unidad y el incremento vigentes desde una fecha. Al editarlos se añade una versión, para que el pasado conserve los suyos. |
 | **Vigente desde** | `effectiveFrom` | Primer día, o primera semana, en que se aplica una versión de la configuración. |
 | **Primera semana** | `firstWeek` | Lunes de la semana en que empieza un objetivo semanal. |
 | **Semana de archivado** | `archivedWeek` | Lunes de la semana en que se archivó un objetivo recurrente. |
 | **Registro semanal** | `WeeklyGoalEntry` | Total apuntado de un objetivo semanal en una semana. |
 | **Aviso de progreso** | `ProgressDigest` | Aviso a una hora fija de la semana que nombra los objetivos aún sin conseguir y cuánto llevan. |
+| **Meta** | `LongTermGoal` | Algo que el usuario quiere conseguir antes de una fecha límite, a largo plazo (por ejemplo, "Correr una media maratón"). |
+| **Fecha límite** | `deadline` | Último día en que una meta está en curso. |
 | **Aviso final** | `finalNotice` | Aviso que pide abrir la aplicación cuando los recordatorios ya preparados están a punto de acabarse. |
 
-La columna "En el código" es el nombre en inglés con el que cada término aparece en el código y en el modelo de datos ([ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)). Cada término se traduce siempre igual; uno nuevo se añade aquí antes de usarlo en el código. `goal` abrevia `WeeklyGoal` en el código de los objetivos semanales; los objetivos a largo plazo de la [visión a futuro](#6-visión-a-futuro-tres-horizontes) tendrán un nombre propio. `Record` se evita porque ya tiene otro significado en el lenguaje de programación.
+La columna "En el código" es el nombre en inglés con el que cada término aparece en el código y en el modelo de datos ([ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)). Cada término se traduce siempre igual; uno nuevo se añade aquí antes de usarlo en el código. `goal` abrevia `WeeklyGoal` en el código de los objetivos semanales; las metas usan siempre su nombre completo, `LongTermGoal`, para no confundirse con ellos. `Record` se evita porque ya tiene otro significado en el lenguaje de programación.
 
 ## 3. Funcionalidades
 
@@ -74,7 +77,7 @@ Cada requisito conserva su número aunque cambie de sección, y el número de un
 
 ### 3.1 Estructura de la interfaz
 
-La aplicación tiene una sola pantalla principal, con una página por horizonte: la vista de un día (3.4) y la de los objetivos de la semana (RF-40). Todo lo demás se despliega desde ella con gestos.
+La aplicación tiene una sola pantalla principal, con una página por horizonte: la vista de un día (3.4), la de los objetivos de la semana (RF-40) y la de las metas (RF-58). Todo lo demás se despliega desde ella con gestos.
 
 ```
   Hoy                          ← fecha
@@ -94,16 +97,17 @@ La aplicación tiene una sola pantalla principal, con una página por horizonte:
   - **Una franja fina** justo debajo del recuadro, que indica que desde ahí se despliega el menú. Queda bien separada del borde inferior de la pantalla, para no confundirse con los gestos del propio teléfono.
 - **RF-31.** Al deslizar hacia abajo desde la fecha, o desde la lista cuando ya está arriba del todo, se despliega el **calendario** desde arriba (RF-18). Se cierra deslizándolo hacia arriba o tocando fuera de él.
 - **RF-32.** Al deslizar hacia arriba desde la franja se despliega el **menú** desde abajo. Se cierra deslizándolo hacia abajo o tocando fuera de él. Tiene dos opciones, cada una con su icono:
-  - **Crear**, que crea un elemento del horizonte que se esté viendo. En Hábitos crea un hábito (RF-06) y en Objetivos semanales, un objetivo (RF-42).
+  - **Crear**, que crea un elemento del horizonte que se esté viendo. En Hábitos crea un hábito (RF-06); en Objetivos semanales, un objetivo (RF-42), y en Metas, una meta (RF-55).
   - **Ajustes**, con las opciones de la cuenta (RF-03, RF-04).
-- **RF-33.** Deslizar el recuadro hacia la izquierda o hacia la derecha cambia de horizonte. El orden es Hábitos, Objetivos semanales y, más adelante, Objetivos a largo plazo, y el carrusel termina en sus extremos.
+- **RF-33.** Deslizar el recuadro hacia la izquierda o hacia la derecha cambia de horizonte. El orden es Hábitos, Objetivos semanales y Metas, y el carrusel termina en sus extremos.
   - Solo se desplaza el recuadro. El título no se mueve: el anterior desaparece y aparece el nuevo a medida que avanza el desplazamiento.
   - La franja del menú no cambia, y no hay ningún indicador de página.
   - Un deslizamiento que empieza sobre un elemento de la lista no lo registra.
 - **RF-40.** La página de **Objetivos semanales** tiene la misma estructura que la de Hábitos. Su título es "Esta semana" y las fechas de la semana (por ejemplo, "16–22 nov"); en otra semana, solo sus fechas. Mientras no haya objetivos, el recuadro indica que todavía no hay ninguno y cómo crear uno. Si los hay, pero ninguno en esa semana, lo dice.
-- **RF-41.** Todos los horizontes comparten la fecha que se está viendo: la página semanal muestra la semana de ese día.
+- **RF-41.** Todos los horizontes comparten la fecha que se está viendo: la página semanal muestra la semana de ese día, y la de metas, las metas en curso ese día.
   - En la página semanal, el calendario (RF-18) resalta la semana entera, y al tocar un día se pasa a su semana.
   - Al tocar el título de otra semana se vuelve a la semana actual y al día actual.
+  - En la página de metas, el calendario funciona como en la de hábitos, y al tocar el título de otro día se vuelve al día actual.
 
 ### 3.2 Cuenta de usuario
 
@@ -125,7 +129,7 @@ La aplicación tiene una sola pantalla principal, con una página por horizonte:
   |------|-------------|-------|
   | Nombre | Sí | Texto corto, de 40 caracteres como máximo. |
   | Tipo | Sí | Booleano o cuantitativo. No se puede cambiar después de crearlo. |
-  | Meta | Solo cuantitativo | Número mayor que 0 y hasta 999.999, con 2 decimales como máximo. |
+  | Cantidad | Solo cuantitativo | Número mayor que 0 y hasta 999.999, con 2 decimales como máximo. |
   | Unidad | Solo cuantitativo | Texto libre corto, de 10 caracteres como máximo: "L", "páginas", "min"… |
   | Incremento | Solo cuantitativo | Número mayor que 0 y hasta 999.999, con 2 decimales como máximo. Por defecto, 1. |
   | Días programados | Sí | Al menos un día. Por defecto, todos. |
@@ -136,8 +140,8 @@ La aplicación tiene una sola pantalla principal, con una página por horizonte:
 
 - **RF-07.** *Retirado.* Los hábitos se gestionan desde un día en que tocan (RF-08). El listado de todos los hábitos queda fuera del alcance (sección 4).
 - **RF-08.** El usuario puede editar cualquier dato de un hábito salvo el tipo. Se edita desde sus opciones (RF-34), en cualquier día en que aparezca: pasado, actual o futuro.
-- **RF-52.** Un formulario de hábito u objetivo con cambios sin guardar no se cierra por accidente: tanto "Cancelar" como el gesto de deslizarlo hacia abajo piden confirmación ("Seguir editando" o "Descartar"). Sin cambios, se cierra directamente. Un selector de hora abierto cuenta como cambio, porque al guardar se añadiría su hora (RF-22).
-- **RF-09.** Los cambios en un hábito (nombre, meta, días programados, recordatorios…) se aplican desde el día actual en adelante, se edite desde el día que se edite. Los días pasados conservan lo que se registró. Si se edita desde un día distinto del actual, el formulario lo indica con una línea discreta: "Los cambios se aplican desde hoy". Un hábito que aún no ha empezado (RF-06) es la excepción: sus cambios se aplican desde el día en que empieza, y el formulario lo indica si se edita desde otro día ("Los cambios se aplican desde el 20 de noviembre de 2026"). El nombre y el color son la excepción: identifican al hábito, así que cambian también en los días pasados. Si se quita de los días programados un día que ya tiene un registro, aunque se haya vuelto a 0, el hábito sigue apareciendo ese día para no ocultar lo apuntado y poder corregirlo, pero ese día ya no envía recordatorios ni aparece en los avisos de pendientes.
+- **RF-52.** Un formulario de hábito, objetivo o meta con cambios sin guardar no se cierra por accidente: tanto "Cancelar" como el gesto de deslizarlo hacia abajo piden confirmación ("Seguir editando" o "Descartar"). Sin cambios, se cierra directamente. Un selector de hora abierto cuenta como cambio, porque al guardar se añadiría su hora (RF-22).
+- **RF-09.** Los cambios en un hábito (nombre, cantidad, días programados, recordatorios…) se aplican desde el día actual en adelante, se edite desde el día que se edite. Los días pasados conservan lo que se registró. Si se edita desde un día distinto del actual, el formulario lo indica con una línea discreta: "Los cambios se aplican desde hoy". Un hábito que aún no ha empezado (RF-06) es la excepción: sus cambios se aplican desde el día en que empieza, y el formulario lo indica si se edita desde otro día ("Los cambios se aplican desde el 20 de noviembre de 2026"). El nombre y el color son la excepción: identifican al hábito, así que cambian también en los días pasados. Si se quita de los días programados un día que ya tiene un registro, aunque se haya vuelto a 0, el hábito sigue apareciendo ese día para no ocultar lo apuntado y poder corregirlo, pero ese día ya no envía recordatorios ni aparece en los avisos de pendientes.
 - **RF-10.** El usuario puede archivar un hábito. Archivar sirve para dejar de seguir un hábito sin perder lo que se hizo; por ejemplo, uno que ya forma parte de la rutina.
   - Deja de aparecer en los días siguientes y deja de recordarse, pero su historial se conserva y sigue visible en los días pasados. El día en que se archiva solo aparece si tiene un registro, aunque se haya vuelto a 0: así, desmarcarlo no lo oculta y se puede volver a marcar.
   - Archivar pide confirmación, porque no se puede deshacer: para retomar el hábito se crea uno nuevo.
@@ -161,15 +165,15 @@ Es la pantalla principal de la aplicación (ver 3.1).
   - Al volver a la aplicación después de haber salido de ella se muestra de nuevo el día actual, aunque se estuviera viendo otro.
 - **RF-13.** Cada hábito de la lista muestra su nombre y su estado:
   - Booleano: solo el nombre.
-  - Cuantitativo: el nombre, la cantidad acumulada y la meta (por ejemplo, "1,25 / 2 L").
+  - Cuantitativo: el nombre, lo acumulado y la cantidad (por ejemplo, "1,25 / 2 L").
   - En los dos, un hábito cumplido se muestra atenuado.
-  - Un hábito con color lleva delante del nombre una circunferencia de ese color que se va rellenando, como las agujas de un reloj desde las 12, a medida que avanza el progreso del día. Un hábito booleano la tiene vacía o llena; uno cuantitativo, en proporción a la cantidad acumulada sobre la meta, y llena al alcanzarla o superarla. Si algún hábito del día tiene color, los que no lo tienen dejan ese hueco vacío, para que los nombres queden alineados; si ninguno lo tiene, no hay circunferencias.
+  - Un hábito con color lleva delante del nombre una circunferencia de ese color que se va rellenando, como las agujas de un reloj desde las 12, a medida que avanza el progreso del día. Un hábito booleano la tiene vacía o llena; uno cuantitativo, en proporción a lo acumulado sobre la cantidad, y llena al alcanzarla o superarla. Si algún hábito del día tiene color, los que no lo tienen dejan ese hueco vacío, para que los nombres queden alineados; si ninguno lo tiene, no hay circunferencias.
 - **RF-14.** Un hábito booleano se marca y desmarca con un toque.
-- **RF-15.** Un hábito cuantitativo suma su incremento con un toque. Desde sus opciones (RF-34) también se puede restar el incremento o escribir la cantidad exacta. La cantidad nunca baja de 0 y admite 2 decimales como máximo.
-- **RF-16.** Un hábito cuantitativo cuenta como cumplido cuando la cantidad acumulada alcanza la meta. Se puede superar la meta.
+- **RF-15.** Un hábito cuantitativo suma su incremento con un toque. Desde sus opciones (RF-34) también se puede restar el incremento o escribir la cantidad exacta. Lo acumulado nunca baja de 0 y admite 2 decimales como máximo.
+- **RF-16.** Un hábito cuantitativo cuenta como cumplido cuando lo acumulado alcanza la cantidad. Se puede superar.
 - **RF-39.** Los toques sobre la lista se notan en la mano, con las mismas vibraciones que usa el propio sistema del teléfono:
-  - El toque que cumple un hábito (marcar uno booleano o alcanzar la meta de uno cuantitativo) da la vibración de tarea terminada.
-  - Cualquier otro toque que apunta algo (sumar sin llegar a la meta, superarla o desmarcar) da un toque sutil.
+  - El toque que cumple un hábito (marcar uno booleano o alcanzar la cantidad de uno cuantitativo) da la vibración de tarea terminada.
+  - Cualquier otro toque que apunta algo (sumar sin llegar a la cantidad, superarla o desmarcar) da un toque sutil.
   - Mantener pulsado un hábito para abrir sus opciones (RF-34) da un golpe ligero, como los menús del sistema.
   - Nada más vibra: ni el menú, ni el calendario, ni lo que se hace desde las opciones. Si el usuario ha desactivado las vibraciones del sistema, la aplicación tampoco vibra.
 - **RF-17.** Un hábito aparece en los días programados a partir del día en que empieza (RF-06), nunca en días anteriores.
@@ -205,7 +209,7 @@ Es la pantalla principal de la aplicación (ver 3.1).
 
 - **RF-22.** Cada hábito puede tener cero, una o varias horas de recordatorio. Cada hora se fija con precisión de minuto y un hábito no puede repetir la misma hora. Si se guarda el hábito con el selector de hora abierto, la hora elegida se añade; para no añadirla está "Descartar".
 - **RF-23.** Un recordatorio solo se envía los días programados del hábito.
-- **RF-24.** Si el hábito ya está cumplido ese día, sus recordatorios pendientes de ese día no se envían, tampoco los pospuestos. Un hábito cuantitativo que ha avanzado sin llegar a la meta sí se recuerda, y el recordatorio indica lo que lleva y la meta (por ejemplo, "llevas 1 de 2 L").
+- **RF-24.** Si el hábito ya está cumplido ese día, sus recordatorios pendientes de ese día no se envían, tampoco los pospuestos. Un hábito cuantitativo que ha avanzado sin llegar a la cantidad sí se recuerda, y el recordatorio indica lo que lleva y la cantidad (por ejemplo, "llevas 1 de 2 L").
 - **RF-25.** Desde el propio recordatorio, sin abrir la aplicación, el usuario puede:
   - **Booleano:** marcarlo como cumplido.
   - **Cuantitativo:** sumar el incremento.
@@ -248,7 +252,7 @@ Un objetivo semanal se mide por la semana completa, de lunes a domingo: cuenta l
   |------|-------------|-------|
   | Nombre | Sí | Texto corto, de 40 caracteres como máximo. |
   | Tipo | Sí | Sí o no, o cantidad. No se puede cambiar después de crearlo. |
-  | Meta | Solo cantidad | Número mayor que 0 y hasta 999.999, con 2 decimales como máximo. |
+  | Cantidad | Solo cantidad | Número mayor que 0 y hasta 999.999, con 2 decimales como máximo. |
   | Unidad | Solo cantidad | Texto libre corto, de 10 caracteres como máximo: "h", "veces", "km"… |
   | Incremento | Solo cantidad | Número mayor que 0 y hasta 999.999, con 2 decimales como máximo. Por defecto, 1. |
   | Repetir cada semana | Sí | Activado por defecto. No se puede cambiar después de crearlo. |
@@ -259,7 +263,7 @@ Un objetivo semanal se mide por la semana completa, de lunes a domingo: cuenta l
   El objetivo empieza en la semana que se está viendo si es futura. Creado desde la semana actual o desde una pasada, empieza en la actual. Si se creó desde una semana pasada, al guardarlo la pantalla pasa a la semana actual, para que se vea el objetivo recién creado.
 - **RF-43.** El usuario puede editar cualquier dato de un objetivo salvo el tipo y la repetición.
   - El nombre y el color cambian también en las semanas pasadas.
-  - La meta, la unidad y el incremento se aplican desde la semana actual, o desde su primera semana si aún no ha empezado. Las semanas pasadas conservan los suyos. Si se edita desde otra semana, el formulario indica desde cuándo se aplican.
+  - La cantidad, la unidad y el incremento se aplican desde la semana actual, o desde su primera semana si aún no ha empezado. Las semanas pasadas conservan los suyos. Si se edita desde otra semana, el formulario indica desde cuándo se aplican.
   - Un objetivo puntual de una semana pasada y un objetivo archivado ya no se editan.
 - **RF-44.** El usuario puede archivar un objetivo recurrente para dejar de seguirlo sin perder lo conseguido.
   - Deja de aparecer en las semanas siguientes. La semana en que se archiva solo aparece si tiene un registro, aunque se haya vuelto a 0: así, quitar lo apuntado no lo oculta y se puede volver a apuntar.
@@ -267,7 +271,7 @@ Un objetivo semanal se mide por la semana completa, de lunes a domingo: cuenta l
   - Un objetivo puntual no se archiva: termina con su semana.
 - **RF-45.** El usuario puede eliminar un objetivo de forma permanente, tras una confirmación explícita. Desaparece de todas las semanas junto con lo apuntado, y como en RF-11 no se conserva nada de su contenido.
 - **RF-46.** La página semanal muestra los objetivos de la semana que se está viendo, cada uno con su nombre y su progreso, en dos grupos como los hábitos (RF-12): los pendientes arriba y los conseguidos abajo.
-- **RF-47.** Un objetivo de sí o no se marca y desmarca con un toque, y uno de cantidad suma su incremento. Se consigue al alcanzar la meta, que se puede superar.
+- **RF-47.** Un objetivo de sí o no se marca y desmarca con un toque, y uno de cantidad suma su incremento. Se consigue al alcanzar la cantidad, que se puede superar.
   - Se guarda un único total por objetivo y semana, sin el día en que se hizo.
   - Se puede apuntar en la semana actual y en las pasadas, no en las futuras.
 - **RF-50.** Al mantener pulsado un objetivo se abren sus opciones, igual que en un hábito (RF-34). Las que aparecen dependen de la semana y del objetivo:
@@ -285,6 +289,51 @@ Un objetivo semanal se mide por la semana completa, de lunes a domingo: cuenta l
   - El título dice cuántos quedan ("Te quedan 3 objetivos") y el texto los nombra en el orden de la página semanal, los de cantidad con lo que llevan y los de sí o no solo con su nombre (por ejemplo, "Proyectos 2 de 5 h · Correr 1 de 3 · Llamar a casa"). Si son muchos, la lista se recorta como en RF-37 ("… y 2 más").
   - Al tocarlo se abre la aplicación en la página semanal de la semana actual, aunque se toque más tarde y la semana del aviso ya haya terminado. No tiene botones, porque reúne varios objetivos.
   - Las horas son fijas.
+
+### 3.9 Metas
+
+Una meta es algo que el usuario quiere conseguir antes de una fecha límite, a largo plazo: correr una media maratón, leer 24 libros en el año. Sirve para no perder de vista hacia dónde se va, no para el registro diario. Por ahora es independiente de los hábitos y de los objetivos semanales.
+
+- **RF-55.** El usuario puede crear una meta con estos datos:
+
+  | Dato | Obligatorio | Notas |
+  |------|-------------|-------|
+  | Nombre | Sí | Texto corto, de 40 caracteres como máximo. |
+  | Tipo | Sí | Sí o no, o cantidad. No se puede cambiar después de crearla. |
+  | Cantidad | Solo cantidad | Número mayor que 0 y hasta 999.999, con 2 decimales como máximo. |
+  | Unidad | Solo cantidad | Texto libre corto, de 10 caracteres como máximo: "libros", "km"… |
+  | Incremento | Solo cantidad | Número mayor que 0 y hasta 999.999, con 2 decimales como máximo. Por defecto, 1. |
+  | Fecha límite | Sí | Un día posterior a aquel en que empieza la meta. No tiene valor por defecto, para que se elija a conciencia. |
+  | Color | No | Uno de la paleta de los hábitos (RF-06), o ninguno. |
+
+  El formulario indica con una línea discreta cuánto tiempo da la fecha elegida ("Quedan 217 días"), para que un día o un año equivocados salten a la vista antes de guardar.
+
+  La meta empieza el día que se está viendo si es futuro. Creada desde el día actual o desde uno pasado, empieza el día actual. Si se creó desde un día pasado, al guardarla la pantalla pasa al día actual, para que se vea la meta recién creada.
+- **RF-56.** El usuario puede editar cualquier dato de una meta salvo el tipo.
+  - Una meta tiene un único total y no se divide en periodos, así que los cambios se aplican a toda ella, sin versiones: si se cambia la cantidad, la meta pasa a estar conseguida o pendiente según lo acumulado.
+  - La nueva fecha límite tiene que ser posterior al día en que empieza la meta y no puede ser anterior al día actual.
+  - Una meta cuya fecha límite ya ha pasado ya no se edita.
+- **RF-57.** El usuario puede eliminar una meta de forma permanente, tras una confirmación explícita. Desaparece junto con lo apuntado y, como en RF-11, no se conserva nada de su contenido. Las metas no se archivan: terminan en su fecha límite (RF-61).
+- **RF-58.** La página de **Metas** tiene la misma estructura que las de Hábitos y Objetivos semanales. Su título es "Metas" y, si se está viendo otro día, también ese día, como en RF-30 ("Metas · Martes, 10 nov").
+  - Muestra las metas en curso el día que se está viendo: desde el día en que empiezan hasta su fecha límite, ambos incluidos.
+  - Están en dos grupos, como los hábitos (RF-12): las pendientes arriba y las conseguidas abajo. Dentro de cada grupo, primero la fecha límite más próxima y, a igualdad, el orden de creación.
+  - Cada meta muestra su nombre y su progreso como un objetivo semanal (RF-46). Las pendientes indican además lo que queda hasta su fecha límite desde el día que se está viendo ("quedan 40 días", "queda 1 día", "último día"). Las conseguidas se muestran atenuadas.
+  - Mientras no haya metas, el recuadro indica que todavía no hay ninguna y cómo crear una. Si las hay, pero ninguna en curso ese día, lo dice.
+- **RF-59.** Una meta de sí o no se marca y desmarca con un toque, y una de cantidad suma su incremento. Se consigue al alcanzar la cantidad, que se puede superar.
+  - Se guarda un único total por meta, sin el día en que se hizo.
+  - Se puede apuntar viendo un día en que la meta está en curso, siempre que no sea futuro. Así, si se olvidó apuntarla antes de su fecha límite, se puede hacer desde el calendario.
+  - Los toques vibran como en los hábitos (RF-39).
+- **RF-60.** Al mantener pulsada una meta se abren sus opciones, igual que en un hábito (RF-34):
+
+  | Opción | Cuándo aparece |
+  |--------|----------------|
+  | Restar el incremento (solo cantidad) | Cuando se puede apuntar (RF-59) |
+  | Escribir la cantidad exacta (solo cantidad) | Cuando se puede apuntar (RF-59) |
+  | Editar (RF-56) | Salvo si su fecha límite ya ha pasado |
+  | Eliminar (RF-57) | Siempre |
+- **RF-61.** Al pasar su fecha límite, una meta se queda como conseguida o no conseguida y deja de aparecer en los días siguientes. Sigue visible en los días en que estuvo en curso.
+
+Los avisos de las metas (por ejemplo, de cuenta atrás) están por definir.
 
 ## 4. Fuera del alcance
 
@@ -305,6 +354,8 @@ Funcionalidades descartadas por ahora, en orden aproximado de interés:
 13. Cambiar las horas de los avisos de pendientes (RF-37) o desactivarlos, desde los ajustes (RF-32).
 14. Carrusel circular: que al deslizar desde el último horizonte se vuelva al primero (RF-33).
 15. Un tutorial que explique los gestos de la aplicación, también el paso entre horizontes.
+16. Hitos intermedios en las metas: pasos que se van cumpliendo hasta conseguirla (RF-55).
+17. Vincular las metas con hábitos y objetivos semanales (ver [Vínculo entre horizontes](#vínculo-entre-horizontes)).
 
 ## 5. Preguntas abiertas
 
@@ -312,7 +363,7 @@ Puntos a decidir antes de implementar la parte correspondiente. Ahora mismo no q
 
 ## 6. Visión a futuro: tres horizontes
 
-> **Solo es una idea, salvo los objetivos semanales,** que ya tienen sus requisitos en la sección [3.8](#38-objetivos-semanales). El resto no forma parte del MVP, no tiene requisitos ni tareas y se concretará cuando el desarrollo avance. Se apunta para no perderla y para construir a partir de ella.
+> **Los tres horizontes ya tienen sus requisitos:** los hábitos en las secciones 3.1 a 3.7, los objetivos semanales en la [3.8](#38-objetivos-semanales) y las metas en la [3.9](#39-metas). Lo que sigue siendo solo una idea es el vínculo entre ellos y los avisos de las metas, que se concretarán cuando el desarrollo avance.
 
 La aplicación podría organizarse en tres partes, una por cada horizonte de tiempo. Cada una responde a una pregunta distinta:
 
@@ -320,7 +371,7 @@ La aplicación podría organizarse en tres partes, una por cada horizonte de tie
 |-----------|-------|----------|----------------|---------|
 | Diario | **Hábitos** | ¿Qué hago hoy? | Mantener un orden en el día | Tomar el sol, leer 20 minutos |
 | Corto plazo | **Objetivos semanales** | ¿Cómo voy esta semana? | Ver el progreso de la semana | Dedicar 5 horas a proyectos personales |
-| Largo plazo | **Objetivos a largo plazo** | ¿Hacia dónde voy? | Mantener el foco y no desviarse del camino | Correr una media maratón, terminar una aplicación antes de una fecha |
+| Largo plazo | **Metas** | ¿Hacia dónde voy? | Mantener el foco y no desviarse del camino | Correr una media maratón, terminar una aplicación antes de una fecha |
 
 ### Hábitos
 
@@ -330,14 +381,13 @@ Es lo que define el MVP (secciones 3.1 a 3.7) y la base de las otras dos partes.
 
 Definidos en la sección [3.8](#38-objetivos-semanales).
 
-### Objetivos a largo plazo
+### Metas
 
-- Tienen un resultado claro y una **fecha concreta**.
-- Sirven para mantener el foco en el largo plazo, no para el registro diario.
+Definidas en la sección [3.9](#39-metas).
 
 ### Vínculo entre horizontes
 
-Los tres horizontes podrían relacionarse: un objetivo a largo plazo se consigue con objetivos semanales y hábitos (la media maratón se prepara corriendo varias veces por semana). Vincularlos daría sentido al registro diario, porque mostraría **para qué** se hace cada cosa. El vínculo sería opcional. Es una idea valorada, pendiente de definir.
+Los tres horizontes podrían relacionarse: una meta se consigue con objetivos semanales y hábitos (la media maratón se prepara corriendo varias veces por semana). Vincularlos daría sentido al registro diario, porque mostraría **para qué** se hace cada cosa. El vínculo sería opcional. Es una idea valorada, pendiente de definir.
 
 ### Puntos a tener en cuenta
 
@@ -345,9 +395,8 @@ Los tres horizontes podrían relacionarse: un objetivo a largo plazo se consigue
 - **Recordatorios en cada horizonte.** Siguiendo el principio de que el recordatorio es el punto fuerte, cada parte podría tener los suyos: a una hora para los hábitos, de progreso para la semana ("llevas 2 de 5 horas y es jueves") y de cuenta atrás para el largo plazo ("quedan 40 días").
 - **Minimalismo.** Cada parte nueva tendrá que justificar su presencia cuando llegue, como cualquier otra funcionalidad.
 - **Visión del producto.** Hoy el problema que se resuelve es el olvido. Con los tres horizontes se ampliaría a no perder de vista lo que uno quiere hacer, hoy, esta semana y a largo plazo. Si se adopta, habrá que revisar la sección 1.
-- **Nombres.** "Meta" ya significa la cantidad de un hábito o de un objetivo semanal (ver el glosario), así que la tercera parte no debe llamarse "metas". Por ahora: "Objetivos a largo plazo" (alternativa: "Propósitos").
+- **Nombres.** La tercera parte se llama "Metas" por ser una palabra corta, para títulos. Por eso la cantidad que hay que alcanzar, que antes se llamaba "meta", pasó a llamarse "cantidad" (ver el glosario).
 
 ### Preguntas abiertas
 
 - ¿Cómo se vinculan los horizontes y qué se ve de ese vínculo?
-- ¿Cómo se mide el progreso de un objetivo a largo plazo: hitos intermedios, avance calculado a partir de lo vinculado, o solo cumplido o no en la fecha?
