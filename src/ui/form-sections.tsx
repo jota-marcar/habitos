@@ -1,5 +1,5 @@
-// The sections shared by the forms of a habit (RF-06) and a weekly goal (RF-42): the name, the
-// color, and the type with its amounts.
+// The sections shared by the forms of a habit (RF-06), a weekly goal (RF-42) and a long-term
+// goal (RF-55): the name, the color, and the type with its amounts.
 
 import { StyleSheet, View } from "react-native";
 
