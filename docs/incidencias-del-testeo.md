@@ -94,3 +94,11 @@ Una incidencia que cambia el comportamiento descrito en la [especificación func
 - **Qué se espera:** poder usar los botones directamente desde la notificación.
 - **Por qué no se hace así:** iOS no permite mostrar los botones de una notificación normal sin mantenerla pulsada. Las alternativas con botones visibles (Live Activity, AlarmKit) se descartan de momento por su coste, su riesgo para los datos o porque resultarían intrusivas.
 - **Cómo se resuelve:** los recordatorios explican el gesto con una línea ("Mantén pulsado para marcarlo o posponerlo", o "para sumar o posponerlo" en un cuantitativo). Deja de aparecer al usar un botón por primera vez y, como mucho, a los 7 días del primer recordatorio. Se guarda solo en el dispositivo, fuera de la base de datos, para que la actualización OTA se pueda deshacer sin riesgo. Además, un recordatorio que cambia se sustituye sin cancelarlo antes, para que iOS no pueda dejarlo sin programar si suspende la app a mitad. Se actualiza RF-25.
+
+## INC-11. Los botones Cancelar y Guardar del formulario se ven grises y violeta
+
+- **Encontrada:** 2026-11-25, en el iPhone, tras actualizar iOS.
+- **Estado:** pendiente.
+- **Qué pasa:** en el formulario de creación, los botones Cancelar y Guardar aparecen con un fondo gris y el texto en violeta, que no corresponden al aspecto de la aplicación. Antes de la actualización de iOS se veían bien, y la aplicación no ha cambiado en ese aspecto.
+- **Qué se espera:** los botones se ven como antes de la actualización, con los colores de la aplicación.
+- **Por confirmar:** la versión de iOS exacta, si pasa en las dos variantes (Hábitos Dev y producción) y si afecta también al formulario de edición y al de las metas.
