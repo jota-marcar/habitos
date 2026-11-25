@@ -2,12 +2,8 @@
 // Every write marks the row as pending synchronization; deleted rows are never returned.
 
 import { localDate } from "@/domain/dates";
-import {
-  parseHabitColor,
-  type Habit,
-  type HabitType,
-  type HabitVersion,
-} from "@/domain/habits";
+import { type Habit, type HabitVersion } from "@/domain/habits";
+import { parseTrackedColor, type TrackedType } from "@/domain/tracked";
 import type { Reminder } from "@/domain/reminders";
 
 import type { Database } from "./database";
@@ -38,9 +34,9 @@ function toHabit(row: HabitRow): Habit {
     id: row.id,
     name: row.name,
     // The table only admits the two types.
-    type: row.type as HabitType,
+    type: row.type as TrackedType,
     // A key this version does not know is read as no color (ADR-0014).
-    color: parseHabitColor(row.color),
+    color: parseTrackedColor(row.color),
     createdOn: localDate(row.created_on),
     archivedOn: row.archived_on === null ? null : localDate(row.archived_on),
   };

@@ -78,3 +78,8 @@ export function msUntilNextDay(instant: Date): number {
   );
   return nextDay.getTime() - instant.getTime();
 }
+
+/** The later of two dates. */
+export function later(a: LocalDate, b: LocalDate): LocalDate {
+  return a > b ? a : b;
+}

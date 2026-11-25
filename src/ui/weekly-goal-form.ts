@@ -2,14 +2,8 @@
 // changes to an existing one (RF-43). The rules are the domain's: this only turns what the user
 // typed into its input.
 
-import { parseAmount } from "@/domain/amounts";
 import type { LocalDate } from "@/domain/dates";
-import {
-  DEFAULT_INCREMENT,
-  type Amounts,
-  type HabitColor,
-  type HabitType,
-} from "@/domain/habits";
+import type { TrackedColor } from "@/domain/tracked";
 import {
   changeWeeklyGoalAmounts,
   createWeeklyGoal,
@@ -21,40 +15,27 @@ import {
 } from "@/domain/weekly-goals";
 import { weekOf } from "@/domain/weeks";
 
-import { formatAmount, formatWeekRange } from "@/shared/format";
+import { formatWeekRange } from "@/shared/format";
+import {
+  EMPTY_AMOUNTS,
+  amountValuesOf,
+  amountsOf,
+  type AmountValues,
+} from "./amounts-form";
 
-export interface WeeklyGoalFormValues {
+export interface WeeklyGoalFormValues extends AmountValues {
   readonly name: string;
-  readonly color: HabitColor | null;
-  readonly type: HabitType;
-  /** The amounts as typed, so that "1," can be shown while typing "1,5". */
-  readonly target: string;
-  readonly unit: string;
-  readonly increment: string;
+  readonly color: TrackedColor | null;
   readonly recurring: boolean;
 }
 
 export const EMPTY_WEEKLY_GOAL_FORM: WeeklyGoalFormValues = {
+  ...EMPTY_AMOUNTS,
   name: "",
   color: null,
-  type: "boolean",
-  target: "",
-  unit: "",
-  increment: formatAmount(DEFAULT_INCREMENT),
   // On by default: a goal left like this comes back into view instead of going away (RF-42).
   recurring: true,
 };
-
-// The amounts of a yes-or-no goal are ignored, even if they were typed before changing the type.
-function amountsOf(type: HabitType, values: WeeklyGoalFormValues): Amounts {
-  const quantitative = type === "quantitative";
-  return {
-    // Text that is not a number is rejected like a missing amount.
-    target: quantitative ? parseAmount(values.target) : null,
-    unit: quantitative ? values.unit : null,
-    increment: quantitative ? parseAmount(values.increment) : null,
-  };
-}
 
 export type WeeklyGoalFormResult =
   | {
@@ -90,15 +71,10 @@ export function weeklyGoalFormOf(
   goal: WeeklyGoal,
   version: WeeklyGoalVersion,
 ): WeeklyGoalFormValues {
-  const amount = (value: number | null, missing: string) =>
-    value === null ? missing : formatAmount(value);
   return {
+    ...amountValuesOf(goal.type, version),
     name: goal.name,
     color: goal.color,
-    type: goal.type,
-    target: amount(version.target, EMPTY_WEEKLY_GOAL_FORM.target),
-    unit: version.unit ?? EMPTY_WEEKLY_GOAL_FORM.unit,
-    increment: amount(version.increment, EMPTY_WEEKLY_GOAL_FORM.increment),
     recurring: goal.recurring,
   };
 }

@@ -3,8 +3,7 @@
 // configuration, which is versioned with an effective date so that changes only apply from
 // today onwards and past days keep what was due then (RF-09, ADR-0006).
 
-import { MAX_AMOUNT, isAmount } from "./amounts";
-import type { LocalDate } from "./dates";
+import { later, type LocalDate } from "./dates";
 import { fail, ok, type Result } from "./result";
 import {
   EVERY_DAY,
@@ -12,58 +11,31 @@ import {
   isValidScheduledDays,
   type ScheduledDays,
 } from "./schedule";
-
-export type HabitType = "boolean" | "quantitative";
-
-/**
- * The colors a habit can be given to tell it apart from others (RF-06). They are the keys of
- * a palette: the interface decides the tone of each one (ADR-0014).
- */
-export const HABIT_COLORS = [
-  "red",
-  "orange",
-  "amber",
-  "lime",
-  "green",
-  "teal",
-  "cyan",
-  "blue",
-  "violet",
-  "fuchsia",
-  "pink",
-  "gray",
-] as const;
-
-export type HabitColor = (typeof HABIT_COLORS)[number];
-
-/**
- * The color with the key `text`, or null if there is none: a habit without a color, or a key
- * of a palette this version does not know (ADR-0014).
- */
-export function parseHabitColor(text: string | null): HabitColor | null {
-  return HABIT_COLORS.find((color) => color === text) ?? null;
-}
+import {
+  normalizeAmounts,
+  validateAmounts,
+  validateName,
+  type Amounts,
+  type AmountsError,
+  type NameError,
+  type TrackedColor,
+  type TrackedType,
+} from "./tracked";
+import { versionOn } from "./versions";
 
 export interface Habit {
   readonly id: string;
   readonly name: string;
   /** Cannot change after the habit is created (RF-06). */
-  readonly type: HabitType;
+  readonly type: TrackedType;
   /** Not versioned, like the name: it changes in the whole history (ADR-0014). */
-  readonly color: HabitColor | null;
+  readonly color: TrackedColor | null;
   /**
    * The first day the habit is due: the day it was created, or a later one if it was created
    * from a future day (RF-06).
    */
   readonly createdOn: LocalDate;
   readonly archivedOn: LocalDate | null;
-}
-
-/** The amounts of a quantitative habit or weekly goal: null in boolean ones. */
-export interface Amounts {
-  readonly target: number | null;
-  readonly unit: string | null;
-  readonly increment: number | null;
 }
 
 /** The part of a habit that is versioned. */
@@ -77,96 +49,11 @@ export interface HabitVersion extends HabitConfig {
   readonly effectiveFrom: LocalDate;
 }
 
-export type NameError = "name_empty" | "name_too_long";
-
-export type AmountsError =
-  | "amounts_not_allowed"
-  | "target_not_positive"
-  | "target_too_precise"
-  | "target_too_large"
-  | "unit_empty"
-  | "unit_too_long"
-  | "increment_not_positive"
-  | "increment_too_precise"
-  | "increment_too_large";
-
 export type HabitError =
   NameError | AmountsError | "scheduled_days_invalid" | "scheduled_days_empty";
 
 export const DEFAULT_SCHEDULED_DAYS: ScheduledDays = EVERY_DAY;
-export const DEFAULT_INCREMENT = 1;
-
-/** Longest name and unit, in characters, without surrounding spaces (RF-06). */
-export const MAX_NAME_LENGTH = 40;
-export const MAX_UNIT_LENGTH = 10;
-
-// Counts characters as the user sees them, so that an emoji counts as one.
-function lengthOf(text: string): number {
-  return [...text.trim()].length;
-}
-
-/** `text` cut to `maxLength`, counted as the rules count it, so that it can be typed. */
-export function limitedText(text: string, maxLength: number): string {
-  if (lengthOf(text) <= maxLength) return text;
-  const start = text.length - text.trimStart().length;
-  const kept = [...text.slice(start)].slice(0, maxLength).join("");
-  return text.slice(0, start) + kept;
-}
-
-export function validateName(name: string): NameError[] {
-  if (name.trim() === "") return ["name_empty"];
-  return lengthOf(name) > MAX_NAME_LENGTH ? ["name_too_long"] : [];
-}
-
-function validateAmount(
-  value: number | null,
-  notPositive: AmountsError,
-  tooPrecise: AmountsError,
-  tooLarge: AmountsError,
-): AmountsError[] {
-  if (value === null || !Number.isFinite(value) || value <= 0) {
-    return [notPositive];
-  }
-  if (value > MAX_AMOUNT) return [tooLarge];
-  return isAmount(value) ? [] : [tooPrecise];
-}
-
-/** Boolean habits and goals have no amounts; quantitative ones need all of them. */
-export function validateAmounts(
-  type: HabitType,
-  amounts: Amounts,
-): AmountsError[] {
-  if (type === "boolean") {
-    const hasAmounts =
-      amounts.target !== null ||
-      amounts.unit !== null ||
-      amounts.increment !== null;
-    return hasAmounts ? ["amounts_not_allowed"] : [];
-  }
-
-  const errors = validateAmount(
-    amounts.target,
-    "target_not_positive",
-    "target_too_precise",
-    "target_too_large",
-  );
-  if (amounts.unit === null || amounts.unit.trim() === "") {
-    errors.push("unit_empty");
-  } else if (lengthOf(amounts.unit) > MAX_UNIT_LENGTH) {
-    errors.push("unit_too_long");
-  }
-  errors.push(
-    ...validateAmount(
-      amounts.increment,
-      "increment_not_positive",
-      "increment_too_precise",
-      "increment_too_large",
-    ),
-  );
-  return errors;
-}
-
-function validateConfig(type: HabitType, config: HabitConfig): HabitError[] {
+function validateConfig(type: TrackedType, config: HabitConfig): HabitError[] {
   const errors: HabitError[] = [];
 
   if (!isValidScheduledDays(config.scheduledDays)) {
@@ -177,15 +64,6 @@ function validateConfig(type: HabitType, config: HabitConfig): HabitError[] {
 
   errors.push(...validateAmounts(type, config));
   return errors;
-}
-
-/** The amounts as they are stored: the unit, without surrounding spaces. */
-export function normalizeAmounts(amounts: Amounts): Amounts {
-  return {
-    target: amounts.target,
-    unit: amounts.unit === null ? null : amounts.unit.trim(),
-    increment: amounts.increment,
-  };
 }
 
 function normalizeConfig(config: HabitConfig): HabitConfig {
@@ -203,14 +81,9 @@ function sameConfig(a: HabitConfig, b: HabitConfig): boolean {
 
 export interface NewHabit {
   readonly name: string;
-  readonly type: HabitType;
-  readonly color: HabitColor | null;
+  readonly type: TrackedType;
+  readonly color: TrackedColor | null;
   readonly config: HabitConfig;
-}
-
-/** The later of two dates. */
-export function later(a: LocalDate, b: LocalDate): LocalDate {
-  return a > b ? a : b;
 }
 
 /**
@@ -265,32 +138,13 @@ export function renameHabit(
 }
 
 /** Gives a habit another color, or none. Like the name, it is not versioned (ADR-0014). */
-export function recolorHabit(habit: Habit, color: HabitColor | null): Habit {
+export function recolorHabit(habit: Habit, color: TrackedColor | null): Habit {
   return { ...habit, color };
 }
 
 /** Archives a habit as of today (RF-10). Archiving an archived habit changes nothing. */
 export function archiveHabit(habit: Habit, today: LocalDate): Habit {
   return habit.archivedOn === null ? { ...habit, archivedOn: today } : habit;
-}
-
-/**
- * The version in force on `date`: the one with the latest `effectiveFrom` that is not after
- * `date`, or null if there was no configuration yet. `versions` belong to a single habit or
- * weekly goal.
- */
-export function versionOn<V extends { readonly effectiveFrom: LocalDate }>(
-  versions: readonly V[],
-  date: LocalDate,
-): V | null {
-  let current: V | null = null;
-  for (const version of versions) {
-    if (version.effectiveFrom > date) continue;
-    if (current === null || version.effectiveFrom > current.effectiveFrom) {
-      current = version;
-    }
-  }
-  return current;
 }
 
 /**

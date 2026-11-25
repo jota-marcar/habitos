@@ -12,7 +12,8 @@ import {
   saveHabitChanges,
 } from "@/data/habits-repository";
 import { listReminders } from "@/data/reminders-repository";
-import { changesApplyFrom, versionOn } from "@/domain/habits";
+import { changesApplyFrom } from "@/domain/habits";
+import { versionOn } from "@/domain/versions";
 import { newId, today } from "@/shared/clock";
 import { useDatabase } from "@/ui/database";
 import { formatFullDate } from "@/shared/format";

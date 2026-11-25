@@ -1,25 +1,27 @@
 import { localDate } from "./dates";
 import {
-  DEFAULT_INCREMENT,
   DEFAULT_SCHEDULED_DAYS,
-  HABIT_COLORS,
-  MAX_NAME_LENGTH,
-  MAX_UNIT_LENGTH,
-  limitedText,
   archiveHabit,
   changeConfig,
   changesApplyFrom,
   createHabit,
-  parseHabitColor,
   recolorHabit,
   renameHabit,
   startOfNewHabit,
-  versionOn,
   type Habit,
   type HabitConfig,
   type HabitVersion,
   type NewHabit,
 } from "./habits";
+import {
+  DEFAULT_INCREMENT,
+  TRACKED_COLORS,
+  MAX_NAME_LENGTH,
+  MAX_UNIT_LENGTH,
+  limitedText,
+  parseTrackedColor,
+} from "./tracked";
+import { versionOn } from "./versions";
 import { EVERY_DAY, NO_DAYS, scheduledDaysFrom } from "./schedule";
 
 const today = localDate("2026-10-28");
@@ -61,22 +63,22 @@ function created(input: NewHabit) {
   return result.value;
 }
 
-describe("parseHabitColor", () => {
+describe("parseTrackedColor", () => {
   test("the palette has 12 colors, all different (RF-06)", () => {
-    expect(new Set(HABIT_COLORS).size).toBe(12);
+    expect(new Set(TRACKED_COLORS).size).toBe(12);
   });
 
-  test.each(HABIT_COLORS)("reads %s", (color) => {
-    expect(parseHabitColor(color)).toBe(color);
+  test.each(TRACKED_COLORS)("reads %s", (color) => {
+    expect(parseTrackedColor(color)).toBe(color);
   });
 
   test("a habit without a color has none", () => {
-    expect(parseHabitColor(null)).toBeNull();
+    expect(parseTrackedColor(null)).toBeNull();
   });
 
   test("a color that is not in the palette is read as none", () => {
-    expect(parseHabitColor("magenta")).toBeNull();
-    expect(parseHabitColor("")).toBeNull();
+    expect(parseTrackedColor("magenta")).toBeNull();
+    expect(parseTrackedColor("")).toBeNull();
   });
 });
 
