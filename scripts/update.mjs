@@ -32,6 +32,7 @@ import {
   printSource,
   requireCommitted,
   requireCompatibleBuild,
+  requireInstalledDependencies,
   requireMainUpToDate,
   requireUnreleasedVersion,
   tagRelease,
@@ -101,6 +102,7 @@ function uploadSourceMaps() {
 
 if (process.argv.includes("--upload-sourcemaps")) {
   requireSentryToken();
+  requireInstalledDependencies();
   process.exit(uploadSourceMaps() ?? 1);
 }
 
@@ -109,6 +111,7 @@ if (variant.fromMain) {
   requireMainUpToDate(`A ${variantName} update`);
   requireUnreleasedVersion(`A ${variantName} update`);
 }
+requireInstalledDependencies();
 printSource(variantName);
 requireCompatibleBuild(variantName);
 warnIfAppJsonChanged();

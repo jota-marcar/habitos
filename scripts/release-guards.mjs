@@ -5,6 +5,11 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
+import {
+  describeDependencies,
+  outdatedDependencies,
+} from "./installed-dependencies.mjs";
+
 export function git(...args) {
   return execFileSync("git", args, { encoding: "utf8" }).trim();
 }
@@ -56,6 +61,20 @@ export function requireCommitted() {
     fail(
       "There are uncommitted changes. Commit or discard them first:",
       uncommitted,
+    );
+  }
+}
+
+/**
+ * Refuses to release with node_modules out of step with package-lock.json: EAS CLI reads the
+ * Expo config here, with the config plugins installed here, and its error would not say why.
+ */
+export function requireInstalledDependencies() {
+  const outdated = outdatedDependencies();
+  if (outdated.length > 0) {
+    fail(
+      `node_modules does not match package-lock.json (${describeDependencies(outdated)}).`,
+      "Run `npm ci` and try again.",
     );
   }
 }
