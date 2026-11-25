@@ -1,7 +1,7 @@
 -- updated_at is the cursor of the synchronization: the server assigns it on every write,
 -- after taking the lock of the user (ADR-0016).
 begin;
-select plan(10);
+select plan(12);
 
 insert into auth.users (id, email) values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'ana@example.com');
 
@@ -55,7 +55,7 @@ reset role;
 
 -- The same trigger is on every table.
 select has_trigger('public', t, 'set_updated_at', format('%s assigns updated_at', t))
-from unnest(array['habit_versions', 'entries', 'weekly_goals', 'weekly_goal_versions', 'weekly_goal_entries']) as t;
+from unnest(array['habit_versions', 'entries', 'weekly_goals', 'weekly_goal_versions', 'weekly_goal_entries', 'long_term_goals', 'long_term_goal_entries']) as t;
 
 select * from finish();
 rollback;

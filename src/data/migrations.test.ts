@@ -37,6 +37,8 @@ describe("migrate", () => {
       "entries",
       "habit_versions",
       "habits",
+      "long_term_goal_entries",
+      "long_term_goals",
       "reminders",
       "sync_account",
       "sync_cursors",
@@ -72,6 +74,19 @@ describe("migrate", () => {
     await migrate(db);
 
     expect(await db.all("SELECT id FROM entries")).toEqual([{ id: "e" }]);
+    expect(await schemaVersion(db)).toBe(MIGRATIONS.length);
+  });
+
+  test("a database of the previous version keeps its data and gains the long-term goals", async () => {
+    await migrate(db, MIGRATIONS.slice(0, 5));
+    await db.run(
+      "INSERT INTO habits (id, name, type, created_on) VALUES ('h', 'Read', 'boolean', '2026-11-01')",
+    );
+
+    await migrate(db);
+
+    expect(await db.all("SELECT id FROM habits")).toEqual([{ id: "h" }]);
+    expect(await db.all("SELECT id FROM long_term_goals")).toEqual([]);
     expect(await schemaVersion(db)).toBe(MIGRATIONS.length);
   });
 

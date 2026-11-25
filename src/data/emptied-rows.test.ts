@@ -5,12 +5,18 @@ import { addReminder, deleteReminder } from "./reminders-repository";
 import { SYNC_TABLES, syncedColumns } from "./sync-repository";
 import {
   habit,
+  longTermGoal,
   openMigratedDatabase,
   version,
   weeklyGoal,
   weeklyGoalVersion,
 } from "./testing/fixtures";
 import type { TestDatabase } from "./testing/node-database";
+import {
+  deleteLongTermGoal,
+  saveLongTermGoal,
+  saveLongTermGoalEntry,
+} from "./long-term-goals-repository";
 import {
   addWeeklyGoal,
   deleteWeeklyGoal,
@@ -46,7 +52,13 @@ describe("EMPTIED_VALUES", () => {
       const synced = syncedColumns(table);
 
       expect(columns.filter((c) => !synced.includes(c))).toEqual([]);
-      for (const kept of ["id", "deleted", "habit_id", "weekly_goal_id"]) {
+      for (const kept of [
+        "id",
+        "deleted",
+        "habit_id",
+        "weekly_goal_id",
+        "long_term_goal_id",
+      ]) {
         expect(columns).not.toContain(kept);
       }
     },
@@ -60,6 +72,7 @@ describe("EMPTIED_VALUES", () => {
         "deleted",
         "habit_id",
         "weekly_goal_id",
+        "long_term_goal_id",
         "recurring",
       ];
       const left = syncedColumns(table).filter(
@@ -125,6 +138,30 @@ describe("deleting empties the rows (RF-11, RF-45)", () => {
     );
     expect(await emptiedColumns("weekly_goal_entries", "e")).toEqual(
       EMPTIED_VALUES.weekly_goal_entries,
+    );
+  });
+
+  test("a long-term goal and its total (RF-57)", async () => {
+    await saveLongTermGoal(
+      db,
+      longTermGoal("g", {
+        name: "Secret",
+        type: "quantitative",
+        color: "blue",
+        target: 24,
+        unit: "libros",
+        increment: 1,
+      }),
+    );
+    await saveLongTermGoalEntry(db, { id: "e", longTermGoalId: "g", value: 3 });
+
+    await deleteLongTermGoal(db, "g");
+
+    expect(await emptiedColumns("long_term_goals", "g")).toEqual(
+      EMPTIED_VALUES.long_term_goals,
+    );
+    expect(await emptiedColumns("long_term_goal_entries", "e")).toEqual(
+      EMPTIED_VALUES.long_term_goal_entries,
     );
   });
 

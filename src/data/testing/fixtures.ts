@@ -2,6 +2,7 @@
 
 import { localDate } from "@/domain/dates";
 import type { Habit, HabitVersion } from "@/domain/habits";
+import type { LongTermGoal } from "@/domain/long-term-goals";
 import { EVERY_DAY } from "@/domain/schedule";
 import type { WeeklyGoal, WeeklyGoalVersion } from "@/domain/weekly-goals";
 
@@ -70,6 +71,24 @@ export function weeklyGoalVersion(
     target: null,
     unit: null,
     increment: null,
+    ...overrides,
+  };
+}
+
+export function longTermGoal(
+  id: string,
+  overrides: Partial<LongTermGoal> = {},
+): LongTermGoal {
+  return {
+    id,
+    name: id,
+    type: "boolean",
+    color: null,
+    target: null,
+    unit: null,
+    increment: null,
+    firstDay: localDate("2026-11-25"),
+    deadline: localDate("2026-12-31"),
     ...overrides,
   };
 }

@@ -1,7 +1,7 @@
 -- Deleting is for good (RF-11, RF-45, ADR-0023): a deleted row keeps nothing the user wrote or
 -- recorded, and it cannot come back.
 begin;
-select plan(14);
+select plan(17);
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'ana@example.com');
@@ -22,6 +22,10 @@ insert into public.weekly_goal_versions (id, user_id, weekly_goal_id, effective_
   ('aaaaaaaa-0000-4000-8000-000000000038', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-0000-4000-8000-000000000037', '2026-11-02', 5, 'h', 1);
 insert into public.weekly_goal_entries (id, user_id, weekly_goal_id, week, value) values
   ('aaaaaaaa-0000-4000-8000-000000000039', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-0000-4000-8000-000000000037', '2026-11-02', 3);
+insert into public.long_term_goals (id, user_id, name, type, color, target, unit, increment, first_day, deadline) values
+  ('aaaaaaaa-0000-4000-8000-000000000042', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Secret long-term goal', 'quantitative', 'blue', 24, 'books', 1, '2026-11-25', '2026-12-31');
+insert into public.long_term_goal_entries (id, user_id, long_term_goal_id, value) values
+  ('aaaaaaaa-0000-4000-8000-000000000043', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-0000-4000-8000-000000000042', 5);
 
 -- Deleting empties each row.
 update public.habits set deleted = true where id = 'aaaaaaaa-0000-4000-8000-000000000031';
@@ -31,6 +35,7 @@ update public.reminders set deleted = true where id = 'aaaaaaaa-0000-4000-8000-0
 update public.weekly_goals set deleted = true where id = 'aaaaaaaa-0000-4000-8000-000000000037';
 update public.weekly_goal_versions set deleted = true where id = 'aaaaaaaa-0000-4000-8000-000000000038';
 update public.weekly_goal_entries set deleted = true where id = 'aaaaaaaa-0000-4000-8000-000000000039';
+update public.long_term_goals set deleted = true where id = 'aaaaaaaa-0000-4000-8000-000000000042';
 
 select results_eq(
   $$ select name, type, color, created_on, archived_on from public.habits where id = 'aaaaaaaa-0000-4000-8000-000000000031' $$,
@@ -67,6 +72,11 @@ select results_eq(
   $$ values ('1970-01-05'::date, 0::double precision) $$,
   'A deleted total keeps nothing'
 );
+select results_eq(
+  $ select name, type, color, target, unit, increment, first_day, deadline from public.long_term_goals where id = 'aaaaaaaa-0000-4000-8000-000000000042' $,
+  $ values ('', 'boolean', null::text, null::double precision, null::text, null::double precision, '1970-01-05'::date, '1970-01-06'::date) $,
+  'A deleted long-term goal keeps nothing'
+);
 
 -- It cannot come back.
 update public.habits set deleted = false, name = 'Back' where id = 'aaaaaaaa-0000-4000-8000-000000000031';
@@ -98,6 +108,19 @@ select results_eq(
   $$ select deleted, value from public.weekly_goal_entries where id = 'aaaaaaaa-0000-4000-8000-000000000041' $$,
   $$ values (true, 0::double precision) $$,
   'A new total of a deleted goal arrives deleted and empty'
+);
+update public.long_term_goal_entries set value = 6 where id = 'aaaaaaaa-0000-4000-8000-000000000043';
+select results_eq(
+  $ select deleted, value from public.long_term_goal_entries where id = 'aaaaaaaa-0000-4000-8000-000000000043' $,
+  $ values (true, 0::double precision) $,
+  'A total of a deleted long-term goal ends up deleted and empty when it is uploaded'
+);
+insert into public.long_term_goal_entries (id, user_id, long_term_goal_id, value) values
+  ('aaaaaaaa-0000-4000-8000-000000000044', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'aaaaaaaa-0000-4000-8000-000000000042', 2);
+select results_eq(
+  $ select deleted, value from public.long_term_goal_entries where id = 'aaaaaaaa-0000-4000-8000-000000000044' $,
+  $ values (true, 0::double precision) $,
+  'A new total of a deleted long-term goal arrives deleted and empty'
 );
 
 -- What is alive is not touched.

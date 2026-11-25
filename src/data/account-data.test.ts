@@ -9,9 +9,14 @@ import {
   saveHabit,
   saveHabitVersion,
 } from "./habits-repository";
+import {
+  saveLongTermGoal,
+  saveLongTermGoalEntry,
+} from "./long-term-goals-repository";
 import { addReminder } from "./reminders-repository";
 import {
   habit,
+  longTermGoal,
   markSynced,
   openMigratedDatabase,
   version,
@@ -29,6 +34,8 @@ const TABLES = [
   "weekly_goals",
   "weekly_goal_versions",
   "weekly_goal_entries",
+  "long_term_goals",
+  "long_term_goal_entries",
 ];
 
 let db: TestDatabase;
@@ -54,6 +61,16 @@ async function addFullHabit(id: string): Promise<void> {
     id: `${id}-reminder`,
     habitId: id,
     time: localTime("08:30"),
+  });
+}
+
+/** A long-term goal with its total. */
+async function addFullLongTermGoal(id: string): Promise<void> {
+  await saveLongTermGoal(db, longTermGoal(id));
+  await saveLongTermGoalEntry(db, {
+    id: `${id}-entry`,
+    longTermGoalId: id,
+    value: 1,
   });
 }
 
@@ -140,6 +157,16 @@ describe("hasPendingChanges", () => {
     expect(await hasPendingChanges(db)).toBe(false);
   });
 
+  test("a long-term goal that has not been uploaded is pending", async () => {
+    await addFullLongTermGoal("books");
+
+    expect(await hasPendingChanges(db)).toBe(true);
+
+    await markAllSynced();
+
+    expect(await hasPendingChanges(db)).toBe(false);
+  });
+
   test("deleting an uploaded habit is pending: the account still has it", async () => {
     await addFullHabit("water");
     await markAllSynced();
@@ -163,6 +190,7 @@ describe("deleteAccountData", () => {
     await addFullHabit("water");
     await addFullHabit("read");
     await addFullWeeklyGoal("run");
+    await addFullLongTermGoal("books");
     await markSynced(db, "habits");
     await deleteHabit(db, "read");
     await db.run(

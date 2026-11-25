@@ -25,6 +25,8 @@ const NATURAL_KEYS: Record<SyncTable, readonly string[]> = {
   weekly_goals: [],
   weekly_goal_versions: ["weekly_goal_id", "effective_from"],
   weekly_goal_entries: ["weekly_goal_id", "week"],
+  long_term_goals: [],
+  long_term_goal_entries: ["long_term_goal_id"],
 };
 
 /** The table each child hangs from, and the column that points to it. */
@@ -36,6 +38,10 @@ const PARENTS: Partial<
   reminders: { table: "habits", column: "habit_id" },
   weekly_goal_versions: { table: "weekly_goals", column: "weekly_goal_id" },
   weekly_goal_entries: { table: "weekly_goals", column: "weekly_goal_id" },
+  long_term_goal_entries: {
+    table: "long_term_goals",
+    column: "long_term_goal_id",
+  },
 };
 
 /** The error of Postgres for a unique key that already exists. */
@@ -68,6 +74,8 @@ export class FakeRemote implements Remote {
     weekly_goals: new Map(),
     weekly_goal_versions: new Map(),
     weekly_goal_entries: new Map(),
+    long_term_goals: new Map(),
+    long_term_goal_entries: new Map(),
   };
 
   /** Runs before answering each pull: what other devices do meanwhile. */

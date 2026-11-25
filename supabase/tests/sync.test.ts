@@ -19,6 +19,13 @@ import {
   saveHabit,
 } from "@/data/habits-repository";
 import {
+  deleteLongTermGoal,
+  listLongTermGoalEntries,
+  listLongTermGoals,
+  saveLongTermGoal,
+  saveLongTermGoalEntry,
+} from "@/data/long-term-goals-repository";
+import {
   addReminder,
   deleteReminder,
   listReminders,
@@ -30,6 +37,7 @@ import {
 } from "@/data/sync-repository";
 import {
   habit,
+  longTermGoal,
   openMigratedDatabase,
   version,
   weeklyGoal,
@@ -163,6 +171,57 @@ test("a weekly goal and its total reach another device", async () => {
   ]);
 });
 
+test("a long-term goal and its total reach another device", async () => {
+  const goalId = id();
+  const goal = longTermGoal(goalId, {
+    name: "Read",
+    type: "quantitative",
+    target: 24,
+    unit: "books",
+    increment: 1,
+  });
+  await saveLongTermGoal(phone.db, goal);
+  await saveLongTermGoalEntry(phone.db, {
+    id: id(),
+    longTermGoalId: goalId,
+    value: 3,
+  });
+
+  await sync(phone);
+  await sync(tablet);
+
+  expect(await listLongTermGoals(tablet.db)).toEqual([goal]);
+  expect(await listLongTermGoalEntries(tablet.db)).toMatchObject([
+    { longTermGoalId: goalId, value: 3 },
+  ]);
+});
+
+test("the total of a long-term goal recorded on two devices is joined by its key", async () => {
+  const goalId = id();
+  await saveLongTermGoal(phone.db, longTermGoal(goalId));
+  await sync(phone);
+  await sync(tablet);
+  await saveLongTermGoalEntry(phone.db, {
+    id: id(),
+    longTermGoalId: goalId,
+    value: 1,
+  });
+  await saveLongTermGoalEntry(tablet.db, {
+    id: id(),
+    longTermGoalId: goalId,
+    value: 1,
+  });
+
+  await sync(phone);
+  await sync(tablet);
+  await sync(phone);
+
+  expect(await listLongTermGoalEntries(phone.db)).toEqual(
+    await listLongTermGoalEntries(tablet.db),
+  );
+  expect(await listLongTermGoalEntries(phone.db)).toHaveLength(1);
+});
+
 test("the data of a device reach another device of the account (RF-05, RF-38)", async () => {
   await addFullHabit(phone.db, "Water");
   await addFullHabit(tablet.db, "Read");
@@ -218,11 +277,22 @@ describe("a deletion is for good (ADR-0023)", () => {
       week,
       value: 2,
     });
+    const longTermGoalId = id();
+    await saveLongTermGoal(
+      phone.db,
+      longTermGoal(longTermGoalId, { name: "Secret" }),
+    );
+    await saveLongTermGoalEntry(phone.db, {
+      id: id(),
+      longTermGoalId,
+      value: 2,
+    });
     const habitId = await addFullHabit(phone.db, "Secret");
     await sync(phone);
 
     await deleteHabit(phone.db, habitId);
     await deleteWeeklyGoal(phone.db, goalId);
+    await deleteLongTermGoal(phone.db, longTermGoalId);
     await sync(phone);
 
     for (const table of SYNC_TABLES) {
