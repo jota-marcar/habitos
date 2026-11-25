@@ -3,7 +3,6 @@
 // into its input.
 
 import type { HabitChanges } from "@/data/habits-repository";
-import { parseAmount } from "@/domain/amounts";
 import type { LocalDate } from "@/domain/dates";
 import {
   DEFAULT_SCHEDULED_DAYS,
@@ -15,11 +14,7 @@ import {
   type HabitError,
   type HabitVersion,
 } from "@/domain/habits";
-import {
-  DEFAULT_INCREMENT,
-  type TrackedColor,
-  type TrackedType,
-} from "@/domain/tracked";
+import type { TrackedColor } from "@/domain/tracked";
 import {
   addReminder,
   type Reminder,
@@ -28,27 +23,24 @@ import {
 import type { Result } from "@/domain/result";
 import type { LocalTime } from "@/domain/times";
 
-import { formatAmount } from "@/shared/format";
+import {
+  EMPTY_AMOUNTS,
+  amountValuesOf,
+  amountsOf,
+  type AmountValues,
+} from "./amounts-form";
 
-export interface HabitFormValues {
+export interface HabitFormValues extends AmountValues {
   readonly name: string;
   readonly color: TrackedColor | null;
-  readonly type: TrackedType;
-  /** The amounts as typed, so that "1," can be shown while typing "1,5". */
-  readonly target: string;
-  readonly unit: string;
-  readonly increment: string;
   readonly scheduledDays: number;
   readonly reminderTimes: readonly LocalTime[];
 }
 
 export const EMPTY_HABIT_FORM: HabitFormValues = {
+  ...EMPTY_AMOUNTS,
   name: "",
   color: null,
-  type: "boolean",
-  target: "",
-  unit: "",
-  increment: formatAmount(DEFAULT_INCREMENT),
   scheduledDays: DEFAULT_SCHEDULED_DAYS,
   reminderTimes: [],
 };
@@ -64,15 +56,13 @@ export type HabitFormResult =
 
 /**
  * Builds a new habit, its first version and its reminders from the form, starting on
- * `startsOn` (RF-06). The amounts of a boolean habit are ignored, even if they were typed
- * before changing the type.
+ * `startsOn` (RF-06).
  */
 export function buildHabit(
   values: HabitFormValues,
   newId: () => string,
   startsOn: LocalDate,
 ): HabitFormResult {
-  const quantitative = values.type === "quantitative";
   const result = createHabit(
     {
       name: values.name,
@@ -80,10 +70,7 @@ export function buildHabit(
       color: values.color,
       config: {
         scheduledDays: values.scheduledDays,
-        // Text that is not a number is rejected like a missing amount.
-        target: quantitative ? parseAmount(values.target) : null,
-        unit: quantitative ? values.unit : null,
-        increment: quantitative ? parseAmount(values.increment) : null,
+        ...amountsOf(values.type, values),
       },
     },
     { habitId: newId(), versionId: newId() },
@@ -116,15 +103,10 @@ export function habitFormOf(
   version: HabitVersion,
   reminders: readonly Reminder[],
 ): HabitFormValues {
-  const amount = (value: number | null, missing: string) =>
-    value === null ? missing : formatAmount(value);
   return {
+    ...amountValuesOf(habit.type, version),
     name: habit.name,
     color: habit.color,
-    type: habit.type,
-    target: amount(version.target, EMPTY_HABIT_FORM.target),
-    unit: version.unit ?? EMPTY_HABIT_FORM.unit,
-    increment: amount(version.increment, EMPTY_HABIT_FORM.increment),
     scheduledDays: version.scheduledDays,
     reminderTimes: reminders.map((reminder) => reminder.time).sort(),
   };
@@ -147,16 +129,13 @@ export function buildHabitChanges(
   today: LocalDate,
 ): HabitChangesResult {
   const { habit, versions, reminders } = stored;
-  const quantitative = habit.type === "quantitative";
   const renamed = renameHabit(habit, values.name);
   const configured = changeConfig(
     habit,
     versions,
     {
       scheduledDays: values.scheduledDays,
-      target: quantitative ? parseAmount(values.target) : null,
-      unit: quantitative ? values.unit : null,
-      increment: quantitative ? parseAmount(values.increment) : null,
+      ...amountsOf(habit.type, values),
     },
     newId(),
     today,

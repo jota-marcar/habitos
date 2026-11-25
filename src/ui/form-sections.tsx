@@ -16,6 +16,7 @@ import {
 
 import { ColorSwatch, Field, Section, SegmentedControl } from "./components";
 import { TRACKED_COLOR_NAMES } from "@/shared/format";
+import type { AmountValues } from "./amounts-form";
 import { fieldOf, type HabitFormField } from "./habit-form";
 import { HABIT_ERROR_MESSAGES } from "./messages";
 import { spacing, useColors } from "./theme";
@@ -100,14 +101,6 @@ export function ColorSection({
       </View>
     </Section>
   );
-}
-
-export interface AmountValues {
-  readonly type: TrackedType;
-  /** The amounts as typed, so that "1," can be shown while typing "1,5". */
-  readonly target: string;
-  readonly unit: string;
-  readonly increment: string;
 }
 
 /**
