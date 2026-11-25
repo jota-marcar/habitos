@@ -8,8 +8,8 @@ Qué hay publicado, qué viene ahora y qué falta por decidir. Una sesión nueva
 
 | Entorno | Binario | Actualización OTA | Nube |
 |---------|---------|-------------------|------|
-| **Producción** (Hábitos, TestFlight) | `0.1.0 (2)`, tag `v0.1.0+2`. Caduca hacia el **2027-02-19** | `0.2.0`, tag `v0.2.0`, del 2026-11-24 | `habitos`: al día hasta `20261123120000_empty_deleted_rows` |
-| **Desarrollo** (Hábitos Dev) | `0.1.0 (1)`, del 2026-11-21. Hay un build nuevo en marcha, con Sentry, del 2026-11-24 | `0.2.1`, del 2026-11-24, solo para probar | `habitos-dev`: comprobar con `supabase migration list --remote` |
+| **Producción** (Hábitos, TestFlight) | `0.1.0 (2)`, tag `v0.1.0+2`. Caduca hacia el **2027-02-19** | `0.2.0`, tag `v0.2.0`, del 2026-11-24 | `habitos`: al día hasta `20261125120000_long_term_goals`, aplicada el 2026-11-25 |
+| **Desarrollo** (Hábitos Dev) | `0.1.0 (1)`, del 2026-11-21. Hay un build nuevo en marcha, con Sentry, del 2026-11-24 | `0.2.1`, del 2026-11-24, solo para probar | `habitos-dev`: al día hasta `20261125120000_long_term_goals`, aplicada el 2026-11-25 |
 
 Las migraciones de la nube las aplica el usuario. Lo que dice esta tabla sobre ellas es lo último registrado: antes de publicar, compruébalo con `supabase migration list`.
 
@@ -26,9 +26,8 @@ La `0.2.0` se comprobó en producción el 2026-11-24. TestFlight sigue mostrando
 2. **Metas, el tercer horizonte** (rumbo elegido el 2026-11-25): los requisitos están en la [sección 3.9](especificacion-funcional.md#39-metas). Se harán como los objetivos semanales, en Pull Requests sucesivos:
    1. Especificación y glosario. "Meta" pasa a nombrar el horizonte, y la cantidad que hay que alcanzar se llama ahora "Cantidad", también en los formularios.
    2. El núcleo común de hábitos y objetivos (C4 de la auditoría), limitado a lo que vayan a reutilizar las metas.
-   3. El modelo de datos y la sincronización, con su ADR ([ADR-0027](adr/0027-metas-en-dos-tablas-propias-sin-versiones-con-un-total-por-meta.md)). Añade una migración local y la migración de la nube `20261125120000_long_term_goals`.
-      - **Antes de publicar nada desde `main` con este cambio**, también la `0.3.0`, hay que aplicar esa migración en el proyecto de la nube del entorno. Sin ella, la sincronización falla al llegar a las tablas nuevas y deja de subir también los hábitos y los objetivos.
-      - La migración local hace irreversible la actualización que la lleve. Si la `0.3.0` sale después de fusionar este cambio, llevará ya las tablas de las metas, aunque sin interfaz.
+   3. **Hecho (PR 113):** el modelo de datos y la sincronización, con su ADR ([ADR-0027](adr/0027-metas-en-dos-tablas-propias-sin-versiones-con-un-total-por-meta.md), aceptado). La migración de la nube `20261125120000_long_term_goals` ya está aplicada en los dos entornos.
+      - La migración local hace irreversible la actualización que la lleve. La próxima publicación desde `main`, también la `0.3.0`, llevará ya las tablas de las metas, aunque sin interfaz.
    4. La interfaz.
    5. Los avisos de las metas, que están por definir.
 3. **Al tocar los ficheros afectados:** TypeScript más estricto, dividir los ficheros más grandes, quitar lo que sobra y revisar la regla de separar los textos.
