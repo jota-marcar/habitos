@@ -2,6 +2,7 @@
 
 import type { Month } from "@/domain/calendar";
 import { weekdayOf, type LocalDate, type Weekday } from "@/domain/dates";
+import type { Pace } from "@/domain/long-term-goals";
 import type { Amounts, TrackedColor } from "@/domain/tracked";
 import type { Week } from "@/domain/weeks";
 
@@ -143,4 +144,14 @@ export function formatAmount(value: number): string {
 export function formatProgress(value: number, amounts: Amounts): string {
   const target = formatAmount(amounts.target ?? 0);
   return `${formatAmount(value)} / ${target} ${amounts.unit ?? ""}`.trim();
+}
+
+/**
+ * How a long-term goal is going against its pace (RF-62): "al día", "2 libros por detrás" or
+ * "3 libros por delante".
+ */
+export function formatPace(pace: Pace, unit: string | null): string {
+  if (pace.kind === "on_pace") return "al día";
+  const amount = `${formatAmount(pace.amount)} ${unit ?? ""}`.trim();
+  return `${amount} ${pace.kind === "behind" ? "por detrás" : "por delante"}`;
 }

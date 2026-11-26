@@ -6,11 +6,15 @@ import { StyleSheet, Text, View } from "react-native";
 
 import type { LocalDate } from "@/domain/dates";
 import type { DayHabit } from "@/domain/day";
-import { daysLeft, type DayLongTermGoal } from "@/domain/long-term-goals";
+import {
+  daysLeft,
+  paceOf,
+  type DayLongTermGoal,
+} from "@/domain/long-term-goals";
 import type { DayGroups } from "@/domain/order";
 import type { WeekGoal } from "@/domain/weekly-goals";
 
-import { formatDaysLeft } from "@/shared/format";
+import { formatDaysLeft, formatPace } from "@/shared/format";
 import { fontSize, spacing, useColors } from "./theme";
 import {
   TrackedList,
@@ -53,19 +57,29 @@ const weekGoalItem = ({
   done,
 });
 
-// A pending goal says what is left until its deadline from the day on screen (RF-58).
+// A pending goal says what is left until its deadline from the day on screen (RF-58) and, on
+// the current day, how it is going against its pace (RF-62). On another day it could not: the
+// total has no day, so what had been recorded by then is not known.
 const longTermGoalItem =
-  (day: LocalDate) =>
-  ({ goal, value, done }: DayLongTermGoal): TrackedItem => ({
-    id: goal.id,
-    name: goal.name,
-    type: goal.type,
-    color: goal.color,
-    amounts: goal,
-    value,
-    done,
-    detail: done ? undefined : formatDaysLeft(daysLeft(goal.deadline, day)),
-  });
+  (day: LocalDate, isToday: boolean) =>
+  ({ goal, value, done }: DayLongTermGoal): TrackedItem => {
+    const pace = isToday ? paceOf(goal, value, day) : null;
+    const left = formatDaysLeft(daysLeft(goal.deadline, day));
+    return {
+      id: goal.id,
+      name: goal.name,
+      type: goal.type,
+      color: goal.color,
+      amounts: goal,
+      value,
+      done,
+      detail: done
+        ? undefined
+        : pace === null
+          ? left
+          : `${left} · ${formatPace(pace, goal.unit)}`,
+    };
+  };
 
 const isEmpty = <T,>(groups: DayGroups<T>) =>
   groups.pending.length === 0 && groups.done.length === 0;
@@ -185,7 +199,7 @@ export function LongTermPage({
       testID="long-term-goals"
       rowPrefix="long-term-goal"
       groups={groups}
-      itemOf={longTermGoalItem(day)}
+      itemOf={longTermGoalItem(day, isToday)}
       {...list}
     />
   );

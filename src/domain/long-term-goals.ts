@@ -3,6 +3,7 @@
 // applies to the whole goal. It is in progress from its first day to its deadline, both
 // included.
 
+import { roundAmount } from "./amounts";
 import type { LocalDate } from "./dates";
 import { addDays, daysBetween, later } from "./dates";
 import { isDone } from "./day";
@@ -238,4 +239,43 @@ export function longTermGoalsForDay(
       const value = valueByGoal.get(goal.id) ?? 0;
       return { goal, value, done: isDone(goal.type, goal, value) };
     });
+}
+
+/**
+ * How a pending goal with an amount is going against its pace (RF-62). A difference under one
+ * increment is on pace: a day without recording must not look like falling behind.
+ */
+export type Pace =
+  | { readonly kind: "on_pace" }
+  | { readonly kind: "behind" | "ahead"; readonly amount: number };
+
+// Tolerance for the error of dividing amounts (0.3 / 0.1 = 2.9999999999999996).
+const STEP_TOLERANCE = 1e-9;
+
+/**
+ * The pace of a goal on `today` (RF-62): the amount split evenly over its days, from the first
+ * to the deadline, both included, counting only the days already over. The difference is given
+ * in whole increments, rounded down. Null when there is no pace to speak of: a yes-or-no goal, a
+ * goal already achieved, or one not in progress today.
+ */
+export function paceOf(
+  goal: LongTermGoal,
+  value: number,
+  today: LocalDate,
+): Pace | null {
+  const { target, increment } = goal;
+  if (goal.type !== "quantitative" || target === null || increment === null) {
+    return null;
+  }
+  if (isDone(goal.type, goal, value) || !isInProgress(goal, today)) return null;
+
+  const days = daysBetween(goal.firstDay, goal.deadline) + 1;
+  const expected = (target * daysBetween(goal.firstDay, today)) / days;
+  const difference = value - expected;
+  const steps = Math.floor(Math.abs(difference) / increment + STEP_TOLERANCE);
+  if (steps < 1) return { kind: "on_pace" };
+  return {
+    kind: difference < 0 ? "behind" : "ahead",
+    amount: roundAmount(steps * increment),
+  };
 }

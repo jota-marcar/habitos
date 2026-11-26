@@ -11,6 +11,7 @@ import {
   firstDayOfNewLongTermGoal,
   isInProgress,
   longTermGoalsForDay,
+  paceOf,
   recolorLongTermGoal,
   renameLongTermGoal,
   validateDeadline,
@@ -316,5 +317,73 @@ describe("longTermGoalsForDay", () => {
       TODAY,
     );
     expect(goals.map(({ goal: { id } }) => id)).toEqual(["marathon", "books"]);
+  });
+});
+
+describe("paceOf (RF-62)", () => {
+  // Ten days, from 20 to 29 November, to read ten books: one a day.
+  const tenDays = goal({
+    target: 10,
+    firstDay: localDate("2026-11-20"),
+    deadline: localDate("2026-11-29"),
+  });
+  // On the 25th, five days are over: the 20th to the 24th.
+
+  test("is on pace with what the days already over ask for", () => {
+    expect(paceOf(tenDays, 5, TODAY)).toEqual({ kind: "on_pace" });
+  });
+
+  test("the day in progress does not count yet: the first day asks for nothing", () => {
+    expect(paceOf(tenDays, 0, localDate("2026-11-20"))).toEqual({
+      kind: "on_pace",
+    });
+  });
+
+  test("is behind or ahead by whole increments, rounded down", () => {
+    expect(paceOf(tenDays, 2, TODAY)).toEqual({ kind: "behind", amount: 3 });
+    expect(paceOf(tenDays, 8, TODAY)).toEqual({ kind: "ahead", amount: 3 });
+    expect(paceOf(tenDays, 2.5, TODAY)).toEqual({ kind: "behind", amount: 2 });
+  });
+
+  test("less than one increment of difference is on pace", () => {
+    expect(paceOf(tenDays, 4.5, TODAY)).toEqual({ kind: "on_pace" });
+    expect(paceOf(tenDays, 5.9, TODAY)).toEqual({ kind: "on_pace" });
+  });
+
+  test("gives the difference in increments of the goal", () => {
+    const halves = { ...tenDays, increment: 0.5 };
+
+    expect(paceOf(halves, 3.4, TODAY)).toEqual({ kind: "behind", amount: 1.5 });
+  });
+
+  test("an exact number of increments is not lost to rounding", () => {
+    // 0.3 / 0.1 is 2.9999999999999996 in floating point.
+    const tenths = { ...tenDays, target: 1, increment: 0.1 };
+
+    expect(paceOf(tenths, 0, localDate("2026-11-23"))).toEqual({
+      kind: "behind",
+      amount: 0.3,
+    });
+  });
+
+  test("a goal already achieved has no pace", () => {
+    expect(paceOf(tenDays, 10, TODAY)).toBeNull();
+  });
+
+  test("a yes-or-no goal has no pace", () => {
+    expect(
+      paceOf(goal({ ...NO_AMOUNTS, type: "boolean" }), 0, TODAY),
+    ).toBeNull();
+  });
+
+  test("a goal not in progress that day has no pace", () => {
+    expect(paceOf(tenDays, 0, localDate("2026-11-19"))).toBeNull();
+    expect(paceOf(tenDays, 0, localDate("2026-11-30"))).toBeNull();
+  });
+
+  test("the last day counts all the days before it", () => {
+    expect(paceOf(tenDays, 9, localDate("2026-11-29"))).toEqual({
+      kind: "on_pace",
+    });
   });
 });
