@@ -1,7 +1,12 @@
 import { saveEntry } from "@/data/entries-repository";
 import { addHabit } from "@/data/habits-repository";
 import {
+  saveLongTermGoal,
+  saveLongTermGoalEntry,
+} from "@/data/long-term-goals-repository";
+import {
   habit,
+  longTermGoal,
   openMigratedDatabase,
   version,
   weeklyGoal,
@@ -14,6 +19,10 @@ import {
 } from "@/data/weekly-goals-repository";
 import { localDate } from "@/domain/dates";
 import type { DayHabit } from "@/domain/day";
+import type {
+  GoalNeedingAttention,
+  LongTermGoalDigest,
+} from "@/domain/long-term-goal-digests";
 import type { PendingDigest } from "@/domain/digests";
 import type { ProgressDigest } from "@/domain/progress-digests";
 import { localTime, type LocalDateTime } from "@/domain/times";
@@ -29,6 +38,7 @@ import {
   finalNoticeNotification,
   horizonOfNotification,
   instantOf,
+  longTermGoalDigestNotification,
   localDateTimeOf,
   planReminders,
   progressDigestNotification,
@@ -339,11 +349,71 @@ describe("planReminders", () => {
       ]);
     });
   });
+
+  describe("long-term goal digests (RF-63)", () => {
+    const longTermIds = (notifications: readonly PlannedNotification[]) =>
+      notifications.filter((n) => n.id.startsWith("long-term."));
+
+    // 100 km in 100 days from 2 November: on Monday the 16th, 14 days are over.
+    const addRun = () =>
+      saveLongTermGoal(
+        db,
+        longTermGoal("run", {
+          name: "Correr",
+          type: "quantitative",
+          target: 100,
+          unit: "km",
+          increment: 1,
+          firstDay: localDate("2026-11-02"),
+          deadline: localDate("2027-02-09"),
+        }),
+      );
+
+    test("go in the window on the next Mondays, naming the goals behind", async () => {
+      await addRun();
+      await saveLongTermGoalEntry(db, {
+        id: "e1",
+        longTermGoalId: "run",
+        value: 6,
+      });
+
+      const { notifications } = await planReminders(db, NOW);
+
+      const digests = longTermIds(notifications);
+      expect(digests.map((n) => n.id)).toEqual([
+        "long-term.2026-11-16.20:00",
+        "long-term.2026-11-23.20:00",
+      ]);
+      expect(digests[0]).toMatchObject({
+        title: "Cómo van tus metas",
+        body: "Correr 6 de 100 km, 8 por detrás",
+      });
+    });
+
+    test("are not sent while the goals are on pace", async () => {
+      await addRun();
+      await saveLongTermGoalEntry(db, {
+        id: "e1",
+        longTermGoalId: "run",
+        value: 30,
+      });
+
+      const { notifications } = await planReminders(db, NOW);
+
+      expect(longTermIds(notifications)).toEqual([]);
+    });
+  });
 });
 
 describe("horizonOfNotification", () => {
   test("a progress digest opens the weekly page (RF-49)", () => {
     expect(horizonOfNotification("progress.2026-11-12.20:00")).toBe("weekly");
+  });
+
+  test("a long-term goal digest opens the page of long-term goals (RF-63)", () => {
+    expect(horizonOfNotification("long-term.2026-11-16.20:00")).toBe(
+      "longTerm",
+    );
   });
 
   test("everything else is about habits (RF-26, RF-37)", () => {
@@ -354,6 +424,91 @@ describe("horizonOfNotification", () => {
     ]) {
       expect(horizonOfNotification(id)).toBe("habits");
     }
+  });
+});
+
+describe("longTermGoalDigestNotification (RF-63)", () => {
+  const behind = (
+    name: string,
+    value: number,
+    target: number,
+    unit: string | null,
+    amount: number,
+  ): GoalNeedingAttention => ({
+    goal: longTermGoal(name, {
+      name,
+      type: "quantitative",
+      target,
+      unit,
+      increment: 1,
+    }),
+    value,
+    done: false,
+    reason: "behind",
+    target,
+    amount,
+  });
+  const deadline = (name: string, daysLeft: number): GoalNeedingAttention => ({
+    goal: longTermGoal(name, { name }),
+    value: 0,
+    done: false,
+    reason: "deadline",
+    daysLeft,
+  });
+  const digest = (...goals: GoalNeedingAttention[]): LongTermGoalDigest => ({
+    date: localDate("2026-11-16"),
+    time: localTime("20:00"),
+    goals,
+  });
+
+  test("has no buttons and no habit, and an identifier of its own", () => {
+    expect(
+      longTermGoalDigestNotification(digest(deadline("Mudanza", 3))),
+    ).toMatchObject({
+      id: "long-term.2026-11-16.20:00",
+      at: { date: "2026-11-16", time: "20:00" },
+      title: "Cómo van tus metas",
+      habitId: null,
+      category: null,
+    });
+  });
+
+  test("names amounts with how far behind, and yes-or-no goals with what is left", () => {
+    const { body } = longTermGoalDigestNotification(
+      digest(
+        behind("Leer", 8, 24, "libros", 2),
+        behind("Flexiones", 1.5, 100, null, 3),
+        deadline("Media maratón", 5),
+      ),
+    );
+
+    expect(body).toBe(
+      "Leer 8 de 24 libros, 2 por detrás · Flexiones 1,5 de 100, 3 por detrás · Media maratón, quedan 5 días",
+    );
+  });
+
+  test("says when it is the last day", () => {
+    const { body } = longTermGoalDigestNotification(
+      digest(deadline("App", 0), deadline("Mudanza", 1)),
+    );
+
+    expect(body).toBe("App, último día · Mudanza, queda 1 día");
+  });
+
+  test("names three goals at most, and counts the rest", () => {
+    const { body } = longTermGoalDigestNotification(
+      digest(
+        deadline("A", 1),
+        deadline("B", 2),
+        deadline("C", 3),
+        deadline("D", 4),
+        deadline("E", 5),
+      ),
+    );
+
+    expect(body).toBe(
+      "A, queda 1 día · B, quedan 2 días · C, quedan 3 días y 2 más",
+    );
   });
 });
 

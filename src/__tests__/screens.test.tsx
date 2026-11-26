@@ -1810,7 +1810,7 @@ describe("horizons (RF-33, RF-40, RF-41)", () => {
     expect(await screen.findByText("Hoy")).toBeTruthy();
   });
 
-  describe("tapping a notification (RF-26, RF-37, RF-49)", () => {
+  describe("tapping a notification (RF-26, RF-37, RF-49, RF-63)", () => {
     const tap = (horizon: Horizon) => act(async () => requestHorizon(horizon));
 
     test("a progress digest opens this week, from the habits of another day", async () => {
@@ -1845,6 +1845,19 @@ describe("horizons (RF-33, RF-40, RF-41)", () => {
 
       expect(await screen.findByText("Hoy")).toBeTruthy();
       expect(screen.queryByText("Esta semana")).toBeNull();
+    });
+
+    test("a long-term goal digest opens today's long-term goals, from another day", async () => {
+      await renderApp();
+      await screen.findByText("Todavía no tienes hábitos.");
+      await openCalendar();
+      await fireEvent.press(screen.getByLabelText("4 de noviembre de 2026"));
+      await screen.findByText("Miércoles, 4 nov");
+
+      await tap("longTerm");
+
+      expect(await screen.findByText("Metas")).toBeTruthy();
+      expect(screen.queryByText("Miércoles, 4 nov")).toBeNull();
     });
 
     test("a notification that starts the app opens its page", async () => {
