@@ -2,7 +2,7 @@
 
 Qué hay publicado, qué viene ahora y qué falta por decidir. Una sesión nueva puede empezar por aquí. Se actualiza en el mismo Pull Request que cambia algo de lo que cuenta, y al publicar.
 
-**Última actualización:** 2026-11-26.
+**Última actualización:** 2026-11-27.
 
 ## Qué hay publicado
 
@@ -26,8 +26,11 @@ La `0.3.0` llegó a los probadores el 2026-11-24. Es un binario nuevo, así que 
       1. **Hecho (PR 119):** la especificación (RF-37, RF-62 y RF-63).
       2. **Hecho (PR 120):** un único aviso de pendientes, configurable en Ajustes (RF-37).
       3. **Hecho (PR 121):** el ritmo en la página de Metas (RF-62).
-      4. **En curso:** el aviso de metas (RF-63).
-2. **Versión `0.4.0`, por OTA, con las metas** y el ejemplo "litros" en la unidad del hábito ([IDEA-02](ideas.md#idea-02-un-ejemplo-más-claro-para-la-cantidad-del-hábito)): el selector de fecha usa el módulo nativo que ya lleva el binario, así que no hace falta un build. Lleva la migración local de las metas, así que la actualización **no se podrá deshacer**: cualquier fallo se corrige publicando otra hacia delante ([despliegue.md](despliegue.md#actualizaciones-con-una-migración-local)). Se prepara con `node scripts/bump-version.mjs`, se prueba sin prisa en Hábitos Dev con `update:dev` y después sale con `update:prod`. Falta decidir si sale antes o después de los avisos de las metas.
+      4. **Hecho (PR 122):** el aviso de metas (RF-63).
+2. **Versión `0.4.0`, por OTA, con las metas y sus avisos**, el aviso de pendientes único y el ejemplo "litros" en la unidad del hábito ([IDEA-02](ideas.md#idea-02-un-ejemplo-más-claro-para-la-cantidad-del-hábito)). El selector de fecha usa el módulo nativo que ya lleva el binario, así que no hace falta un build. Lleva la migración local de las metas, así que la actualización **no se podrá deshacer**: cualquier fallo se corrige publicando otra hacia delante ([despliegue.md](despliegue.md#actualizaciones-con-una-migración-local)). La migración de la nube ya está aplicada en los dos entornos.
+   1. **En curso:** preparar la versión (`node scripts/bump-version.mjs`).
+   2. Con `main` al día, publicarla en Hábitos Dev con `npm run update:dev` y probarla sin prisa como actualización.
+   3. Publicarla en producción con `npm run update:prod`, que lanza el usuario.
 3. **Ideas por debatir:** las propuestas sin decidir están en [ideas.md](ideas.md), que se revisa a medida que avanza el desarrollo.
 4. **Al tocar los ficheros afectados:** TypeScript más estricto, dividir los ficheros más grandes, quitar lo que sobra y revisar la regla de separar los textos.
 
