@@ -3,11 +3,11 @@
 // the new time if it is still to come.
 
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 
 import type { PendingDigestSettings } from "@/domain/digests";
-import { localTimeOf, type LocalTime } from "@/domain/times";
+import { localTimeOf } from "@/domain/times";
 import {
   readPendingDigestSettings,
   savePendingDigestSettings,
@@ -16,29 +16,28 @@ import { refreshReminders } from "@/notifications/reminders";
 
 import { Section, SwitchRow } from "./components";
 import { useDatabase } from "./database";
+import { dateAt } from "./picker-time";
 import { fontSize, spacing, useColors } from "./theme";
 
 const DISABLED_LINE =
   "No recibirás el aviso de lo que te queda por hacer o apuntar.";
 const SAVE_ERROR = "No se ha podido guardar el cambio. Inténtalo de nuevo.";
 
-function dateAt(time: LocalTime): Date {
-  const [hours, minutes] = time.split(":").map(Number);
-  const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
-  return date;
-}
-
 export function PendingDigestSection() {
   const colors = useColors();
   const db = useDatabase();
   // Null until it is read, so that the switch does not jump from the default to the choice.
   const [settings, setSettings] = useState<PendingDigestSettings | null>(null);
+  // What the device has saved: a change that cannot be saved goes back to it, even if another
+  // change was made meanwhile.
+  const saved = useRef<PendingDigestSettings | null>(null);
 
   useEffect(() => {
     let active = true;
     void readPendingDigestSettings().then((read) => {
-      if (active) setSettings(read);
+      if (!active) return;
+      saved.current = read;
+      setSettings(read);
     });
     return () => {
       active = false;
@@ -48,13 +47,13 @@ export function PendingDigestSection() {
   if (settings === null) return null;
 
   const change = async (next: PendingDigestSettings) => {
-    const previous = settings;
     setSettings(next);
     try {
       await savePendingDigestSettings(next);
+      saved.current = next;
     } catch (error) {
       console.warn("The pending digest settings could not be saved.", error);
-      setSettings(previous);
+      setSettings(saved.current);
       Alert.alert("Aviso de pendientes", SAVE_ERROR);
       return;
     }
