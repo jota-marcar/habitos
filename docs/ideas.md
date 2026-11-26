@@ -50,13 +50,12 @@ Este contexto sale del análisis del 2026-11-25 frente a Recordatorios de Apple 
 ## IDEA-02. Un ejemplo más claro para la cantidad del hábito
 
 - **Propuesta:** el 2026-11-25, por el usuario.
-- **Estado:** por debatir.
-- **Qué se propone:** al crear un hábito, los ejemplos de Cantidad y Unidad son "2" y "L", poco intuitivos. Se cambiarían por "3" y "veces", con incremento 1.
-- **Puntos a debatir:**
-  - **"Veces" puede confundir el hábito con un objetivo semanal.** Sugiere una frecuencia, y lo de "3 veces por semana" se cubre con un objetivo semanal (sección 4, punto 3). Alguien podría crear un hábito diario de "3 veces" queriendo decir "3 veces por semana". Unidades que no se pueden confundir, como "vasos" (8), "páginas" (20) o "min" (30), evitarían ese error (principio 5).
-  - **Las minúsculas.** La unidad se muestra tras la cantidad ("1 / 3 veces"), así que iría en minúscula, como "libros" en las metas.
-  - **Los otros formularios.** Conviene revisar a la vez el ejemplo del objetivo semanal ("5 h").
-- **Coste aproximado:** mínimo. Cabe en una actualización OTA.
+- **Estado:** aprobada el 2026-11-26. Saldrá con la `0.4.0`.
+- **Qué se propuso:** al crear un hábito, los ejemplos de Cantidad y Unidad eran "2" y "L", poco intuitivos. Se propuso cambiarlos por "3" y "veces", con incremento 1.
+- **Qué se debatió:**
+  - **"Veces" puede confundir el hábito con un objetivo semanal.** Sugiere una frecuencia, y lo de "3 veces por semana" se cubre con un objetivo semanal (sección 4, punto 3). Alguien podría crear un hábito diario de "3 veces" queriendo decir "3 veces por semana" (principio 5).
+  - **Alternativas.** Se valoraron "8 vasos", "20 páginas" y "30 min". Las dos últimas, con incremento 1, piden muchos toques.
+- **Qué se decidió:** se mantiene el ejemplo del agua, pero con la unidad escrita entera: "2" y "litros", en minúscula como "libros" en las metas. "L" era lo que no se entendía. El incremento ya era 1, y los ejemplos de los objetivos semanales ("5 h") y de las metas ("24 libros") no cambian.
 
 ## IDEA-03. Recordatorios urgentes, con alarma
 
@@ -135,7 +134,7 @@ Este contexto sale del análisis del 2026-11-25 frente a Recordatorios de Apple 
 
 Es una propuesta, pendiente de debate:
 
-1. **IDEA-02.** Es mínima y puede salir con la `0.4.0`.
+1. **IDEA-02.** Aprobada: sale con la `0.4.0`.
 2. **IDEA-07 e IDEA-01.** Ambas tratan de los avisos y de cuántos recibe el usuario, así que conviene debatirlas juntas.
 3. **IDEA-06.**
 4. **IDEA-04 e IDEA-03.** Juntas, en el mismo build, con lo que digan los probadores.
