@@ -24,7 +24,8 @@ La `0.3.0` llegó a los probadores el 2026-11-24. Es un binario nuevo, así que 
    4. **Hecho (PR 115):** la interfaz, la tercera página de la pantalla principal con su formulario y sus opciones.
    5. Los avisos de las metas, que están por definir.
 2. **Versión `0.4.0`, por OTA, con las metas:** el selector de fecha usa el módulo nativo que ya lleva el binario, así que no hace falta un build. Lleva la migración local de las metas, así que la actualización **no se podrá deshacer**: cualquier fallo se corrige publicando otra hacia delante ([despliegue.md](despliegue.md#actualizaciones-con-una-migración-local)). Se prepara con `node scripts/bump-version.mjs`, se prueba sin prisa en Hábitos Dev con `update:dev` y después sale con `update:prod`. Falta decidir si sale antes o después de los avisos de las metas.
-3. **Al tocar los ficheros afectados:** TypeScript más estricto, dividir los ficheros más grandes, quitar lo que sobra y revisar la regla de separar los textos.
+3. **Ideas por debatir:** las propuestas sin decidir están en [ideas.md](ideas.md), que se revisa a medida que avanza el desarrollo. Los avisos de las metas se debatirán junto con IDEA-07 (avisos de ritmo) e IDEA-01 (un único aviso de pendientes, configurable).
+4. **Al tocar los ficheros afectados:** TypeScript más estricto, dividir los ficheros más grandes, quitar lo que sobra y revisar la regla de separar los textos.
 
 ## Decisiones pendientes
 
