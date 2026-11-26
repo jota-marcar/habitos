@@ -9,7 +9,7 @@ Qué hay publicado, qué viene ahora y qué falta por decidir. Una sesión nueva
 | Entorno | Binario | Actualización OTA | Nube |
 |---------|---------|-------------------|------|
 | **Producción** (Hábitos, TestFlight) | `0.3.0 (3)`, tag `v0.3.0`, del 2026-11-24, con Sentry. Caduca hacia el **2027-02-22** | Ninguna: funciona con la que lleva el binario | `habitos`: al día hasta `20261125120000_long_term_goals`, aplicada el 2026-11-25 |
-| **Desarrollo** (Hábitos Dev) | `0.3.0 (1)`, del 2026-11-24 | `0.3.0`, del 2026-11-24, desde `main` | `habitos-dev`: al día hasta `20261125120000_long_term_goals`, aplicada el 2026-11-25 |
+| **Desarrollo** (Hábitos Dev) | `0.3.0 (1)`, del 2026-11-24 | `0.4.0`, del 2026-11-27, desde `main`, con la migración local de las metas | `habitos-dev`: al día hasta `20261125120000_long_term_goals`, aplicada el 2026-11-25 |
 
 Las migraciones de la nube las aplica el usuario. Lo que dice esta tabla sobre ellas es lo último registrado: antes de publicar, compruébalo con `supabase migration list`.
 
@@ -28,8 +28,8 @@ La `0.3.0` llegó a los probadores el 2026-11-24. Es un binario nuevo, así que 
       3. **Hecho (PR 121):** el ritmo en la página de Metas (RF-62).
       4. **Hecho (PR 122):** el aviso de metas (RF-63).
 2. **Versión `0.4.0`, por OTA, con las metas y sus avisos**, el aviso de pendientes único y el ejemplo "litros" en la unidad del hábito ([IDEA-02](ideas.md#idea-02-un-ejemplo-más-claro-para-la-cantidad-del-hábito)). El selector de fecha usa el módulo nativo que ya lleva el binario, así que no hace falta un build. Lleva la migración local de las metas, así que la actualización **no se podrá deshacer**: cualquier fallo se corrige publicando otra hacia delante ([despliegue.md](despliegue.md#actualizaciones-con-una-migración-local)). La migración de la nube ya está aplicada en los dos entornos.
-   1. **En curso:** preparar la versión (`node scripts/bump-version.mjs`).
-   2. Con `main` al día, publicarla en Hábitos Dev con `npm run update:dev` y probarla sin prisa como actualización.
+   1. **Hecho (PR 124):** preparar la versión (`node scripts/bump-version.mjs`).
+   2. **En curso:** probarla sin prisa en Hábitos Dev, donde está publicada como actualización desde el 2026-11-27.
    3. Publicarla en producción con `npm run update:prod`, que lanza el usuario.
 3. **Ideas por debatir:** las propuestas sin decidir están en [ideas.md](ideas.md), que se revisa a medida que avanza el desarrollo.
 4. **Al tocar los ficheros afectados:** TypeScript más estricto, dividir los ficheros más grandes, quitar lo que sobra y revisar la regla de separar los textos.

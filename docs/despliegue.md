@@ -134,6 +134,14 @@ Con un build nuevo de Hábitos Dev, fuerza un error (por ejemplo, un `throw` tem
 - en el rastro hay pantallas, pero no toques ni nombres de hábitos;
 - no aparece ningún usuario ni ninguna dirección IP.
 
+### Avisos conocidos al publicar
+
+Analizados el 2026-11-27, al publicar la `0.4.0` en Hábitos Dev. No impiden nada:
+
+- **`expo-router contains an invalid package.json configuration`**, por `build/global-state/router-store`. Lo pide `@sentry/react-native` (8.28.1) para poner la ruta en los errores, pero ese fichero ya no existe en `expo-router` 58. Sentry lo pide dentro de un `try` y sigue sin la ruta si no está. La app no usa esa parte de Sentry (`expoRouterIntegration`), así que no pierde nada. Debería desaparecer cuando Sentry se adapte a `expo-router` 58.
+- **`Using https://sentry.io (embedded in token) rather than manually-configured URL https://sentry.io/`**. Es la misma dirección: solo cambia la barra final del `url` del plugin de Sentry en `app.json`. Quitarla cambia la configuración nativa y, con ella, la huella, así que se hace en el próximo build, no antes.
+- **`Bundler cache is empty, rebuilding`**: Metro empieza sin caché y tarda algo más. Es normal.
+
 ## Límites
 
 - **Los builds son limitados:** 15 de iOS en el plan gratuito de EAS. Conviene agrupar los cambios nativos.
