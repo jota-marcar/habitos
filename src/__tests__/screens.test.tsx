@@ -2421,6 +2421,20 @@ describe("long-term goals (RF-55 to RF-61)", () => {
     ]);
   });
 
+  test("saving a goal brings the digest of long-term goals up to date (RF-63)", async () => {
+    await renderGoals();
+    await openNewGoal("Mudanza");
+    await fireEvent.press(screen.getByText("Elegir fecha límite"));
+    mockPicked = new Date(2026, 10, 17, 12);
+    await fireEvent.press(screen.getByTestId("deadline-picker"));
+    await save();
+
+    // On Monday the 16th, the day before its deadline.
+    await waitFor(() =>
+      expect(mockScheduled.has("long-term.2026-11-16.20:00")).toBe(true),
+    );
+  });
+
   test("a goal created from a future day starts that day, and counts from it", async () => {
     await renderGoals();
     await chooseDay("20 de noviembre de 2026");
