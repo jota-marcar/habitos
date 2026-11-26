@@ -21,6 +21,7 @@ import {
   earliestDeadline,
   type LongTermGoalError,
 } from "@/domain/long-term-goals";
+import { refreshReminders } from "@/notifications/reminders";
 import { syncSoon } from "@/sync/app-sync";
 
 import { today } from "@/shared/clock";
@@ -99,6 +100,8 @@ export function LongTermGoalFormScreen({
       const rejected = await onSubmit(values);
       setErrors(rejected);
       if (rejected.length > 0) return;
+      // The goal may change what the long-term goal digests name or how they say it (RF-63).
+      void refreshReminders(db);
       syncSoon(db);
       closeSaved();
     } finally {

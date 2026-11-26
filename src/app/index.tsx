@@ -75,9 +75,9 @@ export default function Today() {
   // The long-term goals are those in progress on the day on screen (RF-41).
   const longTermPage = useLongTermGoals(date);
 
-  // Tapping a notification opens its page on the current day and week (RF-26, RF-37, RF-49). A
-  // form that is open stays on top, with what was typed in it. Until the carousel is there, a
-  // request waits, because it could not be moved.
+  // Tapping a notification opens its page on the current day and week (RF-26, RF-37, RF-49,
+  // RF-63). A form that is open stays on top, with what was typed in it. Until the carousel is
+  // there, a request waits, because it could not be moved.
   const { ready: pagerReady, show: showHorizon } = horizons;
   const { select: selectDay } = day;
   useEffect(() => {

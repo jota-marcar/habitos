@@ -6,6 +6,10 @@
 import type { Database } from "@/data/database";
 import { listEntries } from "@/data/entries-repository";
 import { listHabitVersions, listHabits } from "@/data/habits-repository";
+import {
+  listLongTermGoalEntries,
+  listLongTermGoals,
+} from "@/data/long-term-goals-repository";
 import { listReminders } from "@/data/reminders-repository";
 import {
   listWeeklyGoalEntries,
@@ -21,6 +25,11 @@ import {
   type PendingDigestSettings,
 } from "@/domain/digests";
 import type { Habit } from "@/domain/habits";
+import {
+  upcomingLongTermGoalDigests,
+  type GoalNeedingAttention,
+  type LongTermGoalDigest,
+} from "@/domain/long-term-goal-digests";
 import {
   upcomingProgressDigests,
   type ProgressDigest,
@@ -42,7 +51,7 @@ import {
 } from "@/domain/times";
 import type { WeekGoal } from "@/domain/weekly-goals";
 import { weekOf } from "@/domain/weeks";
-import { formatAmount } from "@/shared/format";
+import { formatAmount, formatDaysLeft } from "@/shared/format";
 import type { Horizon } from "@/shared/horizon-request";
 
 import type {
@@ -61,6 +70,9 @@ export const DIGEST_PREFIX = "digest.";
 /** Every progress digest of the window has an identifier that starts like this (RF-49). */
 export const PROGRESS_PREFIX = "progress.";
 
+/** Every long-term goal digest of the window has an identifier that starts like this (RF-63). */
+export const LONG_TERM_PREFIX = "long-term.";
+
 /** Every snoozed notification has an identifier that starts like this. */
 export const SNOOZE_PREFIX = "snooze.";
 
@@ -75,12 +87,15 @@ const WINDOW_PREFIXES = [
   REMINDER_PREFIX,
   DIGEST_PREFIX,
   PROGRESS_PREFIX,
+  LONG_TERM_PREFIX,
   FINAL_NOTICE_ID,
 ];
 
-/** The page that tapping a notification opens: its own horizon (RF-26, RF-37, RF-49). */
+/** The page that tapping a notification opens: its own horizon (RF-26, RF-37, RF-49, RF-63). */
 export function horizonOfNotification(id: string): Horizon {
-  return id.startsWith(PROGRESS_PREFIX) ? "weekly" : "habits";
+  if (id.startsWith(PROGRESS_PREFIX)) return "weekly";
+  if (id.startsWith(LONG_TERM_PREFIX)) return "longTerm";
+  return "habits";
 }
 
 /** The buttons of the reminders (RF-25). */
@@ -286,6 +301,40 @@ export function progressDigestNotification(
   };
 }
 
+/**
+ * A goal in a long-term goal digest (RF-63): one with an amount says how far it has got and how
+ * much it lacks to be on pace, "Leer 8 de 24 libros, 2 por detrás"; a yes-or-no one says what is
+ * left, "Media maratón, quedan 5 días".
+ */
+function goalAttention(attention: GoalNeedingAttention): string {
+  const { goal, value } = attention;
+  const name = shortened(goal.name);
+  if (attention.reason === "deadline") {
+    return `${name}, ${formatDaysLeft(attention.daysLeft)}`;
+  }
+  const target = formatAmount(attention.target);
+  const progress =
+    `${formatAmount(value)} de ${target} ${goal.unit ?? ""}`.trim();
+  return `${name} ${progress}, ${formatAmount(attention.amount)} por detrás`;
+}
+
+/** The notification of a long-term goal digest: the goals that need attention (RF-63). */
+export function longTermGoalDigestNotification(
+  digest: LongTermGoalDigest,
+): PlannedNotification {
+  const { date, time, goals } = digest;
+  const shown = goals.slice(0, DIGEST_NAMES).map(goalAttention).join(" · ");
+  const rest = goals.length - DIGEST_NAMES;
+  return {
+    id: `${LONG_TERM_PREFIX}${date}.${time}`,
+    at: { date, time },
+    title: "Cómo van tus metas",
+    body: rest > 0 ? `${shown} y ${rest} más` : shown,
+    habitId: null,
+    category: null,
+  };
+}
+
 /** The notice that asks to open the app before the window runs out (RF-51). */
 export function finalNoticeNotification(
   lastWarning: LocalDateTime,
@@ -366,7 +415,7 @@ export function signatureOf(
 
 /** What the device has to have scheduled now. */
 export interface ReminderPlan {
-  /** The reminders and digests of the window, soonest first (ADR-0005, RF-37, RF-49). */
+  /** The reminders and digests of the window, soonest first (ADR-0005, RF-37, RF-49, RF-63). */
   readonly notifications: readonly PlannedNotification[];
   /** The categories those reminders use. */
   readonly categories: readonly NotificationCategory[];
@@ -391,6 +440,8 @@ export async function planReminders(
     goals,
     goalVersions,
     goalEntries,
+    longTermGoals,
+    longTermGoalEntries,
   ] = await Promise.all([
     listHabits(db),
     listHabitVersions(db),
@@ -400,12 +451,18 @@ export async function planReminders(
     listWeeklyGoalVersions(db),
     // Future weeks cannot be recorded (RF-47), so the current one is all there is to read.
     listWeeklyGoalEntries(db, weekOf(now.date).start),
+    listLongTermGoals(db),
+    listLongTermGoalEntries(db),
   ]);
   const data = { habits, versions, entries, reminders };
   const upcoming = upcomingReminders(data, now);
   const digests = upcomingPendingDigests(data, now, pendingDigest);
   const progressDigests = upcomingProgressDigests(
     { goals, versions: goalVersions, entries: goalEntries },
+    now,
+  );
+  const longTermGoalDigests = upcomingLongTermGoalDigests(
+    { goals: longTermGoals, entries: longTermGoalEntries },
     now,
   );
 
@@ -434,6 +491,7 @@ export async function planReminders(
       [
         ...digests.map(digestNotification),
         ...progressDigests.map(progressDigestNotification),
+        ...longTermGoalDigests.map(longTermGoalDigestNotification),
       ],
       now,
     ),

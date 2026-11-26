@@ -1810,7 +1810,7 @@ describe("horizons (RF-33, RF-40, RF-41)", () => {
     expect(await screen.findByText("Hoy")).toBeTruthy();
   });
 
-  describe("tapping a notification (RF-26, RF-37, RF-49)", () => {
+  describe("tapping a notification (RF-26, RF-37, RF-49, RF-63)", () => {
     const tap = (horizon: Horizon) => act(async () => requestHorizon(horizon));
 
     test("a progress digest opens this week, from the habits of another day", async () => {
@@ -1845,6 +1845,19 @@ describe("horizons (RF-33, RF-40, RF-41)", () => {
 
       expect(await screen.findByText("Hoy")).toBeTruthy();
       expect(screen.queryByText("Esta semana")).toBeNull();
+    });
+
+    test("a long-term goal digest opens today's long-term goals, from another day", async () => {
+      await renderApp();
+      await screen.findByText("Todavía no tienes hábitos.");
+      await openCalendar();
+      await fireEvent.press(screen.getByLabelText("4 de noviembre de 2026"));
+      await screen.findByText("Miércoles, 4 nov");
+
+      await tap("longTerm");
+
+      expect(await screen.findByText("Metas")).toBeTruthy();
+      expect(screen.queryByText("Miércoles, 4 nov")).toBeNull();
     });
 
     test("a notification that starts the app opens its page", async () => {
@@ -2406,6 +2419,20 @@ describe("long-term goals (RF-55 to RF-61)", () => {
         deadline: localDate("2027-06-17"),
       }),
     ]);
+  });
+
+  test("saving a goal brings the digest of long-term goals up to date (RF-63)", async () => {
+    await renderGoals();
+    await openNewGoal("Mudanza");
+    await fireEvent.press(screen.getByText("Elegir fecha límite"));
+    mockPicked = new Date(2026, 10, 17, 12);
+    await fireEvent.press(screen.getByTestId("deadline-picker"));
+    await save();
+
+    // On Monday the 16th, the day before its deadline.
+    await waitFor(() =>
+      expect(mockScheduled.has("long-term.2026-11-16.20:00")).toBe(true),
+    );
   });
 
   test("a goal created from a future day starts that day, and counts from it", async () => {

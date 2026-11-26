@@ -1,4 +1,5 @@
-// The page the main screen has to show because a notification was tapped (RF-26, RF-37, RF-49).
+// The page the main screen has to show because a notification was tapped (RF-26, RF-37, RF-49,
+// RF-63).
 // The tap may arrive before the screen exists, when it is what starts the app, so the request
 // waits here until the screen is there to take it.
 
