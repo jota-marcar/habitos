@@ -178,7 +178,7 @@ export function HabitFormScreen({
         values={values}
         error={messages.amounts}
         targetPlaceholder="2"
-        unitPlaceholder="L"
+        unitPlaceholder="litros"
         onChange={update}
       />
 

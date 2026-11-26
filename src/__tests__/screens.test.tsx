@@ -1104,6 +1104,14 @@ describe("new habit", () => {
     });
   });
 
+  test("the unit example is a whole word, so that it reads at a glance", async () => {
+    await renderApp("/habits/new");
+    await fireEvent.press(screen.getByText("Cantidad"));
+
+    expect(screen.getByLabelText("Cantidad")).toHaveProp("placeholder", "2");
+    expect(screen.getByLabelText("Unidad")).toHaveProp("placeholder", "litros");
+  });
+
   test("shows the errors next to their fields and saves nothing", async () => {
     await renderApp("/habits/new");
 
