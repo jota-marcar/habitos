@@ -20,6 +20,7 @@ import {
   readGestureHint,
   startGestureHint,
 } from "./gesture-hint-store";
+import { readPendingDigestSettings } from "./pending-digest-store";
 import {
   localDateTimeOf,
   planReminders,
@@ -34,11 +35,15 @@ let database!: Database;
 const knownCategories = new Map<string, string>();
 
 const refresh = serialized(async () => {
-  const gestureHint = await readGestureHint();
+  const [gestureHint, pendingDigest] = await Promise.all([
+    readGestureHint(),
+    readPendingDigestSettings(),
+  ]);
   const plan = await planReminders(
     database,
     localDateTimeOf(now()),
     gestureHint,
+    pendingDigest,
   );
   if (
     plan.gestureHintStartedOn !== null &&

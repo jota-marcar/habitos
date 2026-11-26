@@ -14,7 +14,12 @@ import {
 } from "@/data/weekly-goals-repository";
 import { localDate, localDateOf, type LocalDate } from "@/domain/dates";
 import { scheduledHabitsForDay, type DayHabit } from "@/domain/day";
-import { upcomingPendingDigests, type PendingDigest } from "@/domain/digests";
+import {
+  DEFAULT_PENDING_DIGEST,
+  upcomingPendingDigests,
+  type PendingDigest,
+  type PendingDigestSettings,
+} from "@/domain/digests";
 import type { Habit } from "@/domain/habits";
 import {
   upcomingProgressDigests,
@@ -376,6 +381,7 @@ export async function planReminders(
   db: Database,
   now: LocalDateTime,
   gestureHint: GestureHint = NO_GESTURE_HINT,
+  pendingDigest: PendingDigestSettings = DEFAULT_PENDING_DIGEST,
 ): Promise<ReminderPlan> {
   const [
     habits,
@@ -397,7 +403,7 @@ export async function planReminders(
   ]);
   const data = { habits, versions, entries, reminders };
   const upcoming = upcomingReminders(data, now);
-  const digests = upcomingPendingDigests(data, now);
+  const digests = upcomingPendingDigests(data, now, pendingDigest);
   const progressDigests = upcomingProgressDigests(
     { goals, versions: goalVersions, entries: goalEntries },
     now,
