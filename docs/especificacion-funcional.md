@@ -40,7 +40,7 @@ La aplicación empezó por los hábitos diarios, que fueron su MVP. Se ha amplia
 | **Recordatorio** | `Reminder` | Aviso a una hora concreta para que el usuario no olvide un hábito. |
 | **Posponer** | `snooze` | Aplazar un recordatorio para recibirlo de nuevo más tarde. |
 | **Ayuda del gesto** | `gestureHint` | Línea de los primeros recordatorios que explica que, al mantenerlos pulsados, aparecen sus botones. |
-| **Aviso de pendientes** | `PendingDigest` | Aviso a una hora fija del día que nombra los hábitos de ese día que siguen sin cumplir. |
+| **Aviso de pendientes** | `PendingDigest` | Aviso diario, a la hora elegida en Ajustes, que nombra los hábitos de ese día que siguen sin cumplir. |
 | **Color** | `color` | Color que el usuario da a un hábito, de entre los de una paleta, para agruparlo con otros o distinguirlo de ellos. |
 | **Archivar** | `archive` | Retirar un hábito de uso sin borrar su historial. |
 | **Calendario** | `calendar` | Cuadrícula de un mes con la que se elige el día que se quiere ver. |
@@ -51,7 +51,7 @@ La aplicación empezó por los hábitos diarios, que fueron su MVP. Se ha amplia
 | **Eliminar la cuenta** | `deleteAccount` | Borrar para siempre la cuenta y todos sus datos, en la cuenta y en el dispositivo, y desconectar la aplicación de Apple o de Google. |
 | **Cambios pendientes** | `pendingChanges` | Cambios hechos en el dispositivo que aún no se han copiado en la cuenta. |
 | **Estado de la copia** | `syncStatus` | Si lo que hay en el dispositivo ya está copiado en la cuenta, desde cuándo, o si lleva días sin poder copiarse. |
-| **Ajustes** | `settings` | Pantalla con las opciones de la cuenta, que se abre desde el menú. |
+| **Ajustes** | `settings` | Pantalla con las opciones de la cuenta y del aviso de pendientes, que se abre desde el menú. |
 | **Versión de la aplicación** | `appVersion` | Número que identifica cada publicación de la aplicación (por ejemplo, 0.2.0). |
 | **Opciones** | `options` | Acciones sobre un hábito, un objetivo o una meta que se abren al mantenerlo pulsado: corregir lo acumulado, editar, archivar y eliminar. |
 | **Horizonte** | `horizon` | Cada página de la pantalla principal, según el plazo que abarca: los hábitos del día, los objetivos de la semana y las metas a largo plazo. |
@@ -70,6 +70,8 @@ La aplicación empezó por los hábitos diarios, que fueron su MVP. Se ha amplia
 | **Fecha límite** | `deadline` | Último día en que una meta está en curso. |
 | **Registro de una meta** | `LongTermGoalEntry` | Total apuntado de una meta. |
 | **Lo que queda** | `daysLeft` | Días que faltan, desde el día que se ve, hasta la fecha límite de una meta: 0 el último día. |
+| **Ritmo** | `pace` | Lo que debería llevar acumulado a estas alturas una meta de cantidad para conseguirla a tiempo avanzando cada día lo mismo. |
+| **Aviso de metas** | `LongTermGoalDigest` | Aviso a una hora fija de la semana que nombra las metas que van por detrás de su ritmo o a las que les queda poco. |
 | **Aviso final** | `finalNotice` | Aviso que pide abrir la aplicación cuando los recordatorios ya preparados están a punto de acabarse. |
 
 La columna "En el código" es el nombre en inglés con el que cada término aparece en el código y en el modelo de datos ([ADR-0007](adr/0007-codigo-en-ingles-y-documentacion-en-espanol.md)). Cada término se traduce siempre igual; uno nuevo se añade aquí antes de usarlo en el código. `goal` abrevia `WeeklyGoal` en el código de los objetivos semanales; las metas usan siempre su nombre completo, `LongTermGoal`, para no confundirse con ellos. `Record` se evita porque ya tiene otro significado en el lenguaje de programación.
@@ -101,7 +103,7 @@ La aplicación tiene una sola pantalla principal, con una página por horizonte:
 - **RF-31.** Al deslizar hacia abajo desde la fecha, o desde la lista cuando ya está arriba del todo, se despliega el **calendario** desde arriba (RF-18). Se cierra deslizándolo hacia arriba o tocando fuera de él.
 - **RF-32.** Al deslizar hacia arriba desde la franja se despliega el **menú** desde abajo. Se cierra deslizándolo hacia abajo o tocando fuera de él. Tiene dos opciones, cada una con su icono:
   - **Crear**, que crea un elemento del horizonte que se esté viendo. En Hábitos crea un hábito (RF-06); en Objetivos semanales, un objetivo (RF-42), y en Metas, una meta (RF-55).
-  - **Ajustes**, con las opciones de la cuenta (RF-03, RF-04).
+  - **Ajustes**, con las opciones de la cuenta (RF-03, RF-04) y las del aviso de pendientes (RF-37).
 - **RF-33.** Deslizar el recuadro hacia la izquierda o hacia la derecha cambia de horizonte. El orden es Hábitos, Objetivos semanales y Metas, y el carrusel termina en sus extremos.
   - Solo se desplaza el recuadro. El título no se mueve: el anterior desaparece y aparece el nuevo a medida que avanza el desplazamiento.
   - La franja del menú no cambia, y no hay ningún indicador de página.
@@ -221,11 +223,13 @@ Es la pantalla principal de la aplicación (ver 3.1).
   iOS solo muestra estos botones al mantener pulsada la notificación, así que los recordatorios lo explican con una línea ("Mantén pulsado para marcarlo o posponerlo", o "para sumar o posponerlo" en un cuantitativo, sin "o posponerlo" en los que no pueden posponerse). La línea deja de aparecer en cuanto el usuario usa un botón por primera vez y, si no llega a usarlo, a los 7 días del primer recordatorio. Es una ayuda del dispositivo: no se sincroniza con la cuenta.
 - **RF-26.** Al tocar el recordatorio (fuera de sus botones), se abre la aplicación en el día actual, en la página de Hábitos, aunque se hubiera dejado en otra.
 - **RF-27.** Los recordatorios funcionan sin conexión.
-- **RF-37.** Además de los recordatorios de cada hábito, la aplicación envía cada día dos avisos de pendientes, a las 17:00 y a las 22:00. Así el usuario no se olvida de registrar lo que ya ha hecho, y se le recuerda lo que aún no ha hecho, también los hábitos que no tienen recordatorios.
-  - Un aviso solo se envía si a esa hora quedan hábitos del día sin cumplir. Cuentan todos los pendientes, también los cuantitativos a medias y los que aún tienen un recordatorio más tarde.
+- **RF-37.** Además de los recordatorios de cada hábito, la aplicación envía cada día un **aviso de pendientes**, por defecto a las 21:00. Así se le recuerda al usuario lo que aún no ha hecho, también los hábitos que no tienen recordatorios, y no se olvida de registrar lo que ya ha hecho. La hora por defecto es tardía a propósito: aún da tiempo a hacer algo y cubre casi todo lo que hay que apuntar.
+  - El aviso solo se envía si a esa hora quedan hábitos del día sin cumplir. Cuentan todos los pendientes, también los cuantitativos a medias y los que aún tienen un recordatorio más tarde.
   - El aviso dice cuántos hábitos quedan y los nombra en el orden de la vista del día (RF-12). Si son muchos o tienen nombres largos, la lista se recorta (por ejemplo, "Leer, Beber agua, Correr y 2 más").
   - Al tocarlo se abre la aplicación en el día actual, como un recordatorio (RF-26). No tiene botones, porque reúne varios hábitos.
-  - Las horas son fijas y los avisos no se pueden desactivar (ver sección 4).
+  - En Ajustes, el usuario puede desactivar el aviso y cambiar su hora, con precisión de minuto, como un recordatorio (RF-22). El cambio se aplica en el momento: si la nueva hora de hoy aún no ha pasado, el aviso de hoy ya llega a esa hora.
+  - Mientras está desactivado, Ajustes lo dice con una línea discreta ("No recibirás el aviso de lo que te queda por hacer o apuntar") y no muestra la hora. Al volver a activarlo, recupera la última hora elegida.
+  - La elección es del dispositivo, como la ayuda del gesto (RF-25): no se sincroniza con la cuenta y no se borra al cerrar sesión. En otro dispositivo, o al reinstalar la aplicación, vuelve a la hora por defecto.
 - **RF-51.** Los recordatorios se preparan con antelación y el teléfono solo guarda un número limitado, así que se acabarían sin avisar si la aplicación no se abre en muchos días. Para que eso no ocurra, el último de los avisos preparados es un **aviso final**: "Abre Hábitos para seguir recibiendo tus recordatorios".
   - Llega a las 12:00 del día anterior al último aviso preparado, para que al abrir la aplicación a tiempo no se pierda ninguno. Si esa hora ya ha pasado, llega junto con el último aviso.
   - Abrir la aplicación, usar un botón de un recordatorio o que la aplicación se actualice sola lo aplaza, así que con un uso normal nunca llega.
@@ -335,8 +339,19 @@ Una meta es algo que el usuario quiere conseguir antes de una fecha límite, a l
   | Editar (RF-56) | Salvo si su fecha límite ya ha pasado |
   | Eliminar (RF-57) | Siempre |
 - **RF-61.** Al pasar su fecha límite, una meta se queda como conseguida o no conseguida y deja de aparecer en los días siguientes. Sigue visible en los días en que estuvo en curso.
+- **RF-62.** Una meta de cantidad pendiente indica en la página de Metas, junto a lo que queda (RF-58), cómo va frente a su **ritmo**: "al día", "2 libros por detrás" o "3 libros por delante".
+  - El ritmo reparte la cantidad a partes iguales entre los días de la meta, del primero a la fecha límite, ambos incluidos. A estas alturas tendría que llevarse la parte de los días ya terminados: el día en curso aún no cuenta, así que el primer día el ritmo es 0.
+  - Solo se dice "por detrás" o "por delante" si la diferencia llega al menos a un incremento, y se indica en incrementos enteros, redondeando hacia abajo. Por debajo de un incremento, la meta va "al día": un día sin apuntar no debe parecer un retraso.
+  - Se muestra solo viendo el día actual. Lo acumulado es un único total, sin el día en que se hizo (RF-59), así que en otro día no se sabría cuánto se llevaba entonces.
+  - Una meta de sí o no no tiene ritmo: le basta con lo que queda. Una meta conseguida tampoco lo indica.
+  - Es un reparto uniforme a propósito. Una meta que no avanza de forma lineal, como un entrenamiento que va de menos a más, puede ir "por detrás" sin que sea un problema.
+- **RF-63.** La aplicación envía un **aviso de metas** los lunes a las 20:00, solo si a esa hora alguna meta en curso necesita atención:
+  - una meta de cantidad pendiente que va por detrás de su ritmo (RF-62), o
+  - una meta de sí o no pendiente a la que le quedan 7 días o menos, incluido el último.
 
-Los avisos de las metas (por ejemplo, de cuenta atrás) están por definir.
+  El título es "Cómo van tus metas" y el texto nombra esas metas en el orden de la página de Metas: las de cantidad con lo que llevan y cuánto les falta para ir al día, y las de sí o no con lo que queda (por ejemplo, "Leer 8 de 24 libros, 2 por detrás · Media maratón, quedan 5 días"). Si son muchas, la lista se recorta como en RF-37 ("… y 2 más"). El aviso informa sin culpabilizar: no se avisa de ir por delante, que ya se ve en la página.
+
+  Al tocarlo se abre la aplicación en la página de Metas, en el día actual. No tiene botones, porque reúne varias metas. La hora es fija.
 
 ## 4. Fuera del alcance
 
@@ -354,11 +369,10 @@ Funcionalidades descartadas por ahora, en orden aproximado de interés:
 10. Un listado de todos los hábitos, independiente del día. Solo haría falta si aparecen acciones que no encajan en las opciones de un hábito (RF-34), como reactivar archivados o reordenar.
 11. Pasar al día anterior o al siguiente sin abrir el calendario.
 12. Accesibilidad con lector de pantalla (VoiceOver): acciones equivalentes a los gestos para quien no puede verlos.
-13. Cambiar las horas de los avisos de pendientes (RF-37) o desactivarlos, desde los ajustes (RF-32).
-14. Carrusel circular: que al deslizar desde el último horizonte se vuelva al primero (RF-33).
-15. Un tutorial que explique los gestos de la aplicación, también el paso entre horizontes.
-16. Hitos intermedios en las metas: pasos que se van cumpliendo hasta conseguirla (RF-55).
-17. Vincular las metas con hábitos y objetivos semanales (ver [Vínculo entre horizontes](#vínculo-entre-horizontes)).
+13. Carrusel circular: que al deslizar desde el último horizonte se vuelva al primero (RF-33).
+14. Un tutorial que explique los gestos de la aplicación, también el paso entre horizontes.
+15. Hitos intermedios en las metas: pasos que se van cumpliendo hasta conseguirla (RF-55).
+16. Vincular las metas con hábitos y objetivos semanales (ver [Vínculo entre horizontes](#vínculo-entre-horizontes)).
 
 ## 5. Preguntas abiertas
 
@@ -366,7 +380,7 @@ Puntos a decidir antes de implementar la parte correspondiente. Ahora mismo no q
 
 ## 6. Visión a futuro: tres horizontes
 
-> **Los tres horizontes ya tienen sus requisitos:** los hábitos en las secciones 3.1 a 3.7, los objetivos semanales en la [3.8](#38-objetivos-semanales) y las metas en la [3.9](#39-metas). Lo que sigue siendo solo una idea es el vínculo entre ellos y los avisos de las metas, que se concretarán cuando el desarrollo avance.
+> **Los tres horizontes ya tienen sus requisitos:** los hábitos en las secciones 3.1 a 3.7, los objetivos semanales en la [3.8](#38-objetivos-semanales) y las metas en la [3.9](#39-metas). Lo que sigue siendo solo una idea es el vínculo entre ellos, que se concretará cuando el desarrollo avance.
 
 La aplicación podría organizarse en tres partes, una por cada horizonte de tiempo. Cada una responde a una pregunta distinta:
 

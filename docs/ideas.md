@@ -36,16 +36,19 @@ Este contexto sale del análisis del 2026-11-25 frente a Recordatorios de Apple 
 ## IDEA-01. Un único aviso de pendientes, configurable en Ajustes
 
 - **Propuesta:** el 2026-11-25, por el usuario.
-- **Estado:** por debatir.
-- **Qué se propone:** sustituir los dos avisos de pendientes de cada día (17:00 y 22:00, RF-37) por uno solo. Desde Ajustes, el usuario elegiría si lo quiere y a qué hora. Por defecto estaría a una hora fija, por ejemplo las 18:00. Dos avisos al día suponen demasiadas notificaciones.
-- **Puntos a debatir:**
-  - **Los dos avisos tienen fines distintos.** El de las 17:00 recuerda lo que queda por hacer y el de las 22:00 recuerda apuntar lo que ya se ha hecho. Un aviso a las 18:00 no cubre lo que se hace después, que puede quedarse sin apuntar. Eso va contra el principio 4: el registro tiene que ser fiable. Una hora por defecto más tardía, hacia las 21:00, cubriría mejor los dos fines.
-  - **Desactivarlo.** Desactivar el aviso es decisión del usuario. Aun así, Ajustes podría indicar con una línea qué deja de recibir.
-  - **Dónde se guarda la elección:** en el dispositivo, como la ayuda de los recordatorios (INC-10), o en la cuenta. En el dispositivo es más sencillo, pero se pierde al reinstalar la aplicación.
-  - **Coherencia con el aviso de progreso semanal (RF-49).** Si uno se configura, cabe preguntarse si el otro también debería.
-  - **Ventaja técnica.** Un aviso menos al día deja hueco a más recordatorios preparados, así que el aviso final (RF-51) llega más tarde.
-- **Relación con la especificación:** cambia RF-37 y sacaría de "Fuera del alcance" el punto 13.
-- **Coste aproximado:** cabe en una actualización OTA. El selector de hora ya va en el binario.
+- **Estado:** aprobada el 2026-11-26. Está en RF-37 de la especificación.
+- **Qué se propuso:** sustituir los dos avisos de pendientes de cada día (17:00 y 22:00) por uno solo, que el usuario pudiera desactivar y cambiar de hora desde Ajustes. Por defecto estaría a una hora fija, por ejemplo las 18:00. Dos avisos al día suponen demasiadas notificaciones.
+- **Qué se debatió:**
+  - **Opciones.** Dejarlo como estaba, un único aviso fijo sin ajustes, o un único aviso configurable en Ajustes.
+  - **La hora por defecto.** Los dos avisos tenían fines distintos: el de las 17:00 recordaba lo que quedaba por hacer y el de las 22:00, apuntar lo hecho. A las 18:00 se quedaría sin apuntar lo que se hace por la tarde, en contra del principio 4.
+  - **Dónde se guarda la elección.** En la cuenta pediría una migración de Supabase y sincronización solo para una preferencia.
+  - **El aviso de progreso semanal (RF-49).** Son dos avisos a la semana y nadie se ha quejado de él.
+- **Qué se decidió:** un único aviso, configurable en Ajustes.
+  - Por defecto, a las 21:00: aún da tiempo a hacer algo y cubre casi todo lo que hay que apuntar.
+  - Al desactivarlo, Ajustes lo dice con una línea discreta.
+  - La elección se guarda en el dispositivo, como la ayuda del gesto.
+  - El aviso de progreso semanal sigue fijo.
+  - Los probadores pasan de dos avisos a uno: hay que decirlo al publicarlo.
 
 ## IDEA-02. Un ejemplo más claro para la cantidad del hábito
 
@@ -119,22 +122,23 @@ Este contexto sale del análisis del 2026-11-25 frente a Recordatorios de Apple 
 ## IDEA-07. Avisos de ritmo
 
 - **Propuesta:** el 2026-11-25, al analizar la competencia.
-- **Estado:** por debatir.
-- **Qué se propone:** avisos que comparan lo acumulado con lo que debería llevarse a estas alturas: "Llevas 8 de 24 libros: vas 2 por detrás del ritmo". Recordatorios solo sabe que algo vence a una hora, así que este es el aviso que más diferencia a la aplicación. Serían los avisos de las metas, que están por definir (sección 3.9), y quizá también enriquecerían el aviso de progreso semanal (RF-49).
-- **Puntos a debatir:**
-  - **Cómo se calcula el ritmo.** Lo más simple es un reparto uniforme: la cantidad multiplicada por la parte del plazo transcurrido. No sirve para metas que no avanzan de forma lineal, como un entrenamiento que va de menos a más.
-  - **Las metas de sí o no.** No tienen ritmo; para ellas solo cabe una cuenta atrás.
-  - **Cuándo se envían.** Puede ser con una frecuencia fija (semanal), al quedarse por detrás o al llegar a hitos del plazo. También hay que decidir si se avisa al ir por delante.
-  - **El tono.** El aviso debe informar sin culpabilizar.
-  - **La carga de notificaciones.** Se suma a la que se quiere reducir en IDEA-01.
-  - **Una alternativa sin notificación.** El ritmo podría mostrarse solo en la página de metas ("vas 2 por detrás").
-- **Coste aproximado:** cabe en una actualización OTA, siempre que use las notificaciones que ya existen.
+- **Estado:** aprobada el 2026-11-26. Está en RF-62 y RF-63 de la especificación: son los avisos de las metas, que estaban por definir.
+- **Qué se propuso:** avisos que comparan lo acumulado con lo que debería llevarse a estas alturas: "Llevas 8 de 24 libros: vas 2 por detrás del ritmo". Recordatorios solo sabe que algo vence a una hora, así que este es el aviso que más diferencia a la aplicación.
+- **Qué se debatió:**
+  - **Cómo se calcula el ritmo.** Un reparto uniforme es lo más simple. No sirve para metas que no avanzan de forma lineal, pero calcularlo de otra forma pediría más datos en cada meta.
+  - **Las metas de sí o no.** No tienen ritmo: para ellas solo cabe una cuenta atrás.
+  - **Opciones.** Mostrar el ritmo solo en la página de Metas, con un aviso semanal solo si alguna meta va por detrás, con un aviso justo al quedarse por detrás, o con avisos en hitos del plazo. El aviso justo al quedarse por detrás depende del momento exacto en que llegan los datos de otros dispositivos, así que es más fácil que muestre cifras viejas. Los hitos llegan de tarde en tarde y no dicen si se va bien.
+  - **El tono y la carga de notificaciones.** El aviso tiene que informar sin culpabilizar. La IDEA-01 quita siete avisos de pendientes a la semana, así que un aviso semanal de metas deja la carga total por debajo de la de antes.
+- **Qué se decidió:** el ritmo en la página y un aviso semanal.
+  - **En la página de Metas (RF-62):** el ritmo se ve junto a lo que queda, solo viendo el día actual, porque lo acumulado no guarda el día en que se hizo. Se dice "por detrás" o "por delante" solo a partir de un incremento entero, para que un día sin apuntar no parezca un retraso.
+  - **Un aviso de metas los lunes a las 20:00 (RF-63):** solo si alguna meta de cantidad va por detrás o a alguna de sí o no le quedan 7 días o menos. No se avisa de ir por delante.
+  - **El aviso de progreso semanal (RF-49):** no cambia.
 
 ## Orden sugerido
 
 Es una propuesta, pendiente de debate:
 
 1. **IDEA-02.** Aprobada: sale con la `0.4.0`.
-2. **IDEA-07 e IDEA-01.** Ambas tratan de los avisos y de cuántos recibe el usuario, así que conviene debatirlas juntas.
+2. **IDEA-07 e IDEA-01.** Aprobadas juntas, porque ambas tratan de los avisos y de cuántos recibe el usuario.
 3. **IDEA-06.**
 4. **IDEA-04 e IDEA-03.** Juntas, en el mismo build, con lo que digan los probadores.
