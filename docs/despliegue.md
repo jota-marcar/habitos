@@ -63,7 +63,7 @@ node scripts/bump-version.mjs
 
 Calcula la versión con los commits desde el último tag y la escribe en `app.json`, `package.json` y `package-lock.json`. No gasta un build ni cambia la huella nativa. Si no hay commits nuevos, como al renovar un build que caduca, se indica el nivel: `node scripts/bump-version.mjs patch`.
 
-`build:prod` y `update:prod` se niegan a publicar una versión que ya tiene tag, y crean el suyo cuando la publicación termina bien.
+`build:prod` y `update:prod` se niegan a publicar una versión que ya tiene tag, y crean el suyo cuando la publicación termina bien. El tag va en el commit que se publicó, que se anota al empezar: mientras dura un build se puede cambiar de rama sin que el tag acabe en otro sitio. Al tag de la `0.3.0` le pasó, y se corrigió a mano el 2026-11-26.
 
 **Dónde se ve:** **Ajustes** muestra la versión que está funcionando, también tras una OTA. **TestFlight** muestra la del último build, y solo cambia con otro build.
 

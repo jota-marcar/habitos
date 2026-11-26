@@ -107,8 +107,9 @@ if (process.argv.includes("--upload-sourcemaps")) {
 }
 
 requireCommitted();
+let released;
 if (variant.fromMain) {
-  requireMainUpToDate(`A ${variantName} update`);
+  released = requireMainUpToDate(`A ${variantName} update`);
   requireUnreleasedVersion(`A ${variantName} update`);
 }
 requireInstalledDependencies();
@@ -158,7 +159,7 @@ warnIfAppJsonChanged();
 
 if (publish.status !== 0) process.exit(publish.status ?? 1);
 
-if (variant.fromMain) tagRelease("over-the-air update");
+if (variant.fromMain) tagRelease("over-the-air update", released);
 
 if (uploadSourceMaps() !== 0) {
   fail(

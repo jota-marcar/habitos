@@ -36,17 +36,21 @@ export function requireUnreleasedVersion(what) {
   }
 }
 
-/** Marks in git what has just been released. The release is done even if this fails. */
-export function tagRelease(what) {
+/**
+ * Marks in git what has just been released. The release is done even if this fails.
+ * It tags the commit that was released, taken before releasing: a production build takes
+ * long enough for the checkout to move to another branch, and v0.3.0 was once tagged there.
+ */
+export function tagRelease(what, commit) {
   const tag = `v${appVersion()}`;
   try {
-    git("tag", "-a", tag, "-m", `${tag}: ${what}`);
+    git("tag", "-a", tag, commit, "-m", `${tag}: ${what}`);
     git("push", "--quiet", "origin", `refs/tags/${tag}`);
     console.log(`\nTagged ${tag}.`);
   } catch {
     const create = git("tag", "--list", tag)
       ? ""
-      : `\n  git tag -a ${tag} -m "${tag}: ${what}"`;
+      : `\n  git tag -a ${tag} ${commit} -m "${tag}: ${what}"`;
     console.warn(
       `\nWARNING: ${tag} was released, but its tag could not be created or pushed. Run:${create}`,
       `\n  git push origin refs/tags/${tag}`,
@@ -79,7 +83,7 @@ export function requireInstalledDependencies() {
   }
 }
 
-/** Production comes from main, exactly as it is on GitHub. */
+/** Production comes from main, exactly as it is on GitHub. Returns that commit, to tag it. */
 export function requireMainUpToDate(what) {
   const branch = git("rev-parse", "--abbrev-ref", "HEAD");
   if (branch !== "main") {
@@ -88,11 +92,13 @@ export function requireMainUpToDate(what) {
     );
   }
   git("fetch", "--quiet", "origin", "main");
-  if (git("rev-parse", "HEAD") !== git("rev-parse", "origin/main")) {
+  const commit = git("rev-parse", "HEAD");
+  if (commit !== git("rev-parse", "origin/main")) {
     fail(
       "main is not the same as origin/main. Bring it up to date (/sync) and push nothing to main.",
     );
   }
+  return commit;
 }
 
 /** Runs a read-only EAS command for a variant and returns its JSON output. */
