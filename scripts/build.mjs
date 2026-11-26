@@ -41,8 +41,9 @@ if (profile === undefined) {
 const checkOnly = process.argv.includes("--check");
 
 requireCommitted();
+let released;
 if (profile.fromMain) {
-  requireMainUpToDate(`A ${profileName} build`);
+  released = requireMainUpToDate(`A ${profileName} build`);
   requireUnreleasedVersion(`A ${profileName} build`);
 }
 requireInstalledDependencies();
@@ -61,6 +62,8 @@ const build = spawnSync(
 
 warnIfAppJsonChanged();
 
-if (profile.fromMain && build.status === 0) tagRelease("TestFlight build");
+if (profile.fromMain && build.status === 0) {
+  tagRelease("TestFlight build", released);
+}
 
 process.exit(build.status ?? 1);

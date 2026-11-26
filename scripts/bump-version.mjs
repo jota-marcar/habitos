@@ -70,6 +70,24 @@ if (forced !== undefined && !LEVELS.includes(forced)) {
 }
 
 const tag = lastReleaseTag();
+// `git describe` only sees the tags in the history of HEAD. A newer one outside it would mean
+// counting from an older release, so it stops instead (v0.3.0 was once tagged on a branch).
+const newest = git("tag", "--list", "v*")
+  .split("\n")
+  .filter(Boolean)
+  .reduce(
+    (a, b) => (a === null || compare(b.slice(1), a.slice(1)) > 0 ? b : a),
+    null,
+  );
+if (
+  newest !== null &&
+  (tag === null || compare(newest.slice(1), tag.slice(1)) > 0)
+) {
+  fail(
+    `The newest release, ${newest}, is not in the history of HEAD, so the last one found is ${tag ?? "none"}.`,
+    `Tag the commit that was released instead: git tag -f -a ${newest} <commit>, then push it.`,
+  );
+}
 const released = tag === null ? "0.0.0" : tag.slice(1);
 const range = tag === null ? "HEAD" : `${tag}..HEAD`;
 const subjects = git("log", "--format=%s", range).split("\n").filter(Boolean);
