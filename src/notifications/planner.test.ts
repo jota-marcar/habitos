@@ -22,6 +22,7 @@ import type { WeekGoal } from "@/domain/weekly-goals";
 import type { PlannedNotification } from "./notifier";
 import {
   FINAL_NOTICE_ID,
+  NO_GESTURE_HINT,
   REMINDER_PREFIX,
   categoryOf,
   digestNotification,
@@ -215,7 +216,7 @@ describe("planReminders", () => {
     expect([...pendingToday]).toEqual(["water"]);
   });
 
-  test("warns of the pending habits at 17:00 and 22:00, among the reminders (RF-37)", async () => {
+  test("warns of the pending habits by default at 21:00, among the reminders (RF-37)", async () => {
     await addWater();
     await addHabit(
       db,
@@ -226,13 +227,13 @@ describe("planReminders", () => {
     const { notifications } = await planReminders(db, NOW);
 
     expect(notifications.slice(0, 3).map((n) => n.id)).toEqual([
-      "digest.2026-11-12.17:00",
       "reminder.water@18:00.2026-11-12",
-      "digest.2026-11-12.22:00",
+      "digest.2026-11-12.21:00",
+      "reminder.water@18:00.2026-11-13",
     ]);
-    expect(notifications[0]).toEqual({
-      id: "digest.2026-11-12.17:00",
-      at: { date: "2026-11-12", time: "17:00" },
+    expect(notifications[1]).toEqual({
+      id: "digest.2026-11-12.21:00",
+      at: { date: "2026-11-12", time: "21:00" },
       title: "Te quedan 2 hábitos",
       body: "Beber agua y Meditar",
       habitId: null,
@@ -251,7 +252,29 @@ describe("planReminders", () => {
 
     const { notifications } = await planReminders(db, NOW);
 
-    expect(notifications[0].id).toBe("digest.2026-11-13.17:00");
+    expect(notifications[0].id).toBe("digest.2026-11-13.21:00");
+  });
+
+  test("warns of the pending habits at the time the user chose (RF-37)", async () => {
+    await addHabit(db, habit("read"), version("read"));
+
+    const { notifications } = await planReminders(db, NOW, NO_GESTURE_HINT, {
+      enabled: true,
+      time: localTime("16:30"),
+    });
+
+    expect(notifications[0].id).toBe("digest.2026-11-12.16:30");
+  });
+
+  test("does not warn of the pending habits if the user disabled it (RF-37)", async () => {
+    await addHabit(db, habit("read"), version("read"));
+
+    const { notifications } = await planReminders(db, NOW, NO_GESTURE_HINT, {
+      enabled: false,
+      time: localTime("21:00"),
+    });
+
+    expect(notifications.filter((n) => n.id.startsWith("digest."))).toEqual([]);
   });
 
   describe("progress digests (RF-49)", () => {

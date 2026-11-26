@@ -36,6 +36,7 @@ import {
   type HabitFormValues,
 } from "./habit-form";
 import { REMINDER_ERROR_MESSAGES } from "./messages";
+import { dateAt } from "./picker-time";
 import { warnIfRemindersNotAllowed } from "./reminders";
 import { fontSize, spacing, useColors } from "./theme";
 import { hasFormChanges, useDiscardGuard } from "./use-discard-guard";
@@ -45,13 +46,6 @@ const WEEKDAYS: readonly Weekday[] = [0, 1, 2, 3, 4, 5, 6];
 
 // The time the reminder picker starts at.
 const DEFAULT_REMINDER_TIME = localTime("09:00");
-
-function dateAt(time: LocalTime): Date {
-  const [hours, minutes] = time.split(":").map(Number);
-  const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
-  return date;
-}
 
 export function HabitFormScreen({
   initialValues,

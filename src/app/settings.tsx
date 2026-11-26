@@ -1,5 +1,6 @@
-// The settings, with the options of the account (RF-32): signing out (RF-03) and deleting the
-// account (RF-04). At the end, the version of the app that is running (RF-54).
+// The settings (RF-32): the pending digest (RF-37) and the options of the account, signing out
+// (RF-03) and deleting the account (RF-04). At the end, the version of the app that is running
+// (RF-54).
 
 import type { User } from "@supabase/supabase-js";
 import { useState } from "react";
@@ -16,6 +17,7 @@ import { syncNow } from "@/sync/app-sync";
 import { APP_VERSION } from "@/shared/app-version";
 import { Section } from "@/ui/components";
 import { useDatabase } from "@/ui/database";
+import { PendingDigestSection } from "@/ui/pending-digest-section";
 import { useSession } from "@/ui/session";
 import { SheetOption } from "@/ui/sheet";
 import { SyncStatusLine } from "@/ui/sync-status";
@@ -144,6 +146,7 @@ export default function Settings() {
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={styles.content}
     >
+      <PendingDigestSection />
       <Section title="Cuenta">
         <View style={styles.account}>
           <Text style={[styles.accountText, { color: colors.text }]}>

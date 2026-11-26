@@ -6,6 +6,7 @@ import { addHabit } from "@/data/habits-repository";
 import { habit, openMigratedDatabase, version } from "@/data/testing/fixtures";
 import type { TestDatabase } from "@/data/testing/node-database";
 import { localDate } from "@/domain/dates";
+import { DEFAULT_PENDING_DIGEST } from "@/domain/digests";
 import { localTime } from "@/domain/times";
 import { requestHorizon } from "@/shared/horizon-request";
 import { syncNow } from "@/sync/app-sync";
@@ -16,6 +17,7 @@ import {
   readGestureHint,
   startGestureHint,
 } from "./gesture-hint-store";
+import { readPendingDigestSettings } from "./pending-digest-store";
 import { NO_GESTURE_HINT } from "./planner";
 import { listenToReminders, refreshReminders } from "./reminders";
 import type { fakeNotifier } from "./testing/fake-notifier";
@@ -38,6 +40,9 @@ jest.mock("./gesture-hint-store", () => ({
   readGestureHint: jest.fn(),
   startGestureHint: jest.fn(),
   markGestureLearned: jest.fn(),
+}));
+jest.mock("./pending-digest-store", () => ({
+  readPendingDigestSettings: jest.fn(),
 }));
 // The real parsing of the responses, on a notifier in memory.
 jest.mock("./expo-notifier", () => {
@@ -104,6 +109,9 @@ beforeEach(async () => {
   fake.notifications.clear();
   fake.log.length = 0;
   jest.mocked(readGestureHint).mockResolvedValue(NO_GESTURE_HINT);
+  jest
+    .mocked(readPendingDigestSettings)
+    .mockResolvedValue(DEFAULT_PENDING_DIGEST);
   jest.mocked(Notifications.getLastNotificationResponse).mockReturnValue(null);
   jest.mocked(syncNow).mockResolvedValue();
   warn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -127,6 +135,16 @@ describe("refreshReminders", () => {
     await refreshReminders(db);
 
     expect([...fake.scheduled.keys()]).toContain(REMINDER_ID);
+  });
+
+  test("warns of the pending habits at the time chosen on the device (RF-37)", async () => {
+    jest
+      .mocked(readPendingDigestSettings)
+      .mockResolvedValue({ enabled: true, time: localTime("19:15") });
+
+    await refreshReminders(db);
+
+    expect([...fake.scheduled.keys()]).toContain(`digest.${TODAY}.19:15`);
   });
 
   test("remembers the day the gesture hint starts (RF-25)", async () => {

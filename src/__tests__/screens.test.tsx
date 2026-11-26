@@ -60,8 +60,13 @@ import {
   listWeeklyGoals,
 } from "@/data/weekly-goals-repository";
 import { notifyReminderRecorded } from "@/notifications/actions";
+import { refreshReminders } from "@/notifications/reminders";
 import type { TestDatabase } from "@/data/testing/node-database";
 import { localDate, type Weekday } from "@/domain/dates";
+import {
+  DEFAULT_PENDING_DIGEST,
+  type PendingDigestSettings,
+} from "@/domain/digests";
 import { scheduledDaysFrom } from "@/domain/schedule";
 import { localTime } from "@/domain/times";
 import type { LongTermGoal } from "@/domain/long-term-goals";
@@ -223,6 +228,25 @@ jest.mock("@react-native-community/datetimepicker", () => {
   };
 });
 
+// What the device remembers of the pending digest (RF-37), in memory. Saving it can fail.
+let mockPendingDigest: PendingDigestSettings = DEFAULT_PENDING_DIGEST;
+let mockPendingDigestSaveFails = false;
+jest.mock("@/notifications/pending-digest-store", () => ({
+  readPendingDigestSettings: async () => mockPendingDigest,
+  savePendingDigestSettings: async (settings: PendingDigestSettings) => {
+    if (mockPendingDigestSaveFails) throw new Error("full");
+    mockPendingDigest = settings;
+  },
+}));
+
+// The gesture hint of the reminders (RF-25) is not what these tests look at: it is already
+// learned, as it would be after a few days.
+jest.mock("@/notifications/gesture-hint-store", () => ({
+  readGestureHint: async () => ({ startedOn: null, learned: true }),
+  startGestureHint: async () => undefined,
+  markGestureLearned: async () => undefined,
+}));
+
 // The height of the home indicator, which the tests have none of unless they set it.
 let mockBottomInset = 0;
 jest.mock("react-native-safe-area-context", () => {
@@ -292,6 +316,8 @@ let db: TestDatabase;
 beforeEach(async () => {
   mockToday = TODAY;
   mockPicked = PICKED_TIME;
+  mockPendingDigest = DEFAULT_PENDING_DIGEST;
+  mockPendingDigestSaveFails = false;
   mockNotificationsAllowed = true;
   mockScheduled.clear();
   mockSession = session("apple", "persona@example.com");
@@ -1606,10 +1632,7 @@ describe("reminders (RF-22 to RF-24, RF-36)", () => {
     await createWithReminder();
 
     await waitFor(() => expect(scheduledIds()).toHaveLength(60));
-    expect(scheduledIds().slice(0, 2)).toEqual([
-      "digest.2026-11-12.17:00",
-      "digest.2026-11-12.22:00",
-    ]);
+    expect(scheduledIds()[0]).toBe("digest.2026-11-12.21:00");
   });
 
   test("warns when reminders are not allowed, and saves the habit anyway (RF-36)", async () => {
@@ -3308,6 +3331,90 @@ describe("settings", () => {
     expect(screen).toHavePathname("/settings");
     expect(await screen.findByText("Sesión iniciada con Apple")).toBeTruthy();
     expect(screen.getByText("persona@example.com")).toBeTruthy();
+  });
+
+  describe("pending digest (RF-37)", () => {
+    const digests = () =>
+      [...mockScheduled.keys()].filter((id) => id.startsWith("digest."));
+
+    test("is on by default, at 21:00", async () => {
+      await addBoolean("walk", "Pasear");
+      await renderApp("/settings");
+
+      const toggle = await screen.findByLabelText("Aviso de pendientes");
+
+      expect(toggle.props.value).toBe(true);
+      expect(screen.getByTestId("pending-digest-time")).toBeTruthy();
+      expect(screen.queryByText(/No recibirás el aviso/)).toBeNull();
+    });
+
+    test("turning it off stops the digest and says what is no longer received", async () => {
+      await addBoolean("walk", "Pasear");
+      await refreshReminders(db);
+      expect(digests()).toContain(`digest.${TODAY}.21:00`);
+      await renderApp("/settings");
+
+      await fireEvent(
+        await screen.findByLabelText("Aviso de pendientes"),
+        "valueChange",
+        false,
+      );
+
+      expect(
+        await screen.findByText(
+          "No recibirás el aviso de lo que te queda por hacer o apuntar.",
+        ),
+      ).toBeTruthy();
+      expect(screen.queryByTestId("pending-digest-time")).toBeNull();
+      expect(mockPendingDigest).toEqual({ enabled: false, time: "21:00" });
+      await waitFor(() => expect(digests()).toEqual([]));
+    });
+
+    test("a new time applies at once, also to today's digest", async () => {
+      await addBoolean("walk", "Pasear");
+      mockPicked = new Date(2026, 10, 12, 18, 45);
+      await renderApp("/settings");
+
+      await fireEvent.press(await screen.findByTestId("pending-digest-time"));
+
+      expect(mockPendingDigest).toEqual({ enabled: true, time: "18:45" });
+      await waitFor(() => expect(digests()).toContain(`digest.${TODAY}.18:45`));
+      expect(digests()).not.toContain(`digest.${TODAY}.21:00`);
+    });
+
+    test("turning it on again brings back the last time chosen", async () => {
+      mockPendingDigest = { enabled: false, time: localTime("19:30") };
+      await addBoolean("walk", "Pasear");
+      await renderApp("/settings");
+
+      await fireEvent(
+        await screen.findByLabelText("Aviso de pendientes"),
+        "valueChange",
+        true,
+      );
+
+      expect(mockPendingDigest).toEqual({ enabled: true, time: "19:30" });
+      await waitFor(() => expect(digests()).toContain(`digest.${TODAY}.19:30`));
+    });
+
+    test("if it cannot be saved, it says so and keeps what there was", async () => {
+      const alert = jest.spyOn(Alert, "alert");
+      jest.spyOn(console, "warn").mockImplementation(() => undefined);
+      mockPendingDigestSaveFails = true;
+      await renderApp("/settings");
+
+      const toggle = await screen.findByLabelText("Aviso de pendientes");
+      await fireEvent(toggle, "valueChange", false);
+
+      expect(alert).toHaveBeenCalledWith(
+        "Aviso de pendientes",
+        "No se ha podido guardar el cambio. Inténtalo de nuevo.",
+      );
+      expect(
+        (await screen.findByLabelText("Aviso de pendientes")).props.value,
+      ).toBe(true);
+      expect(mockPendingDigest).toEqual(DEFAULT_PENDING_DIGEST);
+    });
   });
 
   test("shows the version of the app, the one in app.json (RF-54)", async () => {
