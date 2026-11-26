@@ -9,6 +9,7 @@ import {
   formatDayTitle,
   formatFullDate,
   formatMonthTitle,
+  formatPace,
   formatProgress,
   formatWeekRange,
 } from "./format";
@@ -78,6 +79,17 @@ test("formatDaysLeft says what is left of a long-term goal (RF-58)", () => {
   expect(formatDaysLeft(40)).toBe("quedan 40 días");
   expect(formatDaysLeft(1)).toBe("queda 1 día");
   expect(formatDaysLeft(0)).toBe("último día");
+});
+
+test("formatPace says how a long-term goal is going against its pace (RF-62)", () => {
+  expect(formatPace({ kind: "on_pace" }, "libros")).toBe("al día");
+  expect(formatPace({ kind: "behind", amount: 2 }, "libros")).toBe(
+    "2 libros por detrás",
+  );
+  expect(formatPace({ kind: "ahead", amount: 1.5 }, "km")).toBe(
+    "1,5 km por delante",
+  );
+  expect(formatPace({ kind: "behind", amount: 3 }, null)).toBe("3 por detrás");
 });
 
 test("formatDaysLeftLine starts a line with it (RF-55)", () => {

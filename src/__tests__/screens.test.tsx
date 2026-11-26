@@ -2395,7 +2395,8 @@ describe("long-term goals (RF-55 to RF-61)", () => {
 
     expect(await screen.findByText("Leer")).toBeTruthy();
     expect(screen.getByText("0 / 24 libros")).toBeTruthy();
-    expect(screen.getByText("quedan 217 días")).toBeTruthy();
+    // It starts today, so nothing is asked of it yet (RF-62).
+    expect(screen.getByText("quedan 217 días · al día")).toBeTruthy();
     expect(await listLongTermGoals(db)).toEqual([
       expect.objectContaining({
         name: "Leer",
@@ -2509,7 +2510,7 @@ describe("long-term goals (RF-55 to RF-61)", () => {
     expect(goalLabels()).toEqual([
       "App, último día",
       "Mudanza, queda 1 día",
-      "Leer, quedan 49 días",
+      "Leer, quedan 49 días · 4 libros por detrás",
       "Maratón, quedan 140 días",
       "Hecha",
     ]);
@@ -2537,7 +2538,32 @@ describe("long-term goals (RF-55 to RF-61)", () => {
     ]);
   });
 
-  test("another day shows its date next to the title, which goes back to today (RF-41)", async () => {
+  test("a goal with an amount says today how it goes against its pace (RF-62)", async () => {
+    // 24 books from 1 November to 31 December: 11 of its 61 days are over, 4,33 books.
+    await addBooks();
+    await saveLongTermGoalEntry(db, {
+      id: "e1",
+      longTermGoalId: "books",
+      value: 10,
+    });
+    await addGoal("move", { name: "Mudanza", deadline: TOMORROW });
+    await renderGoals();
+    await screen.findByText("Leer");
+
+    expect(goalLabels()).toEqual([
+      // A yes-or-no goal has no pace.
+      "Mudanza, queda 1 día",
+      "Leer, quedan 49 días · 5 libros por delante",
+    ]);
+
+    await fireEvent.press(screen.getByTestId("long-term-goal-books"));
+
+    expect(
+      await screen.findByText("quedan 49 días · 6 libros por delante"),
+    ).toBeTruthy();
+  });
+
+  test("another day shows its date next to the title, which goes back to today (RF-41, RF-62)", async () => {
     await addBooks();
     await renderGoals();
     await screen.findByText("Leer");
@@ -2546,10 +2572,13 @@ describe("long-term goals (RF-55 to RF-61)", () => {
 
     expect(await screen.findByText("Martes, 10 nov")).toBeTruthy();
     expect(screen.getByText("Metas")).toBeTruthy();
+    // Without its pace: what had been recorded by that day is not known.
     expect(screen.getByText("quedan 51 días")).toBeTruthy();
 
     await fireEvent.press(screen.getByText("Metas"));
-    expect(await screen.findByText("quedan 49 días")).toBeTruthy();
+    expect(
+      await screen.findByText("quedan 49 días · 4 libros por detrás"),
+    ).toBeTruthy();
     expect(screen.queryByText("Martes, 10 nov")).toBeNull();
   });
 

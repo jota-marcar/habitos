@@ -24,8 +24,8 @@ La `0.3.0` llegó a los probadores el 2026-11-24. Es un binario nuevo, así que 
    4. **Hecho (PR 115):** la interfaz, la tercera página de la pantalla principal con su formulario y sus opciones.
    5. Los avisos de las metas, definidos el 2026-11-26 junto con el aviso de pendientes único ([IDEA-07](ideas.md#idea-07-avisos-de-ritmo) e [IDEA-01](ideas.md#idea-01-un-único-aviso-de-pendientes-configurable-en-ajustes)). Se hacen en Pull Requests sucesivos:
       1. **Hecho (PR 119):** la especificación (RF-37, RF-62 y RF-63).
-      2. **En curso:** un único aviso de pendientes, configurable en Ajustes (RF-37).
-      3. El ritmo en la página de Metas (RF-62).
+      2. **Hecho (PR 120):** un único aviso de pendientes, configurable en Ajustes (RF-37).
+      3. **En curso:** el ritmo en la página de Metas (RF-62).
       4. El aviso de metas (RF-63).
 2. **Versión `0.4.0`, por OTA, con las metas** y el ejemplo "litros" en la unidad del hábito ([IDEA-02](ideas.md#idea-02-un-ejemplo-más-claro-para-la-cantidad-del-hábito)): el selector de fecha usa el módulo nativo que ya lleva el binario, así que no hace falta un build. Lleva la migración local de las metas, así que la actualización **no se podrá deshacer**: cualquier fallo se corrige publicando otra hacia delante ([despliegue.md](despliegue.md#actualizaciones-con-una-migración-local)). Se prepara con `node scripts/bump-version.mjs`, se prueba sin prisa en Hábitos Dev con `update:dev` y después sale con `update:prod`. Falta decidir si sale antes o después de los avisos de las metas.
 3. **Ideas por debatir:** las propuestas sin decidir están en [ideas.md](ideas.md), que se revisa a medida que avanza el desarrollo.
